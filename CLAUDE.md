@@ -1,0 +1,202 @@
+# JADL — project context
+
+Read this first. It carries the decisions and league knowledge that aren't obvious
+from the code, and that took a long conversation to establish.
+
+## What this is
+
+A self-updating website for the **Jessica Alba Dynasty League (JADL)**, a ten-team
+superflex dynasty NFL fantasy league run by Matt Redmond (@Jebus28), commissioner
+since 2020.
+
+It replaces a Google Site at `sites.google.com/view/ja-dynasty-league` that Matt
+maintained by hand — copying numbers out of Sleeper into Excel and Google Sheets,
+then retyping them into web pages, weekly in season and ad hoc out of it.
+
+**The goal is that Matt never types a number again.** Anything derivable from
+Sleeper must be computed, not stored. If you find yourself adding a hand-entered
+statistic, you have almost certainly taken a wrong turn.
+
+The old site is still live and is the reference for what the new one should cover.
+It is worth reading before making changes.
+
+## How it runs
+
+```
+python scripts/fetch_data.py    # Sleeper  -> data/*.json
+python scripts/build_site.py    # data/ + league.config.json -> docs/*.html
+```
+
+`.github/workflows/refresh.yml` runs both on a schedule — every two hours on
+Sundays, Mondays and Thursdays, daily at 07:30 UTC otherwise, and on every push —
+then commits `data/` and `docs/` back to `main`. GitHub Pages serves `docs/` at
+<https://jebus28.github.io/jadl/>.
+
+Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.app/v1`.
+
+### Layout
+
+| Path | What it is |
+|---|---|
+| `league.config.json` | **The only file Matt should ever need to edit.** Season, league ID, conferences, managers, champions, trophy names. |
+| `scripts/fetch_data.py` | Pulls league, users, rosters, matchups, brackets and trades for every season, walking `previous_league_id` back to 2020. |
+| `scripts/stats.py` | All-time maths: career records, era splits, head-to-head, trades, season tables. |
+| `scripts/build_site.py` | Renders the HTML. |
+| `assets/site.css` | One stylesheet, themed light and dark via CSS custom properties. |
+| `assets/teams/` | `<manager>.jpg` portraits and `<manager>-crest.jpg` square crops. |
+| `data/` | Fetched JSON. Committed so builds are reproducible; regenerated every run. |
+| `docs/` | Generated output. **Never edit by hand** — it is overwritten. |
+
+## League knowledge
+
+This is the part you cannot infer from the data. Get it wrong and the site is wrong.
+
+### The two eras
+
+The league has **two** eras, not three:
+
+- **BCE** — Before the Conference Era. Seasons one and two, **2020 and 2021**.
+  No conferences; everyone played everyone.
+- **The Conference Era** — **2022 onward**, when the league split into the
+  **Lombardi (LFC)** and **Madden (MFC)** conferences.
+
+`league.config.json` → `eras.conference_from` is `2022`.
+
+Head-to-head records are shown **three ways** because of this, which is not the
+same as three eras: against your own conference, against the other conference
+(both conference-era, regular season only), and BCE. Matt corrected this
+explicitly — say "two eras, three tables".
+
+**Playoff and toilet bowl records span all of history** and are not split by era.
+
+### Terminology — use Matt's words
+
+- The losers bracket is the **toilet bowl**, never "consolation".
+- Conferences are **LFC** and **MFC** in record books (the old site's page names
+  use LC/MC, but the stats blocks say LFC/MFC).
+- 10th place is always **Loser of All Losers**.
+- 7th place wins the **consolation bracket** and takes the **1.01 pick**. The
+  trophy is renamed every year after the leading college prospect:
+  2020 Trevor Trophy (Trevor Lawrence), 2021 Corral Cup, 2022 Bijan Bowl,
+  2023 Caleb Cup, 2024 Shedeur Bowl, 2025 Mendoza Marathon. 2026 is TBC —
+  candidates were Arch Manning and Jeremiah Smith. Blank means no badge is drawn.
+
+### The managers
+
+Ten managers, stable since 2020. Sleeper display names bear little relation to
+real names, so `league.config.json` maps them by `user_id`:
+
+| Manager | Sleeper | 2026 team |
+|---|---|---|
+| Jebus | Gebus | Raiders of the Lost Yard |
+| Lee | LACol | J J F J |
+| Alex | alnewbs | Toolsy Prospects |
+| Dave | DJLan | breecetie boys |
+| Mike | MikeJames42 | Tompa Bay Bucs |
+| Chris | ChrisNewbrook | Falcons |
+| Ross | Rossmatt1982 | The Rookies Nest |
+| Neil | NeilMWelch | Canton Giants |
+| Rich | dudders79 | Inch by inch |
+| Gareth | SquirrelGman | Mandos |
+
+Managers rename their teams most seasons, so **never key anything on team name** —
+always `user_id`. Rich was previously listed as the manager name for dudders79 and
+they are the same person.
+
+### League format
+
+10 teams, two conferences of five. Superflex. 0.5 PPR with a 0.5 TE premium.
+K and DEF. 15 bench, 8 IR, 7 taxi. $1000 FAAB. Six playoff teams from Week 15.
+Five-round rookie drafts. Seven seasons on Sleeper, 2020 through 2026, linked by
+`previous_league_id`.
+
+### Champions
+
+2020 Ross, 2021 Dave, 2022–2024 Jebus (a three-peat), 2025 Mike.
+
+## Conventions
+
+- **British English** throughout, in copy and in code comments.
+- Everything that changes season to season lives in `league.config.json`. Matt
+  regenerates team images every year and adjusts the playoff setup, and wants to
+  do that himself without touching code.
+- Team images: AI-generated manager portraits from Matt's `Team AI` folder,
+  resized to 1400px and also square-cropped to 320px for the small crests.
+- The stylesheet defines a complete light palette on bare `:root`, then overrides
+  tokens under `prefers-color-scheme: dark` and `[data-theme="dark"]`. Do not put
+  a colour's only definition inside a media query.
+- Power rankings reproduce Matt's own spreadsheet formula:
+  `((cumulative wins + own points) / 2) − opponent points`, averaged over weeks
+  played. His workbook used projected points he typed in each week; this uses real
+  results. If you change the method, say so on the page.
+
+## Validated against the old site
+
+The generated breecetie boys page was checked line by line against Matt's
+hand-maintained one. Exact matches: points for (11,143.20), vs LFC (19–13),
+playoff record (5 appearances, 6–6), and **every** head-to-head line across all
+five tables.
+
+Two bugs were found and fixed this way, both in `stats.py`:
+
+1. Record week only considered regular-season games, so it missed Dave's 204.86
+   in 2024 Week 15 — a playoff week. Best and worst weeks now span every game.
+2. An in-progress week with no points scored was recorded as an all-time low of
+   0.00, which would have stuck permanently. Weeks where a team has scored zero
+   are now skipped for those records.
+
+**When numbers disagree with the old site, check the live week first.** Records
+shift mid-week while games are in flight and settle when they finish. One real
+discrepancy remains: this computes 43 career trades for Dave where the old page
+says 41. The old page is most likely stale — Matt updates it when he has time —
+but it has not been confirmed.
+
+## Where Matt's material lives
+
+On his Windows machine, under `OneDrive\Documents\Fantasy Football\Dynasty`:
+
+- `Website\Team AI\` — manager portraits, regenerated each season. `IMG_4167`
+  through `IMG_4179` are the 2026 set.
+- `Website\Team Logos\` — 36 logos, mostly retired team names from past seasons.
+- `Website\Team Uniforms\`, `Trades\`, `Season Review\`, `Winners and Losers\`,
+  `End of Year Awards\`, `Team Announcements\`, `Podcasts\` — the archive
+  material, none of it yet on the new site.
+- `Claude\Team Tracking 2026 - altpr.xlsx` — the weekly workbook, including the
+  power rankings formula and the Finishes tab.
+
+Google Drive has the season review PDFs (2020–2026), schedules, rules PDFs,
+records sheets and the Trade Log, in `FF/Website`.
+
+## Backlog
+
+Roughly in the order discussed with Matt, though he has not yet picked:
+
+1. **Playoff odds.** Simulate the remaining season a few thousand times from each
+   team's scoring distribution and the real fixture list; publish playoff, bye and
+   conference-title odds. Replaces the Dynasty Daddy screenshots he pastes in now.
+   Dynasty Daddy has no public API — do not go looking for one.
+2. **Colour scheme and identity.** The current claret and teal are placeholders
+   Matt explicitly wants replaced.
+3. **Team honours and uniforms.** Championships, conference titles, trophies, top
+   scorer, player high score, plus the uniform images. Brings team pages level
+   with the old site.
+4. **The archive.** Trade Centre back to 2020, rules PDFs, commissioner updates,
+   official team statements, Lee's Stat Corner.
+5. **Conference landing pages** (LC/MC) and a **calendar**, both on the old site
+   and not yet rebuilt.
+
+## Gotchas
+
+- `docs/` is generated. Edit the templates in `build_site.py`, never the output.
+- The Action commits `data/` and `docs/` back to `main`, so **pull before you
+  push** or you will collide with the bot.
+- Playoff-week fixtures that appear in neither bracket are Sleeper pairing off
+  eliminated teams. They are deliberately ignored — counting them would inflate
+  records.
+- `fetch_data.py` re-downloads the ~5MB player index at most once a day, keyed on
+  the file's mtime. A fresh checkout has a new mtime, so CI downloads it each run.
+- The site was built in an environment with no network access to `api.sleeper.app`
+  or `github.com`, so nothing could be tested end to end locally — the first real
+  run happened in CI. **On a normal machine both are reachable**, so run the two
+  scripts locally before pushing. That was not possible before and is the main
+  reason for moving to Claude Code.
