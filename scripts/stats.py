@@ -208,6 +208,27 @@ def count_trades(seasons_transactions: list[dict], seasons: list[dict]) -> dict:
     return dict(counts)
 
 
+def conference_finish(season: dict) -> dict:
+    """
+    owner_id -> (division, place) for where each manager finished in their own
+    conference. Matt schedules the following season's inter-conference games off
+    this: last year's two fifth-placed teams meet first, the two winners last.
+    """
+    by_div = defaultdict(list)
+    for r in season["rosters"]:
+        st = r.get("settings") or {}
+        by_div[str(st.get("division") or "1")].append(
+            (st.get("wins", 0), _pts(st, "fpts"), r.get("owner_id"))
+        )
+    out = {}
+    for div, rows in by_div.items():
+        rows.sort(reverse=True)
+        for place, (_w, _pf, owner_id) in enumerate(rows, 1):
+            if owner_id:
+                out[owner_id] = (div, place)
+    return out
+
+
 def season_table(season: dict, players: dict | None = None) -> list[dict]:
     """Final regular-season table for one season, richest first."""
     rows = []

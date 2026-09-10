@@ -101,6 +101,24 @@
     "2024": "Jebus",
     "2025": "Mike"
   },
+  "divisional_weeks": {
+    "_comment": "Weeks 10-14 are mostly in-conference. Each of those weeks also carries one inter-conference game between the two teams that finished in the same place in their conference last season - 5th v 5th first, working up to the two conference winners in the final week. Sleeper already schedules these; we only name them. Keys are last season's conference finishing position. Rename freely.",
+    "from_week": 10,
+    "to_week": 14,
+    "names": {
+      "5": "Clash of the Gash",
+      "4": "Bash of the Trash",
+      "3": "Middle Muddle",
+      "2": "Runners-Up Rumble",
+      "1": "Champions Face Off"
+    }
+  },
+  "playoff_rounds": {
+    "_comment": "Playoffs run in conference until the final. Keyed by week number.",
+    "15": "Divisional Round",
+    "16": "Conference Championships",
+    "17": "The Championship"
+  },
   "side_competitions": {
     "_comment": "10th is always Loser of All Losers. The consolation bracket winner takes 7th and the 1.01, and is renamed each year after the leading college prospect.",
     "wooden_spoon": "Loser of All Losers",

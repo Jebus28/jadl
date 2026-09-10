@@ -206,29 +206,75 @@ def sechead(title, note=""):
     return '<div class="sechead"><h2>' + e(title) + "</h2>" + extra + "</div>"
 
 
-def scoreboard(cfg, teams, results, week, career):
+def ordinal(n):
+    suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return str(n) + suffix
+
+
+def conference_places(cfg, teams):
+    """roster_id -> 'LFC 1st', as the old site showed on every fixture."""
+    out = {}
+    for division in cfg["conferences"]:
+        members = sorted((t for t in teams.values() if t["division"] == division),
+                         key=lambda t: (t["wins"], t["fpts"]), reverse=True)
+        short = cfg["conferences"][division].get("short", "")
+        for place, team in enumerate(members, 1):
+            out[team["roster_id"]] = short + " " + ordinal(place)
+    return out
+
+
+def featured_name(cfg, week, home, away, prev_finish):
+    """
+    The one inter-conference game in a divisional week, named after the place both
+    teams finished in their own conference last season. Matt schedules these by
+    hand, so we only recognise a pairing that really is rank-against-rank.
+    """
+    dw = cfg.get("divisional_weeks") or {}
+    if not (dw.get("from_week", 0) <= week <= dw.get("to_week", -1)):
+        return ""
+    if home["division"] == away["division"]:
+        return ""
+    here, there = prev_finish.get(home["user_id"]), prev_finish.get(away["user_id"])
+    if not here or not there or here[1] != there[1]:
+        return ""
+    return (dw.get("names") or {}).get(str(here[1]), "")
+
+
+def week_heading(cfg, week):
+    rounds = {str(k): v for k, v in (cfg.get("playoff_rounds") or {}).items()
+              if not str(k).startswith("_")}
+    return rounds.get(str(week)) or ("Week " + str(week))
+
+
+def scoreboard(cfg, teams, results, week, career, prev_finish):
     rows = []
+    places = conference_places(cfg, teams)
     for fx in results.get(week, []):
         home, away = teams.get(fx["home"]["roster_id"]), teams.get(fx["away"]["roster_id"])
         if not home or not away:
             continue
         hp, ap = fx["home"]["points"], fx["away"]["points"]
+        billing = featured_name(cfg, week, home, away, prev_finish)
+        # Conference-era regular season only. BCE was a different league shape and
+        # Matt does not want it folded into the head-to-head shown on a fixture.
         h2h = ""
         hs = career.get(home["user_id"])
         if hs:
             against = hs["h2h"].get(away["user_id"])
             if against:
-                w = against["bce"]["w"] + against["conference"]["w"]
-                l = against["bce"]["l"] + against["conference"]["l"]
+                w, l = against["conference"]["w"], against["conference"]["l"]
                 if w or l:
-                    h2h = '<div class="h2hline">All-time ' + str(w) + "&ndash;" + str(l) + "</div>"
+                    h2h = ('<div class="h2hline">Since ' + e(cfg["eras"]["conference_from"])
+                           + " &middot; " + str(w) + "&ndash;" + str(l) + "</div>")
+        marquee = ('<div class="billing">' + e(billing) + "</div>") if billing else ""
         rows.append(f"""
-      <article class="fixture">
+      <article class="fixture{' featured' if billing else ''}">
+        {marquee}
         <div class="side home">
           {crest(home, cfg)}
           <div class="who">
             <div class="team"><a href="team-{e(home['slug'])}.html">{e(home['team'])}</a></div>
-            <div class="mgr">{e(home['manager'])} &middot; {home['wins']}&ndash;{home['losses']}</div>
+            <div class="mgr">{e(home['manager'])} &middot; {home['wins']}&ndash;{home['losses']} &middot; {e(places.get(home['roster_id'], ''))}</div>
           </div>
           <div class="score {'lead' if hp >= ap else 'trail'}">{hp:.2f}</div>
         </div>
@@ -237,13 +283,15 @@ def scoreboard(cfg, teams, results, week, career):
           {crest(away, cfg)}
           <div class="who">
             <div class="team"><a href="team-{e(away['slug'])}.html">{e(away['team'])}</a></div>
-            <div class="mgr">{e(away['manager'])} &middot; {away['wins']}&ndash;{away['losses']}</div>
+            <div class="mgr">{e(away['manager'])} &middot; {away['wins']}&ndash;{away['losses']} &middot; {e(places.get(away['roster_id'], ''))}</div>
           </div>
           <div class="score {'lead' if ap >= hp else 'trail'}">{ap:.2f}</div>
         </div>
       </article>""")
+    # The named game leads the week; Sleeper's own matchup order is arbitrary.
+    rows.sort(key=lambda row: 0 if 'class="billing"' in row else 1)
     inner = "".join(rows) or '<p class="empty">No fixtures published for this week yet.</p>'
-    return ("<section>" + sechead("Week " + str(week), "Scores and records straight from Sleeper.")
+    return ("<section>" + sechead(week_heading(cfg, week), "Scores and records straight from Sleeper.")
             + '<div class="fixtures">' + inner + "</div></section>")
 
 
@@ -308,7 +356,7 @@ def honours_section(cfg):
         cards.append(f"""
       <div class="yr{' current' if current else ''}">
         <span class="season">{e(season)}</span>
-        <span class="winner">{e(winner or '&mdash;')}</span>
+        <span class="winner">{e(winner) if winner else "&mdash;"}</span>
         <span class="cap">{cap}</span>{extra}
       </div>""")
     return ("<section>" + sechead("Honours", note) + '<div class="honours">'
@@ -520,12 +568,19 @@ def main():
     week = max(1, min(week, cfg["season"]["championship_week"]))
     rankings = power_rankings(teams, results, week)
 
+    # Last season's conference tables, which is what the divisional-week billings
+    # are drawn from. Absent in the first conference year, when there is no
+    # conference table to look back on.
+    last_season = max((s for s in indexed if s["season"] < int(current["season"])
+                       and s["era"] == "conference"), key=lambda s: s["season"], default=None)
+    prev_finish = S.conference_finish(last_season) if last_season else {}
+
     DOCS.mkdir(parents=True, exist_ok=True)
     if ASSETS.exists():
         shutil.copytree(ASSETS, DOCS / "assets", dirs_exist_ok=True)
     (DOCS / ".nojekyll").write_text("", encoding="utf-8")
 
-    home = (scoreboard(cfg, teams, results, week, career)
+    home = (scoreboard(cfg, teams, results, week, career, prev_finish)
             + power_section(cfg, rankings) + honours_section(cfg))
     (DOCS / "index.html").write_text(page(cfg, "Scoreboard", "Scoreboard", home), encoding="utf-8")
 

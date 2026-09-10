@@ -1,60 +1,65 @@
+/* Palette taken from the league's own furniture: the crimson-and-gold Lombardi L,
+   the navy-and-gold Madden M, and the cream the old site sat on. Gold is the
+   accent throughout — it is the trophy colour, so it marks champions and the
+   current season. Every colour is defined here on bare :root and only
+   *overridden* in the two dark blocks below, never introduced there. */
 :root{
-    --ground:#EEF0F4;
+    --ground:#F2EFE8;
     --surface:#FFFFFF;
-    --surface-2:#F7F8FA;
-    --ink:#151A21;
-    --ink-2:#3D4650;
-    --muted:#6B7480;
-    --line:#DCE0E7;
-    --line-strong:#C3C9D3;
-    --brass:#9A6F14;
-    --brass-soft:#F0E4C6;
-    --lombardi:#9C2B33;
-    --lombardi-soft:#F6E3E4;
-    --madden:#1C6460;
-    --madden-soft:#DCEDEB;
+    --surface-2:#FAF8F3;
+    --ink:#16181D;
+    --ink-2:#3E434C;
+    --muted:#6E7480;
+    --line:#E2DDD2;
+    --line-strong:#C8C1B3;
+    --brass:#A9741A;
+    --brass-soft:#F7EACD;
+    --lombardi:#C0102A;
+    --lombardi-soft:#FBE4E6;
+    --madden:#1F4E9C;
+    --madden-soft:#E3EAF7;
     --live:#1F7A45;
     --live-soft:#DDEFE3;
-    --shadow:0 1px 2px rgba(16,22,30,.06), 0 8px 24px -16px rgba(16,22,30,.28);
+    --shadow:0 1px 2px rgba(22,24,29,.06), 0 8px 24px -16px rgba(22,24,29,.28);
     --radius:10px;
     --maxw:1080px;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --ground:#101419;
-      --surface:#171C23;
-      --surface-2:#1D232B;
-      --ink:#EDEFF3;
-      --ink-2:#BFC7D2;
-      --muted:#8B95A3;
-      --line:#2A323C;
-      --line-strong:#3A434F;
-      --brass:#E0AE4C;
-      --brass-soft:#3A2F16;
-      --lombardi:#E0777D;
-      --lombardi-soft:#3A2023;
-      --madden:#5FC0B7;
-      --madden-soft:#12302E;
+      --ground:#12141A;
+      --surface:#191C24;
+      --surface-2:#1F232C;
+      --ink:#EEEFF2;
+      --ink-2:#C0C5CE;
+      --muted:#8A919D;
+      --line:#2A2F3A;
+      --line-strong:#3A404D;
+      --brass:#E8B75A;
+      --brass-soft:#3A2E14;
+      --lombardi:#F0868F;
+      --lombardi-soft:#3A1A1E;
+      --madden:#7FA9E8;
+      --madden-soft:#16233A;
       --live:#5FCB8B;
       --live-soft:#12301F;
       --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
     }
   }
   :root[data-theme="dark"]{
-    --ground:#101419;
-    --surface:#171C23;
-    --surface-2:#1D232B;
-    --ink:#EDEFF3;
-    --ink-2:#BFC7D2;
-    --muted:#8B95A3;
-    --line:#2A323C;
-    --line-strong:#3A434F;
-    --brass:#E0AE4C;
-    --brass-soft:#3A2F16;
-    --lombardi:#E0777D;
-    --lombardi-soft:#3A2023;
-    --madden:#5FC0B7;
-    --madden-soft:#12302E;
+    --ground:#12141A;
+    --surface:#191C24;
+    --surface-2:#1F232C;
+    --ink:#EEEFF2;
+    --ink-2:#C0C5CE;
+    --muted:#8A919D;
+    --line:#2A2F3A;
+    --line-strong:#3A404D;
+    --brass:#E8B75A;
+    --brass-soft:#3A2E14;
+    --lombardi:#F0868F;
+    --lombardi-soft:#3A1A1E;
+    --madden:#7FA9E8;
+    --madden-soft:#16233A;
     --live:#5FCB8B;
     --live-soft:#12301F;
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
@@ -140,6 +145,28 @@
   .vs{
     font-size:10.5px;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);
     text-align:center;padding-inline:6px;
+  }
+
+  /* The named inter-conference game in a divisional week. One per week, so it
+     is allowed to shout: gold rule, gold billing, the rest of the card as normal. */
+  .fixture.featured{
+    grid-template-areas:"billing billing billing" "home vs away";
+    border-color:var(--brass);
+    box-shadow:var(--shadow), inset 0 3px 0 var(--brass);
+    padding-top:0;
+  }
+  .fixture.featured .billing{grid-area:billing}
+  .fixture.featured .side.home{grid-area:home}
+  .fixture.featured .vs{grid-area:vs}
+  .fixture.featured .side.away{grid-area:away}
+  .billing{
+    text-align:center;color:var(--brass);
+    font-family:"Bricolage Grotesque",system-ui,sans-serif;
+    font-weight:800;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    padding:12px 8px 10px;
+  }
+  @media (max-width:560px){
+    .fixture.featured{grid-template-areas:"billing" "home" "vs" "away"}
   }
   @media (max-width:560px){
     .fixture{grid-template-columns:1fr;gap:6px}

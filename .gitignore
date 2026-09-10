@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 .DS_Store
 .ghtoken
+
+# Local preview config — holds an absolute path to whichever Python this machine has.
+.claude/
