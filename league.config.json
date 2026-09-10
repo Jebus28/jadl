@@ -15,15 +15,29 @@
     "playoff_teams": 6,
     "trade_deadline_week": 16
   },
+  "eras": {
+    "_comment": "Conferences arrived in season three. Everything before that is BCE.",
+    "conference_from": 2022,
+    "bce": {
+      "label": "BCE",
+      "long": "Before the Conference Era",
+      "seasons": "2020\u20132021"
+    },
+    "conference": {
+      "label": "Conference Era",
+      "long": "Lombardi and Madden conferences",
+      "seasons": "2022\u2013"
+    }
+  },
   "conferences": {
     "1": {
       "name": "Lombardi Conference",
-      "short": "LC",
+      "short": "LFC",
       "colour": "#9C2B33"
     },
     "2": {
       "name": "Madden Conference",
-      "short": "MC",
+      "short": "MFC",
       "colour": "#1C6460"
     }
   },
@@ -86,6 +100,23 @@
     "2023": "Jebus",
     "2024": "Jebus",
     "2025": "Mike"
+  },
+  "side_competitions": {
+    "_comment": "10th is always Loser of All Losers. The consolation bracket winner takes 7th and the 1.01, and is renamed each year after the leading college prospect.",
+    "wooden_spoon": "Loser of All Losers",
+    "consolation_by_season": {
+      "2020": "Trevor Trophy",
+      "2021": "Corral Cup",
+      "2022": "Bijan Bowl",
+      "2023": "Caleb Cup",
+      "2024": "Shedeur Bowl",
+      "2025": "",
+      "2026": ""
+    },
+    "labels": {
+      "playoffs": "Playoffs",
+      "consolation": "Toilet Bowl"
+    }
   },
   "power_rankings": {
     "_comment": "Reproduces the workbook formula: score = ((previous cumulative wins + own projected points) / 2) - opponent projected points.",
