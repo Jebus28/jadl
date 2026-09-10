@@ -250,3 +250,55 @@
     border-radius:8px;display:block;background:var(--surface-2);
   }
   .teamcard{position:relative}
+
+  /* ---------- links in furniture ---------- */
+  a.mark{color:var(--ink);text-decoration:none}
+  .team a, .nm a, .prname a{color:inherit;text-decoration:none}
+  .team a:hover, .nm a:hover, .prname a:hover{text-decoration:underline}
+  a.teamcard{text-decoration:none;color:inherit;transition:border-color .15s ease, transform .15s ease}
+  a.teamcard:hover{border-color:var(--line-strong);transform:translateY(-1px)}
+  a:focus-visible{outline:2px solid var(--brass);outline-offset:2px;border-radius:4px}
+  @media (prefers-reduced-motion: reduce){a.teamcard{transition:none}a.teamcard:hover{transform:none}}
+
+  /* ---------- team page header ---------- */
+  .teamhead{display:grid;grid-template-columns:minmax(0,340px) 1fr;gap:22px;align-items:center;padding-block:28px}
+  .teamhead .hero{width:100%;max-width:100%;border-radius:10px;display:block;object-fit:cover;aspect-ratio:3/2;background:var(--surface-2)}
+  .teamtitle{display:grid;gap:6px}
+  .teamtitle h1{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-size:clamp(26px,4.4vw,40px);font-weight:800;letter-spacing:-.02em;margin:0;line-height:1.05}
+  .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);font-weight:700}
+  .lede{margin:0;color:var(--muted);font-size:14.5px}
+  @media (max-width:640px){.teamhead{grid-template-columns:1fr}}
+
+  /* ---------- fact grid ---------- */
+  .factgrid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;margin:0;
+  }
+  .factgrid > div{background:var(--surface);padding:13px 15px;display:grid;gap:2px}
+  .factgrid dt{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .factgrid dd{margin:0;font-size:17px;font-weight:600;letter-spacing:-.01em}
+
+  /* ---------- eras ---------- */
+  .eras{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:18px}
+  .era{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;display:grid;gap:3px}
+  .era.bce{border-left:3px solid var(--muted)}
+  .era.con{border-left:3px solid var(--brass)}
+  .eralabel{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:15px}
+  .erayears{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
+  .era p{margin:4px 0 0;font-size:13px;color:var(--ink-2, var(--muted));line-height:1.5}
+
+  /* ---------- head to head ---------- */
+  .h2hgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;align-items:start}
+  .h2hblock{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .h2hblock h4{margin:0;padding:12px 14px 4px;font-family:"Bricolage Grotesque",sans-serif;font-size:14px;font-weight:700}
+  .h2hnote{margin:0;padding:0 14px 10px;font-size:11.5px;color:var(--muted)}
+  .h2hblock table{font-size:13px}
+  .h2hblock th,.h2hblock td{padding:7px 14px}
+  .h2hline{font-size:10.5px;color:var(--muted);letter-spacing:0;text-transform:none;margin-top:3px;white-space:nowrap}
+
+  /* ---------- badges ---------- */
+  .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:4px;margin-left:6px;white-space:nowrap}
+  .badge.trophy{background:var(--brass-soft);color:var(--brass)}
+  .badge.spoon{background:var(--lombardi-soft);color:var(--lombardi)}
+  .yr .trophy{font-size:10.5px;color:var(--brass);margin-top:4px;display:block}
