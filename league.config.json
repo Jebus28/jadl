@@ -1,0 +1,100 @@
+{
+  "_comment": "This is the only file you need to edit from season to season. Everything else looks after itself.",
+  "league": {
+    "name": "Jessica Alba Dynasty League",
+    "short_name": "JADL",
+    "established": 2020,
+    "current_league_id": "1312061337769091072",
+    "sleeper_url": "https://sleeper.com/leagues/1312061337769091072"
+  },
+  "season": {
+    "year": 2026,
+    "regular_season_weeks": 14,
+    "playoff_start_week": 15,
+    "championship_week": 17,
+    "playoff_teams": 6,
+    "trade_deadline_week": 16
+  },
+  "conferences": {
+    "1": {
+      "name": "Lombardi Conference",
+      "short": "LC",
+      "colour": "#9C2B33"
+    },
+    "2": {
+      "name": "Madden Conference",
+      "short": "MC",
+      "colour": "#1C6460"
+    }
+  },
+  "managers": {
+    "572154314147561472": {
+      "name": "Jebus",
+      "image": "jebus-crest.jpg",
+      "portrait": "jebus.jpg"
+    },
+    "600292303692689408": {
+      "name": "Lee",
+      "image": "lee-crest.jpg",
+      "portrait": "lee.jpg"
+    },
+    "600803296654979072": {
+      "name": "Alex",
+      "image": "alex-crest.jpg",
+      "portrait": "alex.jpg"
+    },
+    "600805479135911936": {
+      "name": "Dave",
+      "image": "dave-crest.jpg",
+      "portrait": "dave.jpg"
+    },
+    "600979696255041536": {
+      "name": "Mike",
+      "image": "mike-crest.jpg",
+      "portrait": "mike.jpg"
+    },
+    "601466211523428352": {
+      "name": "Chris",
+      "image": "chris-crest.jpg",
+      "portrait": "chris.jpg"
+    },
+    "601492329282453504": {
+      "name": "Ross",
+      "image": "ross-crest.jpg",
+      "portrait": "ross.jpg"
+    },
+    "601535536053678080": {
+      "name": "Neil",
+      "image": "neil-crest.jpg",
+      "portrait": "neil.jpg"
+    },
+    "601674687197544448": {
+      "name": "Rich",
+      "image": "rich-crest.jpg",
+      "portrait": "rich.jpg"
+    },
+    "602040508755283968": {
+      "name": "Gareth",
+      "image": "gareth-crest.jpg",
+      "portrait": "gareth.jpg"
+    }
+  },
+  "champions": {
+    "2020": "Ross",
+    "2021": "Dave",
+    "2022": "Jebus",
+    "2023": "Jebus",
+    "2024": "Jebus",
+    "2025": "Mike"
+  },
+  "power_rankings": {
+    "_comment": "Reproduces the workbook formula: score = ((previous cumulative wins + own projected points) / 2) - opponent projected points.",
+    "method": "matt",
+    "projection_source": "sleeper"
+  },
+  "site": {
+    "tagline": "Ten teams. Two conferences. One Jessica Alba.",
+    "show_playoff_odds": false,
+    "footer_note": "Updated automatically from Sleeper."
+  }
+}
