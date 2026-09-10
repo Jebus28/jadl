@@ -9,23 +9,20 @@ from __future__ import annotations
 
 import html
 import json
+import re
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
+
+import stats as S
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 DOCS = ROOT / "docs"
 ASSETS = ROOT / "assets"
 
-# Which real positions may fill each starting slot.
 SLOT_ELIGIBILITY = {
-    "QB": {"QB"},
-    "RB": {"RB"},
-    "WR": {"WR"},
-    "TE": {"TE"},
-    "K": {"K"},
-    "DEF": {"DEF"},
+    "QB": {"QB"}, "RB": {"RB"}, "WR": {"WR"}, "TE": {"TE"}, "K": {"K"}, "DEF": {"DEF"},
     "FLEX": {"RB", "WR", "TE"},
     "WRRB_FLEX": {"RB", "WR"},
     "REC_FLEX": {"WR", "TE"},
@@ -33,129 +30,100 @@ SLOT_ELIGIBILITY = {
 }
 
 
-# --------------------------------------------------------------------------- #
-# helpers
-# --------------------------------------------------------------------------- #
-def load(name: str, default=None):
+def load(name, default=None):
     path = DATA / name
-    if not path.exists():
-        return default
-    return json.loads(path.read_text(encoding="utf-8"))
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else default
 
 
-def e(value) -> str:
-    """Escape for HTML."""
+def e(value):
     return html.escape(str(value if value is not None else ""), quote=True)
 
 
-def pts(roster_settings: dict, key: str = "fpts") -> float:
-    whole = roster_settings.get(key) or 0
-    decimal = roster_settings.get(f"{key}_decimal") or 0
-    return round(whole + decimal / 100, 2)
+def slugify(text):
+    out = re.sub(r"[^a-z0-9]+", "-", str(text).lower()).strip("-")
+    return out or "team"
 
 
-def optimal_points(entry: dict, roster_positions: list[str], players: dict) -> float:
-    """
-    The most points this roster could have scored with a legal lineup.
-    Greedy over the most restrictive slots first, which matches how these
-    are normally quoted and is exact for all but pathological rosters.
-    """
+def pts(settings, key="fpts"):
+    return round((settings.get(key) or 0) + (settings.get(key + "_decimal") or 0) / 100, 2)
+
+
+def rec(r):
+    base = str(r["w"]) + "&ndash;" + str(r["l"])
+    return base + "&ndash;" + str(r["t"]) if r.get("t") else base
+
+
+def optimal_points(entry, roster_positions, players):
     scores = entry.get("players_points") or {}
     if not scores:
         return 0.0
-
     pool = []
     for pid, score in scores.items():
         pos = (players.get(pid) or {}).get("position")
         if pos:
-            pool.append([pid, pos, float(score or 0)])
+            pool.append((pid, pos, float(score or 0)))
     pool.sort(key=lambda row: row[2], reverse=True)
-
-    slots = [s for s in roster_positions if s in SLOT_ELIGIBILITY]
-    slots.sort(key=lambda s: len(SLOT_ELIGIBILITY[s]))
-
+    slots = sorted((s for s in roster_positions if s in SLOT_ELIGIBILITY),
+                   key=lambda s: len(SLOT_ELIGIBILITY[s]))
     used, total = set(), 0.0
     for slot in slots:
-        allowed = SLOT_ELIGIBILITY[slot]
-        for row in pool:
-            pid, pos, score = row
-            if pid in used or pos not in allowed:
-                continue
-            used.add(pid)
-            total += score
-            break
+        for pid, pos, score in pool:
+            if pid not in used and pos in SLOT_ELIGIBILITY[slot]:
+                used.add(pid)
+                total += score
+                break
     return round(total, 2)
 
 
-def manager_lookup(cfg: dict, users: list[dict], rosters: list[dict]) -> dict:
-    """roster_id -> everything the templates need about that team."""
+def manager_lookup(cfg, users, rosters):
     by_user = {u["user_id"]: u for u in users}
     out = {}
     for r in rosters:
         uid = r.get("owner_id")
         user = by_user.get(uid, {})
-        configured = (cfg.get("managers") or {}).get(uid, {})
+        conf = (cfg.get("managers") or {}).get(uid, {})
         meta = user.get("metadata") or {}
+        st = r.get("settings") or {}
+        team = (meta.get("team_name") or user.get("display_name") or "Unnamed").strip()
         out[r["roster_id"]] = {
-            "roster_id": r["roster_id"],
-            "user_id": uid,
-            "manager": configured.get("name") or user.get("display_name") or "Unknown",
-            "handle": user.get("display_name") or "",
-            "team": (meta.get("team_name") or user.get("display_name") or "Unnamed").strip(),
-            "image": configured.get("image"),
-            "portrait": configured.get("portrait"),
-            "division": str(r.get("settings", {}).get("division") or "1"),
-            "wins": r.get("settings", {}).get("wins", 0),
-            "losses": r.get("settings", {}).get("losses", 0),
-            "ties": r.get("settings", {}).get("ties", 0),
-            "fpts": pts(r.get("settings", {}), "fpts"),
-            "fpts_against": pts(r.get("settings", {}), "fpts_against"),
+            "roster_id": r["roster_id"], "user_id": uid,
+            "manager": conf.get("name") or user.get("display_name") or "Unknown",
+            "team": team, "slug": slugify(team),
+            "image": conf.get("image"), "portrait": conf.get("portrait"),
+            "division": str(st.get("division") or "1"),
+            "wins": st.get("wins", 0), "losses": st.get("losses", 0), "ties": st.get("ties", 0),
+            "fpts": pts(st, "fpts"), "fpts_against": pts(st, "fpts_against"),
         }
     return out
 
 
-def weekly_results(season: dict, players: dict) -> dict:
-    """week -> list of fixtures, each with both sides, scores and optimal points."""
+def weekly_results(season, players):
     positions = season.get("roster_positions", [])
     out = {}
     for wk, entries in (season.get("matchups") or {}).items():
-        pairs: dict[int, list] = {}
+        pairs = {}
         for entry in entries:
-            mid = entry.get("matchup_id")
-            if mid is None:
-                continue
-            pairs.setdefault(mid, []).append(entry)
+            if entry.get("matchup_id") is not None:
+                pairs.setdefault(entry["matchup_id"], []).append(entry)
         fixtures = []
         for mid, sides in sorted(pairs.items()):
             if len(sides) != 2:
                 continue
             a, b = sides
             fixtures.append({
-                "matchup_id": mid,
-                "home": {
-                    "roster_id": a["roster_id"],
-                    "points": round(float(a.get("points") or 0), 2),
-                    "optimal": optimal_points(a, positions, players),
-                },
-                "away": {
-                    "roster_id": b["roster_id"],
-                    "points": round(float(b.get("points") or 0), 2),
-                    "optimal": optimal_points(b, positions, players),
-                },
+                "home": {"roster_id": a["roster_id"], "points": round(float(a.get("points") or 0), 2),
+                         "optimal": optimal_points(a, positions, players)},
+                "away": {"roster_id": b["roster_id"], "points": round(float(b.get("points") or 0), 2),
+                         "optimal": optimal_points(b, positions, players)},
             })
         out[int(wk)] = fixtures
     return out
 
 
-def power_rankings(teams: dict, results: dict, upto_week: int) -> list[dict]:
-    """
-    Matt's workbook method, with real points standing in for the projections
-    he used to type in: score = ((cumulative wins + own points) / 2) - opponent points,
-    averaged over the weeks played so far.
-    """
+def power_rankings(teams, results, upto):
     tally = {rid: {"score": 0.0, "weeks": 0, "wins": 0} for rid in teams}
     for wk in sorted(results):
-        if wk > upto_week:
+        if wk > upto:
             break
         for fx in results[wk]:
             if fx["home"]["points"] == 0 and fx["away"]["points"] == 0:
@@ -164,48 +132,37 @@ def power_rankings(teams: dict, results: dict, upto_week: int) -> list[dict]:
                 rid = fx[side]["roster_id"]
                 if rid not in tally:
                     continue
-                mine = fx[side]["points"]
-                theirs = fx[other]["points"]
+                mine, theirs = fx[side]["points"], fx[other]["points"]
                 if mine > theirs:
                     tally[rid]["wins"] += 1
                 tally[rid]["score"] += ((tally[rid]["wins"] + mine) / 2) - theirs
                 tally[rid]["weeks"] += 1
-
-    rows = []
-    for rid, t in tally.items():
-        weeks = max(t["weeks"], 1)
-        rows.append({**teams[rid], "power": round(t["score"] / weeks, 2), "played": t["weeks"]})
+    rows = [dict(teams[rid], power=round(t["score"] / max(t["weeks"], 1), 2), played=t["weeks"])
+            for rid, t in tally.items()]
     rows.sort(key=lambda r: r["power"], reverse=True)
     for i, row in enumerate(rows, 1):
         row["rank"] = i
     return rows
 
 
-# --------------------------------------------------------------------------- #
-# page furniture
-# --------------------------------------------------------------------------- #
-def page(cfg: dict, title: str, active: str, body: str) -> str:
-    league = cfg["league"]
-    season = cfg["season"]
+NAV = [("index.html", "Scoreboard"), ("standings.html", "Standings"),
+       ("teams.html", "Teams"), ("history.html", "History")]
+
+
+def page(cfg, title, active, body):
+    league, season = cfg["league"], cfg["season"]
     stamp = datetime.now(timezone.utc).strftime("%d %b %Y, %H:%M UTC")
-    nav_items = [
-        ("index.html", "Scoreboard"),
-        ("standings.html", "Standings"),
-        ("teams.html", "Teams"),
-        ("history.html", "History"),
-    ]
-    nav_bits = []
-    for href, label in nav_items:
-        current_attr = ' aria-current="page"' if label == active else ""
-        nav_bits.append(f'<a href="{href}"{current_attr}>{label}</a>')
-    nav = "".join(nav_bits)
+    bits = []
+    for href, label in NAV:
+        attr = ' aria-current="page"' if label == active else ""
+        bits.append('<a href="' + href + '"' + attr + '>' + label + "</a>")
     return f"""<!doctype html>
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{e(title)} &middot; {e(league['short_name'])}</title>
-<meta name="description" content="{e(league['name'])} — {e(cfg['site']['tagline'])}">
+<meta name="description" content="{e(league['name'])} &mdash; {e(cfg['site']['tagline'])}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -215,13 +172,13 @@ def page(cfg: dict, title: str, active: str, body: str) -> str:
 <header class="masthead">
   <div class="wrap">
     <div class="brand">
-      <span class="mark">{e(league['short_name'])}</span>
+      <a class="mark" href="index.html">{e(league['short_name'])}</a>
       <span class="full">{e(league['name'])} &middot; est. {e(league['established'])}</span>
     </div>
     <span class="statuspill"><span class="dot" aria-hidden="true"></span>{e(season['year'])} season</span>
   </div>
 </header>
-<nav class="sitenav" aria-label="Sections"><div class="wrap">{nav}</div></nav>
+<nav class="sitenav" aria-label="Sections"><div class="wrap">{''.join(bits)}</div></nav>
 <main class="wrap">
 {body}
 </main>
@@ -236,197 +193,331 @@ def page(cfg: dict, title: str, active: str, body: str) -> str:
 """
 
 
-def crest(team: dict, cfg: dict) -> str:
+def crest(team, cfg):
     conf = cfg["conferences"].get(team["division"], {})
-    short = conf.get("short", "")
     cls = "lc" if team["division"] == "1" else "mc"
     if team.get("image"):
-        return f'<img class="crest img" src="assets/teams/{e(team["image"])}" alt="" loading="lazy">'
-    return f'<div class="crest {cls}">{e(short)}</div>'
+        return '<img class="crest img" src="assets/teams/' + e(team["image"]) + '" alt="" loading="lazy">'
+    return '<div class="crest ' + cls + '">' + e(conf.get("short", "")) + "</div>"
 
 
-# --------------------------------------------------------------------------- #
-# pages
-# --------------------------------------------------------------------------- #
-def build_scoreboard(cfg, teams, results, week) -> str:
-    fixtures = results.get(week, [])
+def sechead(title, note=""):
+    extra = '<span class="note">' + e(note) + "</span>" if note else ""
+    return '<div class="sechead"><h2>' + e(title) + "</h2>" + extra + "</div>"
+
+
+def scoreboard(cfg, teams, results, week, career):
     rows = []
-    for fx in fixtures:
+    for fx in results.get(week, []):
         home, away = teams.get(fx["home"]["roster_id"]), teams.get(fx["away"]["roster_id"])
         if not home or not away:
             continue
         hp, ap = fx["home"]["points"], fx["away"]["points"]
-        hcls = "lead" if hp >= ap else "trail"
-        acls = "lead" if ap >= hp else "trail"
+        h2h = ""
+        hs = career.get(home["user_id"])
+        if hs:
+            against = hs["h2h"].get(away["user_id"])
+            if against:
+                w = against["bce"]["w"] + against["conference"]["w"]
+                l = against["bce"]["l"] + against["conference"]["l"]
+                if w or l:
+                    h2h = '<div class="h2hline">All-time ' + str(w) + "&ndash;" + str(l) + "</div>"
         rows.append(f"""
       <article class="fixture">
         <div class="side home">
           {crest(home, cfg)}
-          <div class="who"><div class="team">{e(home['team'])}</div><div class="mgr">{e(home['manager'])}</div></div>
-          <div class="score {hcls}">{hp:.2f}</div>
+          <div class="who">
+            <div class="team"><a href="team-{e(home['slug'])}.html">{e(home['team'])}</a></div>
+            <div class="mgr">{e(home['manager'])} &middot; {home['wins']}&ndash;{home['losses']}</div>
+          </div>
+          <div class="score {'lead' if hp >= ap else 'trail'}">{hp:.2f}</div>
         </div>
-        <div class="vs">vs</div>
+        <div class="vs">vs{h2h}</div>
         <div class="side away">
           {crest(away, cfg)}
-          <div class="who"><div class="team">{e(away['team'])}</div><div class="mgr">{e(away['manager'])}</div></div>
-          <div class="score {acls}">{ap:.2f}</div>
+          <div class="who">
+            <div class="team"><a href="team-{e(away['slug'])}.html">{e(away['team'])}</a></div>
+            <div class="mgr">{e(away['manager'])} &middot; {away['wins']}&ndash;{away['losses']}</div>
+          </div>
+          <div class="score {'lead' if ap >= hp else 'trail'}">{ap:.2f}</div>
         </div>
       </article>""")
-
-    if not rows:
-        rows = ['<p class="empty">No fixtures published for this week yet.</p>']
-
-    return f"""
-  <section>
-    <div class="sechead">
-      <h2>Week {week}</h2>
-      <span class="note">Scores come straight from Sleeper.</span>
-    </div>
-    <div class="fixtures">{''.join(rows)}</div>
-  </section>"""
+    inner = "".join(rows) or '<p class="empty">No fixtures published for this week yet.</p>'
+    return ("<section>" + sechead("Week " + str(week), "Scores and records straight from Sleeper.")
+            + '<div class="fixtures">' + inner + "</div></section>")
 
 
-def standings_table(cfg, teams, division: str) -> str:
+def standings_table(cfg, teams, division):
     conf = cfg["conferences"].get(division, {})
     cls = "lc" if division == "1" else "mc"
-    members = [t for t in teams.values() if t["division"] == division]
-    members.sort(key=lambda t: (t["wins"], t["fpts"]), reverse=True)
-    body = "".join(
-        f"""<tr>
-          <td><div class="tm"><span class="nm">{e(t['team'])}</span><span class="hd">{e(t['manager'])}</span></div></td>
-          <td class="num">{t['wins']}&ndash;{t['losses']}</td>
-          <td class="num">{t['fpts']:,.2f}</td>
-          <td class="num">{t['fpts_against']:,.2f}</td>
-        </tr>"""
-        for t in members
-    )
+    members = sorted((t for t in teams.values() if t["division"] == division),
+                     key=lambda t: (t["wins"], t["fpts"]), reverse=True)
+    body = "".join(f"""<tr>
+        <td><div class="tm"><span class="nm"><a href="team-{e(t['slug'])}.html">{e(t['team'])}</a></span><span class="hd">{e(t['manager'])}</span></div></td>
+        <td class="num">{t['wins']}&ndash;{t['losses']}</td>
+        <td class="num">{t['fpts']:,.2f}</td>
+        <td class="num">{t['fpts_against']:,.2f}</td></tr>""" for t in members)
     return f"""
       <div class="conf {cls}">
-        <div class="conf-head"><span class="swatch" aria-hidden="true"></span><h3>{e(conf.get('name', 'Conference'))}</h3></div>
-        <div class="tablewrap">
-          <table>
-            <thead><tr><th>Team</th><th>W&ndash;L</th><th>PF</th><th>PA</th></tr></thead>
-            <tbody>{body}</tbody>
-          </table>
-        </div>
+        <div class="conf-head"><span class="swatch" aria-hidden="true"></span><h3>{e(conf.get('name','Conference'))}</h3></div>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Team</th><th>W&ndash;L</th><th>PF</th><th>PA</th></tr></thead>
+          <tbody>{body}</tbody>
+        </table></div>
       </div>"""
 
 
-def build_standings_section(cfg, teams, heading="Standings") -> str:
-    return f"""
-  <section>
-    <div class="sechead"><h2>{e(heading)}</h2><span class="note">Sorted by record, then points for.</span></div>
-    <div class="conf-grid">{standings_table(cfg, teams, '1')}{standings_table(cfg, teams, '2')}</div>
-  </section>"""
+def standings_section(cfg, teams, heading):
+    return ("<section>" + sechead(heading, "Sorted by record, then points for.")
+            + '<div class="conf-grid">' + standings_table(cfg, teams, "1")
+            + standings_table(cfg, teams, "2") + "</div></section>")
 
 
-def build_power_section(cfg, rankings) -> str:
+def power_section(cfg, rankings):
     if not rankings or all(r["played"] == 0 for r in rankings):
         return ""
-    top = max(abs(r["power"]) for r in rankings) or 1
+    top = max((abs(r["power"]) for r in rankings), default=1) or 1
     rows = []
     for r in rankings:
-        width = max(2, min(100, (r["power"] / top) * 100 if r["power"] > 0 else 2))
-        cls = " top" if r["rank"] == 1 else ""
+        width = max(2, min(100, (r["power"] / top) * 100)) if r["power"] > 0 else 2
         rows.append(f"""
-      <div class="prrow{cls}">
+      <div class="prrow{' top' if r['rank'] == 1 else ''}">
         <div class="prrank num">{r['rank']}</div>
-        <div class="prname">{e(r['team'])} <span class="hd">{e(r['manager'])}</span></div>
+        <div class="prname"><a href="team-{e(r['slug'])}.html">{e(r['team'])}</a> <span class="hd">{e(r['manager'])}</span></div>
         <div class="bar"><span style="width:{width:.0f}%"></span></div>
         <div class="prpts">{r['power']:+.1f}</div>
       </div>""")
-    return f"""
-  <section>
-    <div class="sechead"><h2>Power Rankings</h2><span class="note">Your workbook formula, computed on real results.</span></div>
-    <div class="pr">
-      <div class="prrow prhead"><div class="prrank">#</div><div class="prname">Team</div><div class="bar" style="border:0;background:none"></div><div class="prpts">Score</div></div>
-      {''.join(rows)}
-    </div>
-  </section>"""
+    return ("<section>" + sechead("Power Rankings", "Your workbook formula, computed on real results.")
+            + '<div class="pr"><div class="prrow prhead"><div class="prrank">#</div><div class="prname">Team</div>'
+            + '<div class="bar" style="border:0;background:none"></div><div class="prpts">Score</div></div>'
+            + "".join(rows) + "</div></section>")
 
 
-def build_honours(cfg) -> str:
+def honours_section(cfg):
     champs = cfg.get("champions", {})
-    year = cfg["season"]["year"]
+    consolation = (cfg.get("side_competitions") or {}).get("consolation_by_season", {})
+    year = str(cfg["season"]["year"])
+    note = "Every champion since " + str(cfg["league"]["established"]) + "."
     cards = []
-    for season in sorted(set(list(champs) + [str(year)])):
+    for season in sorted(set(list(champs) + [year])):
         winner = champs.get(season)
-        current = season == str(year) and not winner
+        trophy = consolation.get(season) or ""
+        current = season == year and not winner
+        cap = "In progress" if current else "Champion"
+        extra = '<span class="trophy">' + e(trophy) + "</span>" if trophy else ""
         cards.append(f"""
       <div class="yr{' current' if current else ''}">
         <span class="season">{e(season)}</span>
-        <span class="winner">{e(winner or '—')}</span>
-        <span class="cap">{'In progress' if current else 'Champion'}</span>
+        <span class="winner">{e(winner or '&mdash;')}</span>
+        <span class="cap">{cap}</span>{extra}
       </div>""")
+    return ("<section>" + sechead("Honours", note) + '<div class="honours">'
+            + "".join(cards) + "</div></section>")
+
+
+def era_note(cfg):
+    eras = cfg.get("eras", {})
+    bce, con = eras.get("bce", {}), eras.get("conference", {})
     return f"""
+  <div class="eras">
+    <div class="era bce">
+      <span class="eralabel">{e(bce.get('label','BCE'))}</span>
+      <span class="erayears">{e(bce.get('seasons',''))}</span>
+      <p>{e(bce.get('long',''))}. Seasons one and two: no conferences, everyone played everyone.</p>
+    </div>
+    <div class="era con">
+      <span class="eralabel">{e(con.get('label','Conference Era'))}</span>
+      <span class="erayears">{e(con.get('seasons',''))}</span>
+      <p>{e(con.get('long',''))}. From season three the league split in two, so head-to-head records split with it.</p>
+    </div>
+  </div>"""
+
+
+def h2h_table(title, entries, note=""):
+    if not entries:
+        return ""
+    body = "".join('<tr><td>' + e(name) + '</td><td class="num">' + str(r["w"])
+                   + '</td><td class="num">' + str(r["l"]) + "</td></tr>" for name, r in entries)
+    sub = '<p class="h2hnote">' + e(note) + "</p>" if note else ""
+    return f"""
+      <div class="h2hblock">
+        <h4>{e(title)}</h4>{sub}
+        <div class="tablewrap"><table>
+          <thead><tr><th>Manager</th><th>W</th><th>L</th></tr></thead>
+          <tbody>{body}</tbody>
+        </table></div>
+      </div>"""
+
+
+def team_page(cfg, team, career, names):
+    s = career.get(team["user_id"])
+    conf = cfg["conferences"].get(team["division"], {})
+    portrait = ('<img class="hero" src="assets/teams/' + e(team["portrait"])
+                + '" alt="' + e(team["manager"]) + '" loading="lazy">') if team.get("portrait") else ""
+
+    if not s:
+        return page(cfg, team["team"], "Teams",
+                    "<section>" + sechead(team["team"]) + '<p class="empty">No results recorded yet.</p></section>')
+
+    best, worst = s.get("best_week"), s.get("worst_week")
+    facts = [
+        ("Career record", rec(s["career"])),
+        ("vs " + str(cfg["conferences"]["1"].get("short", "LC")), rec(s["vs_lfc"])),
+        ("vs " + str(cfg["conferences"]["2"].get("short", "MC")), rec(s["vs_mfc"])),
+        ("BCE record", rec(s["bce"])),
+        ("Win %", str(s["win_pct"])),
+        ("PPG", format(s["ppg"], ".1f")),
+        ("Points for", format(s["pf"], ",.2f")),
+        ("Points against", format(s["pa"], ",.2f")),
+        ("Record week", format(best[0], ".2f") if best else "&mdash;"),
+        ("Lowest week", format(worst[0], ".2f") if worst else "&mdash;"),
+        ("Playoffs", str(s["playoff_appearances"]) + " apps, " + rec(s["playoffs"])),
+        ("Trades", str(s["trades"])),
+    ]
+    fact_html = "".join("<div><dt>" + e(label) + '</dt><dd class="num">' + value + "</dd></div>"
+                        for label, value in facts)
+
+    sub = []
+    if best:
+        sub.append("Record week set in " + str(best[1]) + " week " + str(best[2]) + ".")
+    if worst:
+        sub.append("Lowest in " + str(worst[1]) + " week " + str(worst[2]) + ".")
+
+    own_div = team["division"]
+    same, other, bce, po, con = [], [], [], [], []
+    for opp_id, r in s["h2h"].items():
+        name = names.get(opp_id) or "Unknown"
+        if r["conference"]["w"] or r["conference"]["l"]:
+            (same if r["opponent_division"] == own_div else other).append((name, r["conference"]))
+        if r["bce"]["w"] or r["bce"]["l"]:
+            bce.append((name, r["bce"]))
+        if r["playoffs"]["w"] or r["playoffs"]["l"]:
+            po.append((name, r["playoffs"]))
+        if r["consolation"]["w"] or r["consolation"]["l"]:
+            con.append((name, r["consolation"]))
+    for group in (same, other, bce, po, con):
+        group.sort(key=lambda row: row[0])
+
+    other_conf = cfg["conferences"]["2" if own_div == "1" else "1"]
+    labels = (cfg.get("side_competitions") or {}).get("labels", {})
+    body = f"""
+  <section class="teamhead">
+    {portrait}
+    <div class="teamtitle">
+      <span class="eyebrow">{e(conf.get('name',''))}</span>
+      <h1>{e(team['team'])}</h1>
+      <p class="lede">{e(team['manager'])} &middot; {rec(s['career'])} all-time &middot; {len(s['seasons_played'])} seasons</p>
+    </div>
+  </section>
+
   <section>
-    <div class="sechead"><h2>Honours</h2><span class="note">Every champion since {e(cfg['league']['established'])}.</span></div>
-    <div class="honours">{''.join(cards)}</div>
-  </section>"""
+    {sechead("Record", " ".join(sub))}
+    <dl class="factgrid">{fact_html}</dl>
+  </section>
+
+  <section>
+    {sechead("Head to head", "The league changed shape in 2022, so the record does too.")}
+    {era_note(cfg)}
+    <div class="h2hgrid">
+      {h2h_table("vs " + str(conf.get("name", "own conference")), same, "Conference era, regular season.")}
+      {h2h_table("vs " + str(other_conf.get("name", "the other conference")), other, "Conference era, regular season.")}
+      {h2h_table("BCE", bce, "Seasons one and two, before conferences.")}
+      {h2h_table(labels.get("playoffs", "Playoffs"), po, "Winners bracket.")}
+      {h2h_table(labels.get("consolation", "Toilet Bowl"), con, "Losers bracket.")}
+    </div>
+  </section>
+"""
+    return page(cfg, team["team"], "Teams", body)
 
 
-def build_teams_page(cfg, teams, rankings) -> str:
+def teams_index(cfg, teams, rankings, career):
     rank_by = {r["roster_id"]: r["rank"] for r in rankings}
     cards = []
     for t in sorted(teams.values(), key=lambda x: x["team"].lower()):
         conf = cfg["conferences"].get(t["division"], {})
-        portrait = (f'<img class="portrait" src="assets/teams/{e(t["portrait"])}" alt="{e(t["manager"])}" loading="lazy">'
-                    if t.get("portrait") else "")
+        s = career.get(t["user_id"])
+        alltime = rec(s["career"]) if s else "&mdash;"
+        portrait = ('<img class="portrait" src="assets/teams/' + e(t["portrait"])
+                    + '" alt="" loading="lazy">') if t.get("portrait") else ""
         cards.append(f"""
-      <article class="teamcard">
+      <a class="teamcard" href="team-{e(t['slug'])}.html">
         {portrait}
-        {crest(t, cfg)}
         <div class="who">
           <div class="team">{e(t['team'])}</div>
           <div class="mgr">{e(t['manager'])} &middot; {e(conf.get('name',''))}</div>
         </div>
         <dl class="teamstats">
-          <div><dt>Record</dt><dd class="num">{t['wins']}&ndash;{t['losses']}</dd></div>
-          <div><dt>Points for</dt><dd class="num">{t['fpts']:,.0f}</dd></div>
-          <div><dt>Power</dt><dd class="num">{rank_by.get(t['roster_id'], '—')}</dd></div>
+          <div><dt>This year</dt><dd class="num">{t['wins']}&ndash;{t['losses']}</dd></div>
+          <div><dt>All-time</dt><dd class="num">{alltime}</dd></div>
+          <div><dt>Power</dt><dd class="num">{rank_by.get(t['roster_id'], '&mdash;')}</dd></div>
         </dl>
-      </article>""")
-    return f"""
-  <section>
-    <div class="sechead"><h2>Teams</h2><span class="note">Ten franchises, two conferences.</span></div>
-    <div class="teamgrid">{''.join(cards)}</div>
-  </section>"""
+      </a>""")
+    return ("<section>" + sechead("Teams", "Ten franchises, two conferences.")
+            + '<div class="teamgrid">' + "".join(cards) + "</div></section>")
 
 
-def build_history_page(cfg, history) -> str:
+def history_sections(cfg, indexed, names):
+    side = cfg.get("side_competitions") or {}
+    consolation = side.get("consolation_by_season", {})
+    spoon = side.get("wooden_spoon", "Loser of All Losers")
     blocks = []
-    for season in history:
-        teams = manager_lookup(cfg, season.get("users", []), season.get("rosters", []))
-        if not teams:
+    for season in sorted(indexed, key=lambda s: s["season"], reverse=True):
+        table = S.season_table(season)
+        if not table:
             continue
+        era_key = "bce" if season["era"] == "bce" else "conference"
+        era = cfg["eras"].get(era_key, {})
+        rows = []
+        for row in table:
+            conf = cfg["conferences"].get(row["division"], {})
+            badge = ""
+            if row["place"] == 10:
+                badge = '<span class="badge spoon">' + e(spoon) + "</span>"
+            elif row["place"] == 7 and consolation.get(str(season["season"])):
+                badge = '<span class="badge trophy">' + e(consolation[str(season["season"])]) + "</span>"
+            conf_cell = e(conf.get("short", "")) if season["era"] != "bce" else "&mdash;"
+            rows.append(f"""<tr>
+              <td class="num">{row['place']}</td>
+              <td><div class="tm"><span class="nm">{e(names.get(row['owner_id']) or 'Unknown')}</span>{badge}</div></td>
+              <td>{conf_cell}</td>
+              <td class="num">{row['wins']}&ndash;{row['losses']}</td>
+              <td class="num">{row['fpts']:,.2f}</td>
+              <td class="num">{row['max_points']:,.2f}</td>
+            </tr>""")
         blocks.append(f"""
   <section>
-    <div class="sechead"><h2>{e(season.get('season'))} Season</h2><span class="note">Final regular-season standings.</span></div>
-    <div class="conf-grid">{standings_table(cfg, teams, '1')}{standings_table(cfg, teams, '2')}</div>
+    {sechead(str(season['season']) + " Season", era.get('label',''))}
+    <div class="tablewrap"><table>
+      <thead><tr><th>#</th><th>Manager</th><th>Conf</th><th>W&ndash;L</th><th>PF</th><th>Max PF</th></tr></thead>
+      <tbody>{''.join(rows)}</tbody>
+    </table></div>
   </section>""")
     return "".join(blocks)
 
 
-# --------------------------------------------------------------------------- #
-# main
-# --------------------------------------------------------------------------- #
-def main() -> int:
+def main():
     cfg = json.loads((ROOT / "league.config.json").read_text(encoding="utf-8"))
     current = load("current.json")
     if not current:
-        raise SystemExit("data/current.json missing — run scripts/fetch_data.py first")
+        raise SystemExit("data/current.json missing - run scripts/fetch_data.py first")
     state = load("state.json", {}) or {}
     players = load("players.json", {}) or {}
     history = load("history.json", []) or []
 
+    conference_from = int(cfg.get("eras", {}).get("conference_from", 2022))
+    all_seasons = [current] + history
+    indexed = [S.index_season(s, conference_from) for s in all_seasons]
+    trades = S.count_trades([s.get("transactions") for s in all_seasons], indexed)
+    career = S.all_time(indexed, trades)
+
     teams = manager_lookup(cfg, current.get("users", []), current.get("rosters", []))
+    names = {uid: conf.get("name") for uid, conf in (cfg.get("managers") or {}).items()}
     results = weekly_results(current, players)
 
     week = int(state.get("week") or 1)
     if str(state.get("season")) != str(current.get("season")):
         week = cfg["season"]["regular_season_weeks"]
     week = max(1, min(week, cfg["season"]["championship_week"]))
-
     rankings = power_rankings(teams, results, week)
 
     DOCS.mkdir(parents=True, exist_ok=True)
@@ -434,21 +525,29 @@ def main() -> int:
         shutil.copytree(ASSETS, DOCS / "assets", dirs_exist_ok=True)
     (DOCS / ".nojekyll").write_text("", encoding="utf-8")
 
-    home = build_scoreboard(cfg, teams, results, week) + build_power_section(cfg, rankings) + build_honours(cfg)
+    home = (scoreboard(cfg, teams, results, week, career)
+            + power_section(cfg, rankings) + honours_section(cfg))
     (DOCS / "index.html").write_text(page(cfg, "Scoreboard", "Scoreboard", home), encoding="utf-8")
 
     (DOCS / "standings.html").write_text(
-        page(cfg, "Standings", "Standings", build_standings_section(cfg, teams, f"{cfg['season']['year']} Standings")),
-        encoding="utf-8")
+        page(cfg, "Standings", "Standings",
+             standings_section(cfg, teams, str(cfg["season"]["year"]) + " Standings")), encoding="utf-8")
 
     (DOCS / "teams.html").write_text(
-        page(cfg, "Teams", "Teams", build_teams_page(cfg, teams, rankings)), encoding="utf-8")
+        page(cfg, "Teams", "Teams", teams_index(cfg, teams, rankings, career)), encoding="utf-8")
 
-    (DOCS / "history.html").write_text(
-        page(cfg, "History", "History", build_honours(cfg) + build_history_page(cfg, history)), encoding="utf-8")
+    for team in teams.values():
+        (DOCS / ("team-" + team["slug"] + ".html")).write_text(
+            team_page(cfg, team, career, names), encoding="utf-8")
 
-    print(f"Built docs/ for {current.get('season')} week {week}: "
-          f"{len(teams)} teams, {len(results)} weeks of results, {len(history)} past seasons.")
+    history_body = (honours_section(cfg)
+                    + "<section>" + sechead("The two eras") + era_note(cfg) + "</section>"
+                    + history_sections(cfg, indexed, names))
+    (DOCS / "history.html").write_text(page(cfg, "History", "History", history_body), encoding="utf-8")
+
+    print("Built docs/ for " + str(current.get("season")) + " week " + str(week) + ": "
+          + str(len(teams)) + " teams, " + str(len(indexed)) + " seasons, "
+          + str(len(career)) + " managers with career records.")
     return 0
 
 

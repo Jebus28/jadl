@@ -121,6 +121,15 @@ def fetch_season(league_id: str, weeks: int, want_matchups: bool = True) -> dict
         if got:
             season["brackets"][bracket] = got
 
+    season["transactions"] = {}
+    for wk in range(1, weeks + 1):
+        got = get(f"{API}/league/{league_id}/transactions/{wk}")
+        if got:
+            # only trades matter for the record books; drop the waiver noise
+            trades = [t for t in got if t.get("type") == "trade"]
+            if trades:
+                season["transactions"][str(wk)] = trades
+
     return season
 
 
@@ -155,15 +164,6 @@ def main() -> int:
         history.append(past)
         prev_id = past.get("previous_league_id")
     write("history.json", history)
-
-    print("Transactions (current season, all weeks so far)")
-    txns = {}
-    upto = int(state.get("week") or 1) if state.get("season") == current.get("season") else total_weeks
-    for wk in range(1, max(upto, 1) + 1):
-        got = get(f"{API}/league/{current_id}/transactions/{wk}")
-        if got:
-            txns[str(wk)] = got
-    write("transactions.json", txns)
 
     print("Done.")
     return 0
