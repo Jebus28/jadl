@@ -81,6 +81,52 @@ explicitly — say "two eras, three tables".
   2023 Caleb Cup, 2024 Shedeur Bowl, 2025 Mendoza Marathon. 2026 is TBC —
   candidates were Arch Manning and Jeremiah Smith. Blank means no badge is drawn.
 
+### Divisional weeks and the playoff rounds
+
+Weeks **10 to 14** are divisional weeks. Four of the five games each week are
+in-conference. The fifth is an inter-conference game between the two teams that
+finished in **the same place in their own conference last season** — the two
+fifth-placed teams meet in week 10, working up to the two conference winners in
+week 14. Matt schedules all of this by hand in Sleeper months ahead, so the
+fixtures are already in the data: the site **recognises** that pairing, it does
+not compute it. Verified against 2023, 2024, 2025 and 2026 — it holds in every
+one. Week 9 also carries a cross-conference game, but it is not rank-matched and
+must not be billed.
+
+Each of those five games has a name, in `league.config.json` →
+`divisional_weeks.names`, keyed by last season's conference finishing position
+rather than by week, so a name follows the teams if Matt ever reorders the weeks.
+He named two of them; the rest are placeholders for him to overwrite.
+
+In those weeks the scoreboard is **grouped**: the named inter-conference game
+leads, then the LFC fixtures under a Lombardi header, then the MFC fixtures
+under a Madden header. Every other week is a flat list. The headers are the
+conference crests, `assets/conferences/{lfc,mfc}.png`, pointed at from
+`conferences.*.crest`.
+
+### The stars on the conference crests
+
+**The stars are data, not decoration.** They count the championships won by the
+managers *currently in that conference*, so they move when someone changes
+conference and grow when someone wins. As of the 2026 season: LFC 2 (Dave 2021,
+Mike 2025), MFC 4 (Jebus 2022–24, Ross 2020). That is total titles, not the
+number of distinct winners — both conferences have two distinct winners.
+
+The crests in `assets/conferences/` were cut from Matt's artwork in
+`Website\League Logos\` (`LFC 2.png` and `MFC 4.JPG` — the filenames carry the
+star count, and other files in there have the wrong number). **They are static,
+so they will go stale the moment the count changes.** The right fix is to draw
+the stars over a starless crest from the computed figure; `IMG_3384.PNG` in that
+folder is a starless M and would be a starting point. Until that is done, check
+the crests whenever a season ends.
+
+Playoffs run **in conference** until the final and the toilet bowl itself:
+week 15 is the **Divisional Round**, week 16 the **Conference Championships**,
+week 17 **The Championship**. These are in `playoff_rounds`, keyed by week.
+
+Head-to-head shown on a fixture is **conference-era regular season only**
+(2022 onward), not all-time. Matt asked for this explicitly.
+
 ### The managers
 
 Ten managers, stable since 2020. Sleeper display names bear little relation to
@@ -199,4 +245,9 @@ Roughly in the order discussed with Matt, though he has not yet picked:
   or `github.com`, so nothing could be tested end to end locally — the first real
   run happened in CI. **On a normal machine both are reachable**, so run the two
   scripts locally before pushing. That was not possible before and is the main
-  reason for moving to Claude Code.
+  reason for moving to Claude Code. As of September 2026 this works on Matt's
+  machine: Python 3.13 is installed but not on `PATH`, at
+  `%LOCALAPPDATA%\Programs\Python\Python313\python.exe`, and `git` is not on
+  `PATH` either — use the copy inside GitHub Desktop's `app-*\resources\app\git\cmd`.
+  A local `build_site.py` run reproduces the committed `docs/` exactly apart from
+  the "Last refreshed" timestamp, so a clean local build can be trusted.

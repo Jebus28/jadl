@@ -33,12 +33,14 @@
     "1": {
       "name": "Lombardi Conference",
       "short": "LFC",
-      "colour": "#9C2B33"
+      "crest": "lfc.png",
+      "colour": "#C0102A"
     },
     "2": {
       "name": "Madden Conference",
       "short": "MFC",
-      "colour": "#1C6460"
+      "crest": "mfc.png",
+      "colour": "#1F4E9C"
     }
   },
   "managers": {

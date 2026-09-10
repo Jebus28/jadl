@@ -246,6 +246,29 @@ def week_heading(cfg, week):
     return rounds.get(str(week)) or ("Week " + str(week))
 
 
+def is_divisional_week(cfg, week):
+    dw = cfg.get("divisional_weeks") or {}
+    return dw.get("from_week", 0) <= week <= dw.get("to_week", -1)
+
+
+def conf_band(cfg, division):
+    """
+    The conference header that separates the two blocks in a divisional week.
+    The crest carries the conference name, so it does the labelling; the stars on
+    it are championships won by the managers currently in that conference.
+    """
+    conf = cfg["conferences"].get(division, {})
+    cls = "lc" if division == "1" else "mc"
+    crest_file = conf.get("crest")
+    name = conf.get("name", "Conference")
+    if crest_file:
+        mark = ('<img class="conflogo" src="assets/conferences/' + e(crest_file)
+                + '" alt="' + e(name) + '" loading="lazy">')
+    else:
+        mark = "<h3>" + e(name) + "</h3>"
+    return '<div class="confband ' + cls + '">' + mark + "</div>"
+
+
 def scoreboard(cfg, teams, results, week, career, prev_finish):
     rows = []
     places = conference_places(cfg, teams)
@@ -267,7 +290,11 @@ def scoreboard(cfg, teams, results, week, career, prev_finish):
                     h2h = ('<div class="h2hline">Since ' + e(cfg["eras"]["conference_from"])
                            + " &middot; " + str(w) + "&ndash;" + str(l) + "</div>")
         marquee = ('<div class="billing">' + e(billing) + "</div>") if billing else ""
-        rows.append(f"""
+        # "featured" for the inter-conference game, otherwise the division both
+        # sides share. Used to group the week into LFC and MFC blocks.
+        group = "featured" if billing else (
+            home["division"] if home["division"] == away["division"] else "mixed")
+        rows.append((group, f"""
       <article class="fixture{' featured' if billing else ''}">
         {marquee}
         <div class="side home">
@@ -287,10 +314,22 @@ def scoreboard(cfg, teams, results, week, career, prev_finish):
           </div>
           <div class="score {'lead' if ap >= hp else 'trail'}">{ap:.2f}</div>
         </div>
-      </article>""")
-    # The named game leads the week; Sleeper's own matchup order is arbitrary.
-    rows.sort(key=lambda row: 0 if 'class="billing"' in row else 1)
-    inner = "".join(rows) or '<p class="empty">No fixtures published for this week yet.</p>'
+      </article>"""))
+
+    if not rows:
+        inner = '<p class="empty">No fixtures published for this week yet.</p>'
+    elif is_divisional_week(cfg, week):
+        # The named game leads, then the two conferences under their own headers.
+        blocks = ["".join(html for group, html in rows if group == "featured")]
+        for division in sorted(cfg["conferences"]):
+            games = [html for group, html in rows if group == division]
+            if games:
+                blocks.append(conf_band(cfg, division) + "".join(games))
+        leftovers = [html for group, html in rows if group == "mixed"]
+        inner = "".join(blocks) + "".join(leftovers)
+    else:
+        inner = "".join(html for _group, html in rows)
+
     return ("<section>" + sechead(week_heading(cfg, week), "Scores and records straight from Sleeper.")
             + '<div class="fixtures">' + inner + "</div></section>")
 

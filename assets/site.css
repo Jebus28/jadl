@@ -165,6 +165,16 @@
     font-weight:800;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
     padding:12px 8px 10px;
   }
+
+  /* In a divisional week the fixtures split into an LFC block and an MFC block,
+     each under its own crest. The stars on those crests are championships won by
+     the managers currently in that conference. */
+  .confband{display:flex;align-items:center;gap:9px;padding:18px 2px 4px}
+  .confband:first-child{padding-top:0}
+  .conflogo{height:34px;width:auto;display:block}
+  .confband h3{font-size:12px;font-weight:700;letter-spacing:.10em;text-transform:uppercase}
+  .confband.lc h3{color:var(--lombardi)}
+  .confband.mc h3{color:var(--madden)}
   @media (max-width:560px){
     .fixture.featured{grid-template-areas:"billing" "home" "vs" "away"}
   }
