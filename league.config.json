@@ -210,7 +210,7 @@
   },
   "site": {
     "tagline": "Ten teams. Two conferences. One Jessica Alba.",
-    "show_playoff_odds": false,
+    "show_playoff_odds": true,
     "footer_note": "Updated automatically from Sleeper."
   }
 }

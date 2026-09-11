@@ -13,6 +13,7 @@ conference, against the other one, and everything from BCE.
 """
 from __future__ import annotations
 
+import random
 from collections import Counter, defaultdict
 from datetime import date, datetime, time, timedelta, timezone
 
@@ -768,3 +769,209 @@ def honours(seasons: list[dict]) -> dict:
                 add(best["owner_id"], "player_week", player_id=best["player_id"], points=best["points"],
                     week=best["week"], phase=best["phase"])
     return out
+
+
+# --------------------------------------------------------------------------- #
+# playoff odds - the rest of the regular season, played out many times
+# --------------------------------------------------------------------------- #
+def _regular_scores(season: dict) -> dict:
+    """owner_id -> every regular-season score that season."""
+    out = defaultdict(list)
+    for _wk, phase, a, b in games(season):
+        if phase == "regular":
+            for rid, pts in (a, b):
+                if season["roster_owner"].get(rid):
+                    out[season["roster_owner"][rid]].append(pts)
+    return out
+
+
+# Past seasons are no guide to how good a team is this year - dynasty rosters
+# are rebuilt, and Matt's own was in 2026 - so nothing below reads a team's own
+# history. Past seasons only set how much any team's scores move about, and that
+# is one league-wide figure.
+def weekly_swing(seasons: list[dict], year: int) -> float:
+    """
+    How far a score moves from one week to the next, round the team's own
+    average for the season: the league's figure over the three seasons before
+    this one, the same for every team.
+    """
+    gaps = []
+    for season in seasons:
+        if year - 3 <= season["season"] < year:
+            for scores in _regular_scores(season).values():
+                if len(scores) > 1:
+                    mean = sum(scores) / len(scores)
+                    gaps += [s - mean for s in scores]
+    return (sum(g * g for g in gaps) / len(gaps)) ** 0.5 if gaps else 25.0
+
+
+def level_doubt(seasons: list[dict], year: int) -> float:
+    """
+    How far a whole season can turn out from what was expected of a team, in
+    points a week: the spread of the change in managers' season averages from
+    one year to the next, less that year's league-wide change (the second flex
+    lifted everyone in 2023), over all of history. A change between two seasons
+    carries two seasons' worth of surprise, so it is divided by root two. The
+    same for every team.
+    """
+    means = {s["season"]: {u: sum(v) / len(v) for u, v in _regular_scores(s).items() if v}
+             for s in seasons if s["season"] < year}
+    gaps = []
+    for y in means:
+        if y - 1 in means:
+            changes = [means[y][u] - means[y - 1][u] for u in means[y] if u in means[y - 1]]
+            if changes:
+                shift = sum(changes) / len(changes)
+                gaps += [c - shift for c in changes]
+    return (sum(g * g for g in gaps) / len(gaps) / 2) ** 0.5 if gaps else 10.0
+
+
+def scoring_level(seasons: list[dict], year: int, weight: float = 4.0) -> tuple[dict, float]:
+    """
+    Each team's expected score in a week Sleeper has not projected: this
+    season's average, leaning on the league's until a few games are in - not on
+    last season, when it may have been a different team. Returns owner_id ->
+    points, and the league's average.
+    """
+    now = next((s for s in seasons if s["season"] == year), None)
+    before = next((s for s in seasons if s["season"] == year - 1), None)
+    scores = _regular_scores(now) if now else {}
+    every = [p for v in scores.values() for p in v]
+    if not every and before:
+        every = [p for v in _regular_scores(before).values() for p in v]
+    league = sum(every) / len(every) if every else 120.0
+    return {uid: (sum(v) + weight * league) / (len(v) + weight) for uid, v in scores.items()}, league
+
+
+def playoff_odds(raw: dict, season: dict, history: list[dict], projections: dict | None,
+                 players: dict, regular_weeks: int, sims: int = 10_000) -> dict | None:
+    """
+    Every team's chance of the playoffs, of a bye and of the toilet bowl, from
+    playing the rest of the regular season out `sims` times on the real fixtures.
+
+    A team's expected score in a week to come is Sleeper's projection for its
+    best lineup from the players it can start (not IR, not taxi), nudged towards
+    its own results this season, or its scoring average this season where there
+    is no projection. Each run then gives every team a season-long drift from
+    that (level_doubt) and every game its own luck (weekly_swing), both the
+    league's figures rather than the team's: a team's past is no guide to a
+    rebuilt roster. Games already played count as they finished; a week in
+    progress is played out in full. Each run is ranked by the rulebook
+    (para 70: wins, then total points) and the six places go as para 71 has it:
+    the conference winners get the bye, second place is in, and third place is
+    in unless Rule 3 hands the spot to the other conference's fourth.
+
+    `raw` is the current season as fetched and `season` is it indexed. The seed
+    is fixed, so a build gives the same odds from the same data. None once the
+    regular season is over, or where there are not two conferences.
+    """
+    owner, div = season["roster_owner"], season["roster_div"]
+    divisions = sorted(set(div.values()))
+    if len(divisions) != 2:
+        return None
+    teams = [rid for rid in owner if owner[rid]]
+    wins, losses, ties, pf = ({rid: 0 for rid in teams} for _ in range(4))
+    played = set()
+    for wk, phase, (ra, pa), (rb, pb) in games(season):
+        if phase != "regular" or ra not in wins or rb not in wins:
+            continue
+        played.add(wk)
+        pf[ra] += pa
+        pf[rb] += pb
+        if pa == pb:
+            ties[ra] += 1
+            ties[rb] += 1
+        else:
+            won, lost = (ra, rb) if pa > pb else (rb, ra)
+            wins[won] += 1
+            losses[lost] += 1
+
+    remaining = []
+    for wk, entries in (raw.get("matchups") or {}).items():
+        if int(wk) > regular_weeks or int(wk) in played:
+            continue
+        paired = defaultdict(list)
+        for entry in entries:
+            if entry.get("matchup_id") is not None and entry["roster_id"] in wins:
+                paired[entry["matchup_id"]].append(entry["roster_id"])
+        remaining += [(int(wk), *pair) for pair in paired.values() if len(pair) == 2]
+    if not remaining:
+        return None
+
+    year = season["season"]
+    everything = [season] + list(history)
+    swing = weekly_swing(everything, year)
+    doubt = level_doubt(everything, year)
+    level, league = scoring_level(everything, year)
+    projected = (projections or {}).get("weeks") or {} if str((projections or {}).get("season")) == str(year) else {}
+    startable = {}
+    for r in raw.get("rosters") or []:
+        away = set(r.get("reserve") or []) | set(r.get("taxi") or [])
+        startable[r["roster_id"]] = [p for p in r.get("players") or [] if p not in away]
+
+    weeks = sorted({wk for wk, _a, _b in remaining})
+    best_by, weeks_projected = defaultdict(dict), 0
+    for wk in weeks:
+        week = projected.get(str(wk)) or {}
+        weeks_projected += bool(week)
+        for rid in teams:
+            best = optimal_points({p: week[p] for p in startable.get(rid, []) if p in week},
+                                  season["roster_positions"], players, season["played_as"]) if week else 0
+            if best:
+                best_by[rid][wk] = best
+    games_played = {rid: wins[rid] + losses[rid] + ties[rid] for rid in teams}
+    # The projection, nudged towards what the team has actually scored this
+    # season as the games come in: nothing in week one, about half by midway. A
+    # manager who keeps beating or missing Sleeper's numbers shows up here.
+    expected = {}
+    for rid in teams:
+        mine, n = best_by[rid], games_played[rid]
+        lean = n / (n + 8) * (pf[rid] / n - sum(mine.values()) / len(mine)) if n and mine else 0.0
+        for wk in weeks:
+            expected[(rid, wk)] = mine[wk] + lean if wk in mine else level.get(owner[rid], league)
+    fixtures = [(a, b, expected[(a, wk)], expected[(b, wk)]) for wk, a, b in remaining]
+    total = {rid: games_played[rid] + sum(rid in (a, b) for _wk, a, b in remaining) for rid in teams}
+    members = {d: [rid for rid in teams if div[rid] == d] for d in divisions}
+
+    rng = random.Random(int(year) * 100 + len(played))
+    tally = {rid: {"playoffs": 0, "bye": 0, "wins": 0} for rid in teams}
+    for _ in range(sims):
+        w, p = dict(wins), dict(pf)
+        # How this run's season goes for each team against what was expected of it.
+        form = {rid: rng.gauss(0.0, doubt) for rid in teams}
+        for a, b, mean_a, mean_b in fixtures:
+            score_a, score_b = rng.gauss(mean_a + form[a], swing), rng.gauss(mean_b + form[b], swing)
+            p[a] += score_a
+            p[b] += score_b
+            w[a if score_a > score_b else b] += 1
+        table = {d: sorted(members[d], key=lambda rid: (w[rid], p[rid]), reverse=True) for d in divisions}
+        through = set()
+        for d in divisions:
+            tally[table[d][0]]["bye"] += 1
+            through.update(table[d][:3])
+        # Rule 3: a third-placed team below .500 gives way to the other
+        # conference's fourth-placed team above it.
+        for here, there in (divisions, divisions[::-1]):
+            if len(table[here]) > 2 and len(table[there]) > 3:
+                third, fourth = table[here][2], table[there][3]
+                if ((w[third] + ties[third] / 2) / total[third] < 0.5
+                        and (w[fourth] + ties[fourth] / 2) / total[fourth] > 0.5):
+                    through.discard(third)
+                    through.add(fourth)
+        for rid in through:
+            tally[rid]["playoffs"] += 1
+        for rid in teams:
+            tally[rid]["wins"] += w[rid]
+
+    return {
+        "sims": sims,
+        "weeks_left": len({wk for wk, _a, _b in remaining}),
+        "weeks_projected": weeks_projected,
+        "swing": swing,
+        "doubt": doubt,
+        "teams": {owner[rid]: {
+            "playoffs": t["playoffs"] / sims, "bye": t["bye"] / sims,
+            "toilet": 1 - t["playoffs"] / sims, "wins": t["wins"] / sims,
+            "w": wins[rid], "l": losses[rid], "t": ties[rid], "games": total[rid],
+        } for rid, t in tally.items()},
+    }

@@ -82,6 +82,56 @@ def fetch_players(force: bool = False) -> dict:
 
 
 # --------------------------------------------------------------------------- #
+# projections: Sleeper's projected stats, for the playoff odds
+# --------------------------------------------------------------------------- #
+PROJECTIONS = "https://api.sleeper.app/projections/nfl"
+PROJECTED_POSITIONS = ("QB", "RB", "WR", "TE", "K", "DEF")
+PROJECTIONS_EVERY = 6 * 60 * 60
+
+
+def fetch_projections(current: dict, state: dict, last_week: int) -> None:
+    """
+    Sleeper's projected stats for each regular-season week still to play, scored
+    with this league's own settings (the TE premium included) and kept as
+    player -> points. The feed is not in Sleeper's documented API, so if it fails
+    the old file stays and the odds fall back on each team's scoring. Refreshed
+    at most every six hours. The time is kept inside the file, because a fresh
+    checkout gives every file a new mtime.
+    """
+    path = DATA / "projections.json"
+    season = str(current.get("season"))
+    old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    if old.get("season") == season and time.time() - (old.get("fetched") or 0) < PROJECTIONS_EVERY:
+        print("  projections.json is fresh, skipping")
+        return
+    kind = state.get("season_type")
+    if str(state.get("season")) != season or kind not in ("pre", "regular"):
+        print("  no regular season to project")
+        return
+    first = 1 if kind == "pre" else max(1, int(state.get("week") or 1))
+    scoring = current.get("scoring_settings") or {}
+    query = "&".join("position[]=" + p for p in PROJECTED_POSITIONS)
+    weeks = {}
+    try:
+        for wk in range(first, last_week + 1):
+            points = {}
+            for row in get(f"{PROJECTIONS}/{season}/{wk}?season_type=regular&{query}") or []:
+                stats = row.get("stats") or {}
+                total = sum(v * scoring.get(k, 0) for k, v in stats.items() if isinstance(v, (int, float)))
+                if row.get("player_id") and total:
+                    points[row["player_id"]] = round(total, 2)
+            if points:
+                weeks[str(wk)] = points
+    except Exception as exc:
+        print(f"  projections unavailable ({exc}), keeping what we had")
+        return
+    if not weeks:
+        print("  projections came back empty, keeping what we had")
+        return
+    write("projections.json", {"season": season, "fetched": int(time.time()), "weeks": weeks})
+
+
+# --------------------------------------------------------------------------- #
 # one season
 # --------------------------------------------------------------------------- #
 def fetch_season(league_id: str, weeks: int, want_matchups: bool = True) -> dict:
@@ -198,6 +248,9 @@ def main() -> int:
     print("Current season")
     current = fetch_season(current_id, total_weeks)
     write("current.json", current)
+
+    print("Projections")
+    fetch_projections(current, state, cfg["season"]["regular_season_weeks"])
 
     print("Player index")
     fetch_players()

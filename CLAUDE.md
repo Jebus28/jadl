@@ -39,7 +39,7 @@ Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.ap
 | Path | What it is |
 |---|---|
 | `league.config.json` | **The only file Matt should ever need to edit.** Season, league ID, conferences, managers, consolation trophy names, and the draft-day trades Sleeper never recorded (`manual_trades`). Champions are *not* in it — they come from the brackets. |
-| `scripts/fetch_data.py` | Pulls league, users, rosters, matchups, brackets, trades, completed waiver claims, cross-team commissioner moves and the rookie drafts for every season, walking `previous_league_id` back to 2020. |
+| `scripts/fetch_data.py` | Pulls league, users, rosters, matchups, brackets, trades, completed waiver claims, cross-team commissioner moves and the rookie drafts for every season, walking `previous_league_id` back to 2020. Also Sleeper's player projections for the regular-season weeks still to play (`data/projections.json`), for the playoff odds. |
 | `scripts/stats.py` | All-time maths: career records, era splits, head-to-head, trades, season tables, team honours. |
 | `scripts/build_site.py` | Renders the HTML. |
 | `scripts/prepare_media.py` | Turns a champion GIF or loser photo into `assets/records/<season>-<champion\|loser>.*` — GIFs become silent looping WebPs under 2.5MB, photos are straightened and shrunk. |
@@ -359,6 +359,50 @@ Five-round rookie drafts. Seven seasons on Sleeper, 2020 through 2026, linked by
 the winners bracket; the hand-kept list in `league.config.json` was removed
 once the computed one matched it.
 
+### Playoff odds (Scoreboard)
+
+Built in September 2026 to replace the Dynasty Daddy screenshots Matt used to
+paste in. Dynasty Daddy has no public API, so don't go looking for one. The
+odds come from `stats.playoff_odds`. They show under each team on the fixtures
+and as a table per conference, while regular-season games remain.
+`site.show_playoff_odds` turns them off.
+
+- **The simulation.** It plays the rest of the regular season (to week 14) out
+  10,000 times on the real fixtures. Finished games count as they finished. A
+  week in progress is played out in full, because live scores are not used.
+  The seed is fixed, so a build is reproducible.
+- **Expected score.** Sleeper's projected stats for each week, scored with the
+  league's own settings (TE premium and all), taking the best lineup from the
+  players a team can start (not IR, not taxi).
+  - The projections come from `fetch_data.fetch_projections`, which reads
+    `api.sleeper.app/projections/nfl/<season>/<week>`. That feed is not in
+    Sleeper's documented API. It is saved in `data/projections.json` and
+    refreshed at most every six hours, with the time kept inside the file.
+  - The projection is nudged towards the team's actual scoring this season,
+    by n/(n+8) of the gap after n games.
+  - Where there is no projection for a week, the model uses this season's
+    average, leaning on the league's. If the feed fails, the old file stays.
+    If it's missing, every week falls back like that and the page says so.
+- **Luck.** Every game gets the league's weekly swing, about 23 points. That
+  is the spread of scores round each team-season's average, over the three
+  seasons before. Every team in every run also gets a season-long drift,
+  about 10 points a week. That is the year-on-year change in managers'
+  averages, less the league-wide change, divided by √2.
+- **Both figures are league-wide on purpose. Do not bring back per-team
+  history.** Matt, September 2026: a team's own history is no guide to this
+  year. His 2026 roster projects at about 104 a week against a 131 average
+  last season. An earlier version used each team's own past swing and
+  last season's average, and it was wrong for exactly that reason.
+- **Places, rulebook paras 70–71.** Teams are ranked on wins, then total
+  points; the later tiebreakers can't come into play in a simulation. The
+  conference winners get the bye and second place is in. Third is in unless
+  Rule 3 applies: a third-placed team below .500 while the other conference's
+  fourth is above .500. Then that fourth takes the place.
+- **Display.** Chances show as "<1%" and ">99%", never 0% or 100%, because a
+  simulation is not a proof.
+- **Checked in week 1 of 2026.** Every run hands out exactly six places and
+  two byes, and 10,000 runs take half a second.
+
 ## Conventions
 
 - **British English** throughout, in copy and in code comments.
@@ -456,10 +500,7 @@ records sheets and the Trade Log, in `FF/Website`.
 
 Roughly in the order discussed with Matt, though he has not yet picked:
 
-1. **Playoff odds.** Simulate the remaining season a few thousand times from each
-   team's scoring distribution and the real fixture list; publish playoff, bye and
-   conference-title odds. Replaces the Dynasty Daddy screenshots he pastes in now.
-   Dynasty Daddy has no public API — do not go looking for one.
+1. **Playoff odds.** Done in September 2026. See "Playoff odds (Scoreboard)".
 2. **Conference crests with computed stars.** The colour scheme and identity
    were done in September 2026 (see Conventions). What is left of it is drawing
    the stars on the crests from the computed title count, so they stop going

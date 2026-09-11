@@ -280,7 +280,76 @@ def conf_band(cfg, division):
     return '<div class="confband ' + cls + '">' + mark + "</div>"
 
 
-def scoreboard(cfg, teams, results, week, career, prev_finish):
+def chance(p):
+    """A simulated chance as a percentage. Never 0% or 100%: a simulation is not a proof."""
+    if p < 0.005:
+        return "&lt;1%"
+    if p > 0.995:
+        return "&gt;99%"
+    return f"{p * 100:.0f}%"
+
+
+def odds_line(odds, team):
+    """Playoff and bye chances under a team on the Scoreboard, while there is a race."""
+    o = (odds or {}).get("teams", {}).get(team["user_id"])
+    if not o:
+        return ""
+    return (f'<div class="odds">Playoffs <b>{chance(o["playoffs"])}</b> &middot; '
+            f'Bye <b>{chance(o["bye"])}</b></div>')
+
+
+def odds_section(cfg, teams, odds):
+    """
+    The playoff odds table, a conference at a time: each team's chance of the
+    playoffs, of the bye that goes with winning the conference, and of the
+    toilet bowl, from stats.playoff_odds. Only while regular-season games remain.
+    """
+    if not odds:
+        return ""
+    labels = (cfg.get("side_competitions") or {}).get("labels", {})
+    blocks = []
+    for division in sorted(cfg["conferences"]):
+        conf = cfg["conferences"][division]
+        cls = "lc" if division == "1" else "mc"
+        members = [t for t in teams.values() if t["division"] == division and t["user_id"] in odds["teams"]]
+        members.sort(key=lambda t: (-odds["teams"][t["user_id"]]["playoffs"], -odds["teams"][t["user_id"]]["bye"],
+                                    -odds["teams"][t["user_id"]]["wins"]))
+        rows = []
+        for t in members:
+            o = odds["teams"][t["user_id"]]
+            rows.append(f"""<tr>
+        <td><div class="tm"><span class="nm"><a href="team-{e(t['slug'])}.html">{e(t['team'])}</a></span><span class="hd">{e(t['manager'])}</span></div></td>
+        <td class="num">{rec(o)}</td>
+        <td class="num">{o['wins']:.1f}</td>
+        <td class="num pct"><span class="pbar" style="--p:{o['playoffs'] * 100:.1f}%"></span>{chance(o['playoffs'])}</td>
+        <td class="num">{chance(o['bye'])}</td>
+        <td class="num">{chance(o['toilet'])}</td></tr>""")
+        blocks.append(f"""
+      <div class="conf {cls}">
+        <div class="conf-head"><span class="swatch" aria-hidden="true"></span><h3>{e(conf.get('name', 'Conference'))}</h3></div>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Team</th><th>W&ndash;L</th><th title="Average wins at the end of the regular season">Proj. W</th><th>Playoffs</th><th title="Winning the conference: a bye to the Conference Championships">Bye</th><th>{e(labels.get('consolation', 'Toilet Bowl'))}</th></tr></thead>
+          <tbody>{''.join(rows)}</tbody>
+        </table></div>
+      </div>""")
+    weeks = odds["weeks_left"]
+    note = (f"The {weeks} regular-season week{'s' if weeks != 1 else ''} left, played out {odds['sims']:,} times. "
+            "Each team's expected score is Sleeper's projection for its best lineup from the players it can start, "
+            "nudged towards its own results this season as the games come in. Past seasons only set how much any "
+            f"team's scores move about: roughly {odds['swing']:.0f} points either way in a week, and "
+            f"{odds['doubt']:.0f} a week over a whole season. A team's own history is left out, since this year's "
+            "roster may be a different team. Places go by the rulebook: the conference winners get the bye, second "
+            "place is in, and third is in unless Rule 3 applies.")
+    if odds["weeks_projected"] < weeks:
+        missing = weeks - odds["weeks_projected"]
+        note += (f" Sleeper had no projections for {missing} of those week{'s' if missing != 1 else ''}, "
+                 "so they use each team's scoring average instead.")
+    return ("<section>" + sechead("Playoff odds", "Updated with every refresh.")
+            + '<div class="conf-grid oddsgrid">' + "".join(blocks) + "</div>"
+            + '<p class="oddsnote">' + e(note) + "</p></section>")
+
+
+def scoreboard(cfg, teams, results, week, career, prev_finish, odds=None):
     rows = []
     places = conference_places(cfg, teams)
     for fx in results.get(week, []):
@@ -314,6 +383,7 @@ def scoreboard(cfg, teams, results, week, career, prev_finish):
             <div class="who">
               <div class="team"><a href="team-{e(home['slug'])}.html">{e(home['team'])}</a></div>
               <div class="mgr">{e(home['manager'])} &middot; {home['wins']}&ndash;{home['losses']} &middot; {e(places.get(home['roster_id'], ''))}</div>
+              {odds_line(odds, home)}
             </div>
             <div class="score {'lead' if hp >= ap else 'trail'}">{hp:.2f}</div>
           </div>
@@ -325,6 +395,7 @@ def scoreboard(cfg, teams, results, week, career, prev_finish):
             <div class="who">
               <div class="team"><a href="team-{e(away['slug'])}.html">{e(away['team'])}</a></div>
               <div class="mgr">{e(away['manager'])} &middot; {away['wins']}&ndash;{away['losses']} &middot; {e(places.get(away['roster_id'], ''))}</div>
+              {odds_line(odds, away)}
             </div>
             <div class="score {'lead' if ap >= hp else 'trail'}">{ap:.2f}</div>
           </div>
@@ -1547,7 +1618,14 @@ def main():
         shutil.copytree(ASSETS, DOCS / "assets", dirs_exist_ok=True)
     (DOCS / ".nojekyll").write_text("", encoding="utf-8")
 
-    home = (scoreboard(cfg, teams, results, week, career, prev_finish)
+    # Playoff odds, while the regular season still has games to play.
+    odds = None
+    if cfg["site"].get("show_playoff_odds"):
+        odds = S.playoff_odds(current, indexed[0], indexed[1:], load("projections.json"), players,
+                              cfg["season"]["regular_season_weeks"])
+
+    home = (scoreboard(cfg, teams, results, week, career, prev_finish, odds)
+            + odds_section(cfg, teams, odds)
             + power_section(cfg, rankings) + honours_section(cfg, indexed, names))
     (DOCS / "index.html").write_text(page(cfg, "Scoreboard", "Scoreboard", home), encoding="utf-8")
 
