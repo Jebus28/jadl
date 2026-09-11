@@ -196,6 +196,10 @@ PDFs and a few videos. Now both are files in `assets/`, read by
   the season in order, newest first. The videos are 400–800MB, too big for
   GitHub, so they stay on Drive as `.url` shortcuts with a `Date=` line. A
   shortcut with no date goes to the top of its season, as just added.
+- **One season at a time.** Matt found one long page of every season too much
+  (September 2026), so the season chips are tabs. The page opens on the newest
+  season, `updates.html#season-2023` opens 2023, and each season ends with a
+  link to the one before. With no script every season shows.
 - **What's in:** everything the old site posted, plus documents of the same
   kind it never got round to: the 2023 Season Preview, both 2025 mid-season
   reviews, the 2025 Regular Season Review, and the 2026 schedule, draft preview

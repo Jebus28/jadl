@@ -454,6 +454,14 @@
   .jump a.num{font-family:"IBM Plex Mono",monospace}
   .jump a:hover{border-color:var(--line-strong);color:var(--ink)}
   .docseason{padding-block:24px 10px;scroll-margin-top:8px}
+  /* Commissioner Updates shows a season at a time: the season chips are tabs. */
+  .seasontabs{scroll-margin-top:12px}
+  .seasontabs a{padding:6px 13px;font-size:13.5px}
+  .seasontabs a[aria-current]{background:var(--brass-soft);border-color:var(--brass);color:var(--ink);font-weight:600}
+  .seasontabs .count{margin-left:7px;font-size:11px;font-weight:400;color:var(--muted)}
+  .seasontabs a[aria-current] .count{color:var(--brass)}
+  .seasonnext{margin:20px 0 0;text-align:right;font-size:13.5px}
+  .seasonnext a{color:var(--brass);font-weight:600}
   .docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,170px),1fr));gap:14px;align-items:start}
   a.doccard{
     display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);
@@ -473,6 +481,12 @@
   .docwhen{font-size:11.5px;color:var(--muted)}
   a.doccard.latest{border-color:var(--brass);box-shadow:var(--shadow), inset 0 3px 0 var(--brass)}
   .doccard.latest .doctype{color:var(--brass)}
+  /* Two to a row on a phone, where one full-width A4 cover each made a season a long scroll. */
+  @media (max-width:560px){
+    .docs{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .docmeta{padding:8px 10px 10px}
+    .doctitle{font-size:13px}
+  }
 
   /* The rulebook, drawn from Matt's Word file: numbered as Word numbers it, so
      rules.html#rule-40 is paragraph 40 and "para 40" in the text links there. */

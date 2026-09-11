@@ -1106,22 +1106,64 @@ def updates_page(cfg, seasons):
     embedded Drive files: draft and season previews, schedules, the mid-season
     and regular-season reviews, and the season reviews. A PDF saved into
     assets/updates/<season>/ is on the page at the next build; see documents.py.
+    One season shows at a time, picked from the tabs, as the old site had a page
+    a season; updates.html#season-2023 opens 2023. Without script, all show.
     """
     if not seasons:
         return "<section>" + sechead("Commissioner updates") + '<p class="empty">Nothing published yet.</p></section>'
     dated = [it for items in seasons.values() for it in items if it["date"]]
     newest = max(dated, key=lambda it: it["date"]) if dated else None
     total = sum(len(items) for items in seasons.values())
-    jump = ('<nav class="jump" aria-label="Seasons">' + "".join(
-        f'<a class="num" href="#season-{year}">{year}</a>' for year in sorted(seasons, reverse=True)) + "</nav>")
+    years = sorted(seasons, reverse=True)
+
+    def documents(n):
+        return f"{n} document{'' if n == 1 else 's'}"
+
+    tabs = ('<nav class="jump seasontabs" id="seasontabs" aria-label="Seasons">' + "".join(
+        f'<a class="num" href="#season-{year}" title="{documents(len(seasons[year]))}">{year}'
+        f'<span class="count">{len(seasons[year])}</span></a>' for year in years) + "</nav>")
     blocks = ["<section>" + sechead("Commissioner updates", f"{total} previews, reviews and schedules since "
-                                    f"{min(seasons)}. Newest first.") + jump + "</section>"]
-    for year in sorted(seasons, reverse=True):
+                                    f"{min(seasons)}, a season at a time.") + tabs + "</section>"]
+    for i, year in enumerate(years):
         items = seasons[year]
-        count = f"{len(items)} document{'' if len(items) == 1 else 's'}"
-        blocks.append(f'<section class="docseason" id="season-{year}">' + sechead(f"{year} season", count)
-                      + '<div class="docs">' + "".join(doc_card(it, it is newest) for it in items) + "</div></section>")
-    return "".join(blocks)
+        earlier = (f'<p class="seasonnext"><a href="#season-{years[i + 1]}">Earlier: the {years[i + 1]} season '
+                   "&rarr;</a></p>" if i + 1 < len(years) else "")
+        blocks.append(f'<section class="docseason" id="season-{year}">' + sechead(f"{year} season", documents(len(items)))
+                      + '<div class="docs">' + "".join(doc_card(it, it is newest) for it in items) + "</div>"
+                      + earlier + "</section>")
+    return "".join(blocks) + SEASON_TABS_JS
+
+
+SEASON_TABS_JS = """
+<script>
+(function () {
+  // One season at a time. The tabs and the "Earlier" links are ordinary links to
+  // #season-YYYY, so a season can be linked to, and with no script every season shows.
+  var tabs = document.querySelectorAll(".seasontabs a");
+  var seasons = document.querySelectorAll(".docseason");
+  if (!tabs.length || !seasons.length) return;
+  function show(id, jump) {
+    if (!document.getElementById(id) || !document.getElementById(id).classList.contains("docseason")) {
+      id = seasons[0].id;
+    }
+    seasons.forEach(function (s) { s.hidden = s.id !== id; });
+    tabs.forEach(function (a) {
+      if (a.getAttribute("href") === "#" + id) a.setAttribute("aria-current", "true");
+      else a.removeAttribute("aria-current");
+    });
+    if (jump) document.getElementById("seasontabs").scrollIntoView({block: "nearest"});
+  }
+  document.addEventListener("click", function (ev) {
+    var link = ev.target.closest('a[href^="#season-"]');
+    if (!link) return;
+    ev.preventDefault();
+    history.replaceState(null, "", link.getAttribute("href"));
+    show(link.getAttribute("href").slice(1), true);
+  });
+  window.addEventListener("hashchange", function () { show(location.hash.slice(1), true); });
+  show(location.hash.slice(1), false);
+})();
+</script>"""
 
 
 LINEUP_NAMES = {"FLEX": "Flex", "SUPER_FLEX": "Superflex", "WRRB_FLEX": "RB/WR flex",
