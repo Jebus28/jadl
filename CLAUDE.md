@@ -45,7 +45,7 @@ Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.ap
 | `scripts/prepare_media.py` | Turns a champion GIF or loser photo into `assets/records/<season>-<champion\|loser>.*` — GIFs become silent looping WebPs under 2.5MB, photos are straightened and shrunk. |
 | `assets/records/` | One champion loop and one Loser of All Losers picture per season, found by filename. No config entry. |
 | `assets/site.css` | One stylesheet, themed light and dark via CSS custom properties. |
-| `assets/teams/` | `<manager>.jpg` portraits and `<manager>-crest.jpg` square crops. |
+| `assets/teams/` | `<manager>-crest.jpg` square crops of the AI portraits, for the Scoreboard. The full `<manager>.jpg` portraits are no longer shown anywhere. |
 | `data/` | Fetched JSON. Committed so builds are reproducible; regenerated every run. |
 | `docs/` | Generated output. **Never edit by hand** — it is overwritten. |
 
@@ -266,8 +266,14 @@ once the computed one matched it.
 - Everything that changes season to season lives in `league.config.json`. Matt
   regenerates team images every year and adjusts the playoff setup, and wants to
   do that himself without touching code.
-- Team images: AI-generated manager portraits from Matt's `Team AI` folder,
-  resized to 1400px and also square-cropped to 320px for the small crests.
+- **Team images: the AI pictures are for the Scoreboard only.** Matt asked for
+  this in September 2026. The AI images are portraits from his `Team AI` folder,
+  square-cropped to 320px, used as the crests on the fixtures. Everywhere else —
+  the Teams cards, team pages and Trade Centre — shows the team logo as Sleeper
+  has it (`build_site.sleeper_logo`). That is the league team logo
+  (`user.metadata.avatar`), or the manager's Sleeper picture where there is none;
+  Neil has none as of September 2026. The logos are linked from Sleeper's CDN,
+  not copied, so a new one is on the site at the next refresh.
 - The stylesheet defines a complete light palette on bare `:root`, then overrides
   tokens under `prefers-color-scheme: dark` and `[data-theme="dark"]`. Do not put
   a colour's only definition inside a media query.

@@ -77,6 +77,18 @@ def optimal_points(entry, roster_positions, players):
     return round(total, 2)
 
 
+def sleeper_logo(user):
+    """
+    The team logo as Sleeper shows it: the team's own logo in this league, or the
+    manager's Sleeper picture where they have not set one. Linked, not copied, so
+    a new logo in Sleeper is on the site at the next refresh.
+    """
+    meta = user.get("metadata") or {}
+    if meta.get("avatar"):
+        return meta["avatar"]
+    return "https://sleepercdn.com/avatars/" + user["avatar"] if user.get("avatar") else ""
+
+
 def manager_lookup(cfg, users, rosters):
     by_user = {u["user_id"]: u for u in users}
     out = {}
@@ -91,7 +103,8 @@ def manager_lookup(cfg, users, rosters):
             "roster_id": r["roster_id"], "user_id": uid,
             "manager": conf.get("name") or user.get("display_name") or "Unknown",
             "team": team, "slug": slugify(team),
-            "image": conf.get("image"), "portrait": conf.get("portrait"),
+            # The AI crest is for the Scoreboard only; everywhere else has Sleeper's logo.
+            "image": conf.get("image"), "logo": sleeper_logo(user),
             "division": str(st.get("division") or "1"),
             "wins": st.get("wins", 0), "losses": st.get("losses", 0), "ties": st.get("ties", 0),
             "fpts": pts(st, "fpts"), "fpts_against": pts(st, "fpts_against"),
@@ -441,8 +454,8 @@ def h2h_table(title, entries, note=""):
 def team_page(cfg, team, career, names):
     s = career.get(team["user_id"])
     conf = cfg["conferences"].get(team["division"], {})
-    portrait = ('<img class="hero" src="assets/teams/' + e(team["portrait"])
-                + '" alt="' + e(team["manager"]) + '" loading="lazy">') if team.get("portrait") else ""
+    logo = ('<img class="teamlogo" src="' + e(team["logo"]) + '" alt="' + e(team["team"])
+            + ' logo">') if team.get("logo") else ""
 
     if not s:
         return page(cfg, team["team"], "Teams",
@@ -491,7 +504,7 @@ def team_page(cfg, team, career, names):
     labels = (cfg.get("side_competitions") or {}).get("labels", {})
     body = f"""
   <section class="teamhead">
-    {portrait}
+    {logo}
     <div class="teamtitle">
       <span class="eyebrow">{e(conf.get('name',''))}</span>
       <h1>{e(team['team'])}</h1>
@@ -526,14 +539,15 @@ def teams_index(cfg, teams, rankings, career):
         conf = cfg["conferences"].get(t["division"], {})
         s = career.get(t["user_id"])
         alltime = rec(s["career"]) if s else "&mdash;"
-        portrait = ('<img class="portrait" src="assets/teams/' + e(t["portrait"])
-                    + '" alt="" loading="lazy">') if t.get("portrait") else ""
+        logo = ('<img class="logo" src="' + e(t["logo"]) + '" alt="" loading="lazy">') if t.get("logo") else ""
         cards.append(f"""
       <a class="teamcard" href="team-{e(t['slug'])}.html">
-        {portrait}
-        <div class="who">
-          <div class="team">{e(t['team'])}</div>
-          <div class="mgr">{e(t['manager'])} &middot; {e(conf.get('name',''))}</div>
+        <div class="teamcardhead">
+          {logo}
+          <div class="who">
+            <div class="team">{e(t['team'])}</div>
+            <div class="mgr">{e(t['manager'])} &middot; {e(conf.get('name',''))}</div>
+          </div>
         </div>
         <dl class="teamstats">
           <div><dt>This year</dt><dd class="num">{t['wins']}&ndash;{t['losses']}</dd></div>
@@ -891,7 +905,7 @@ def trade_asset(move, board, names, players):
     return '<li class="pick"><span class="pk num">' + e(label) + '</span><span class="sub">' + whose + "</span></li>"
 
 
-def trade_card(trade, board, names, players, slugs, images):
+def trade_card(trade, board, names, players, slugs, logos):
     sides = []
     for uid in trade["owners"]:
         got = sorted((m for m in trade["moves"] if m["to"] == uid),
@@ -899,7 +913,7 @@ def trade_card(trade, board, names, players, slugs, images):
         name = e(names.get(uid) or "Unknown")
         if uid in slugs:
             name = '<a href="team-' + e(slugs[uid]) + '.html">' + name + "</a>"
-        pic = ('<img src="assets/teams/' + e(images[uid]) + '" alt="" loading="lazy">') if images.get(uid) else ""
+        pic = ('<img src="' + e(logos[uid]) + '" alt="" loading="lazy">') if logos.get(uid) else ""
         items = "".join(trade_asset(m, board, names, players) for m in got) or '<li class="none">Nothing</li>'
         sides.append(f'<div class="tside"><h4>{pic}<span class="nm">{name}</span>'
                      f'<span class="rcv">receives</span></h4><ul>{items}</ul></div>')
@@ -1028,7 +1042,7 @@ def trade_centre(cfg, log, table, board, ends, names, players, teams, state):
     numbered them. Picks show as the player they became once the draft is done.
     """
     slugs = {t["user_id"]: t["slug"] for t in teams.values()}
-    images = {uid: conf.get("image") for uid, conf in (cfg.get("managers") or {}).items()}
+    logos = {t["user_id"]: t["logo"] for t in teams.values()}
     windows = defaultdict(list)
     for trade in log:
         windows[trade["window"]].append(trade)
@@ -1040,7 +1054,7 @@ def trade_centre(cfg, log, table, board, ends, names, players, teams, state):
     for window in sorted(windows, key=lambda w: (w[1], w[0] == "in"), reverse=True):
         items = windows[window]
         count = f"{len(items)} trade{'' if len(items) == 1 else 's'}" if items else ""
-        inner = ('<div class="trades">' + "".join(trade_card(t, board, names, players, slugs, images)
+        inner = ('<div class="trades">' + "".join(trade_card(t, board, names, players, slugs, logos)
                                                   for t in reversed(items)) + "</div>"
                  if items else '<p class="empty">No trades yet this season.</p>')
         blocks.append('<section class="tradewindow">' + sechead(window_name(window), count) + inner + "</section>")
