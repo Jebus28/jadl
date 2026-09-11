@@ -11,6 +11,7 @@ import html
 import json
 import re
 import shutil
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -147,7 +148,7 @@ def power_rankings(teams, results, upto):
 
 
 NAV = [("index.html", "Scoreboard"), ("standings.html", "Standings"),
-       ("teams.html", "Teams"), ("history.html", "History")]
+       ("teams.html", "Teams"), ("history.html", "History"), ("records.html", "Records")]
 
 
 def page(cfg, title, active, body):
@@ -606,10 +607,7 @@ def history_sections(cfg, indexed, names):
 
         # Regular season: on record, and within each conference once there were any.
         # Nobody has won a conference until the last regular-season week is played.
-        cutoff = season["playoff_week_start"]
-        regular = [rows for wk, rows in season["fixtures"].items() if wk < cutoff]
-        decided = bool(season["final"]) or (bool(regular) and all(
-            any(a[1] or b[1] for a, b in rows) for rows in regular))
+        decided = season["regular_done"]
         standing = S.conference_finish(season) if in_conferences else {}
         if in_conferences:
             table.sort(key=lambda r: (r["division"], standing.get(r["owner_id"], ("", 99))[1]))
@@ -687,6 +685,189 @@ def history_sections(cfg, indexed, names):
     return "".join(blocks)
 
 
+FLEX_WORDS = {1: "one flex", 2: "two flex", 3: "three flex"}
+
+
+def records_page(cfg, indexed, career, names, waiver):
+    """
+    The all-time record books: Sleeper's all-time standings and the Google Sheets
+    that sat on the old History page, all computed. Single weeks, margins and
+    streaks count every game, playoffs and toilet bowl included, as Matt's
+    sheets do; the season tables are regular season only.
+    """
+    labels = (cfg.get("side_competitions") or {}).get("labels", {})
+    phase_tag = {"playoffs": labels.get("playoffs", "Playoffs"),
+                 "consolation": labels.get("consolation", "Toilet Bowl")}
+
+    def who(uid):
+        return '<span class="nm">' + e(names.get(uid) or "Unknown") + "</span>"
+
+    def week_cell(row):
+        tag = phase_tag.get(row["phase"])
+        return str(row["week"]) + ('<span class="tag">' + e(tag) + "</span>" if tag else "")
+
+    def section(title, note, inner):
+        return "<section>" + sechead(title, note) + inner + "</section>"
+
+    # All-time standings: the regular season, plus what the brackets handed out.
+    honours = defaultdict(lambda: {"titles": 0, "first": 0, "spoons": 0})
+    for s in indexed:
+        last = len(s["final"])
+        for uid, place in s["final"].items():
+            honours[uid]["titles"] += place == 1
+            honours[uid]["first"] += place == s["playoff_teams"] + 1
+            honours[uid]["spoons"] += place == last
+
+    def exact_pct(c):
+        r = c["career"]
+        played = r["w"] + r["l"] + r["t"]
+        return (r["w"] + 0.5 * r["t"]) / played if played else 0.0
+
+    order = sorted(career.items(), key=lambda kv: (exact_pct(kv[1]), kv[1]["pf"]), reverse=True)
+    rows = []
+    for i, (uid, c) in enumerate(order, 1):
+        h = honours[uid]
+        rows.append(f"""<tr><td class="num">{i}</td><td>{who(uid)}</td>
+          <td class="num">{rec(c['career'])}</td><td class="num">{exact_pct(c) * 100:.1f}%</td>
+          <td class="num">{c['pf']:,.2f}</td><td class="num">{c['pa']:,.2f}</td>
+          <td class="num">{c['playoff_appearances']}</td><td class="num">{h['titles']}</td>
+          <td class="num">{h['first']}</td><td class="num">{h['spoons']}</td></tr>""")
+    standings = finish_card(
+        "Since " + str(cfg["league"]["established"]), "Regular-season record; playoffs and trophies from the brackets.",
+        '<th>#</th><th>Manager</th><th>W&ndash;L</th><th>Win %</th><th>PF</th><th>PA</th>'
+        '<th>Playoffs</th><th>Titles</th><th title="7th: the consolation bracket and the 1.01">1.01s</th>'
+        '<th title="Loser of All Losers">LoaL</th>', rows)
+
+    # Single weeks.
+    scores = S.weekly_scores(indexed)
+    by_season = sorted(indexed, key=lambda s: s["season"])
+    spans = []
+    for s in by_season:
+        if spans and spans[-1][0] == s["flex"]:
+            spans[-1][2] = s["season"]
+        else:
+            spans.append([s["flex"], s["season"], s["season"]])
+    lineup_note = "; ".join(FLEX_WORDS.get(f, f"{f} flex") + " " + (f"{a}&ndash;{b}" if a != b else str(a))
+                            for f, a, b in spans)
+    lineup_note = lineup_note[:1].upper() + lineup_note[1:] + "."
+    flex_now, flex_from = spans[-1][0], spans[-1][1]
+
+    def score_card(title, note, items):
+        body = [f"""<tr><td class="num">{i}</td><td>{who(r['owner_id'])}</td>
+          <td class="num">{r['season']}</td><td class="num">{week_cell(r)}</td>
+          <td class="num">{r['points']:.2f}</td></tr>""" for i, r in enumerate(items, 1)]
+        return finish_card(title, note, "<th>#</th><th>Manager</th><th>Season</th><th>Week</th><th>Score</th>", body)
+
+    low_key = lambda r: (r["points"], r["season"], r["week"])  # noqa: E731
+    weeks = [score_card("Lowest scores", "All time.", sorted(scores, key=low_key)[:10])]
+    if len(spans) > 1:
+        weeks.append(score_card("Lowest scores, " + FLEX_WORDS.get(flex_now, f"{flex_now} flex"),
+                                "Since " + str(flex_from) + ".",
+                                sorted((r for r in scores if r["season"] >= flex_from), key=low_key)[:10]))
+    weeks.append(score_card("Highest scores", "All time.",
+                            sorted(scores, key=lambda r: (-r["points"], r["season"], r["week"]))[:10]))
+
+    # Seasons.
+    seasons = S.season_records(indexed)
+
+    def reg_place(r):
+        if r["division"]:
+            return e(cfg["conferences"].get(r["division"], {}).get("short", "")) + " " + ordinal(r["regular_place"])
+        return ordinal(r["regular_place"])
+
+    def team_card(title, note, items):
+        body = [f"""<tr><td class="num">{i}</td><td>{who(r['owner_id'])}</td>
+          <td class="num">{r['season']}</td>
+          <td class="num">{r['w']}&ndash;{r['l']}{'&ndash;' + str(r['t']) if r['t'] else ''}</td>
+          <td class="num">{r['win_pct'] * 100:.1f}%</td><td class="num">{r['pf']:,.2f}</td>
+          <td class="num">{r['per_player']:.2f}</td><td class="num">{reg_place(r)}</td>
+          <td class="num">{ordinal(r['final_place']) if r['final_place'] else '&mdash;'}</td></tr>"""
+                for i, r in enumerate(items, 1)]
+        return finish_card(title, note,
+                           '<th>#</th><th>Manager</th><th>Season</th><th>W&ndash;L</th><th>Win %</th><th>PF</th>'
+                           '<th title="Points per player per game. DEF is a team, so it is left out.">Per player</th>'
+                           '<th>Reg</th><th>Final</th>', body)
+
+    high_body = [f"""<tr><td class="num">{i}</td><td>{who(r['owner_id'])}</td>
+          <td class="num">{r['season']}</td><td class="num">{r['pf']:,.2f}</td></tr>"""
+                 for i, r in enumerate(sorted(seasons, key=lambda r: (-r["pf"], r["season"]))[:10], 1)]
+    season_high = finish_card("Highest season scores", "Points for, regular season.",
+                              "<th>#</th><th>Manager</th><th>Season</th><th>PF</th>", high_body)
+    dominators = team_card("Dominators", "Top 10 teams ever: win %, then points per player per game.",
+                           sorted(seasons, key=lambda r: (-r["win_pct"], -r["per_player"]))[:10])
+    loserminators = team_card("Loser-minators", "Worst 10 teams ever: the same, the other way up.",
+                              sorted(seasons, key=lambda r: (r["win_pct"], r["per_player"]))[:10])
+
+    # Mind the Gap.
+    gaps = sorted((r for r in scores if r["points"] > r["against"]),
+                  key=lambda r: (-(r["points"] - r["against"]), r["season"], r["week"]))[:25]
+    gap_body = [f"""<tr><td class="num">{i}</td><td>{who(r['owner_id'])}</td>
+          <td class="num">{r['points']:.2f}</td><td class="l">{who(r['opponent_id'])}</td>
+          <td class="num">{r['against']:.2f}</td><td class="num"><strong>{r['points'] - r['against']:.2f}</strong></td>
+          <td class="num">{r['season']}</td><td class="num">{week_cell(r)}</td></tr>"""
+                for i, r in enumerate(gaps, 1)]
+    gap_card = finish_card("Mind the Gap", "All-time greatest margins of victory.",
+                           '<th>#</th><th>Winner</th><th>Score</th><th class="l">Loser</th><th>Score</th>'
+                           '<th>Margin</th><th>Season</th><th>Week</th>', gap_body)
+
+    # Streakers.
+    runs = S.streaks(indexed)
+
+    def span(run):
+        years = sorted({yr for yr, _wk in run})
+        label = str(years[0]) if len(years) == 1 else f"{years[0]}&ndash;{str(years[-1])[2:]}"
+        parts = []
+        for yr in years:
+            wks = [wk for y, wk in run if y == yr]
+            parts.append(str(wks[0]) if wks[0] == wks[-1] else f"{wks[0]}&ndash;{wks[-1]}")
+        return label, ", ".join(parts)
+
+    def streak_card(title, kind):
+        items = sorted(((uid, r[kind]) for uid, r in runs.items() if r[kind]),
+                       key=lambda x: (-len(x[1]), x[1][0]))
+        body = []
+        for i, (uid, run) in enumerate(items, 1):
+            years, wks = span(run)
+            body.append(f"""<tr><td class="num">{i}</td><td>{who(uid)}</td><td class="num">{len(run)}</td>
+          <td class="num">{years}</td><td class="num">{wks}</td></tr>""")
+        return finish_card(title, "Each manager's longest.",
+                           "<th>#</th><th>Manager</th><th>Games</th><th>Season</th><th>Weeks</th>", body)
+
+    body = (section("All-time standings", "", standings)
+            + section("Single weeks", "Every game counts: regular season, playoffs and toilet bowl.",
+                      '<div class="finishes">' + "".join(weeks) + "</div>")
+            + section("Seasons", "Regular season only. " + lineup_note,
+                      '<div class="stack"><div class="finishes">' + season_high + "</div>"
+                      + dominators + loserminators + "</div>")
+            + section("Margins", "", gap_card)
+            + section("Streakers", "Runs carry across seasons and through the playoffs. A bye is no game.",
+                      '<div class="finishes">' + streak_card("Winning streaks", "W")
+                      + streak_card("Losing streaks", "L") + "</div>"))
+    if waiver:
+        body += section("Waiver record", "The biggest winning FAAB bid.", f"""
+    <div class="waiver">
+      <span class="bid num">${waiver['bid']:,}</span>
+      <span class="what">{e(waiver['player'])}</span>
+      <span class="when">{e(names.get(waiver['owner_id']) or 'Unknown')} &middot; {waiver['season']} week {waiver['week']}</span>
+    </div>""")
+    return body
+
+
+def last_complete_week(state, season):
+    """
+    The last week of `season` whose games are all over, by Sleeper's clock, or
+    None when the whole season is. A week still in progress is not a result yet.
+    """
+    if not state:
+        return None
+    here, now = int(season or 0), int(state.get("season") or 0)
+    if now > here or state.get("season_type") == "off":
+        return None
+    if now < here or state.get("season_type") == "pre":
+        return 0
+    return max(0, int(state.get("week") or 1) - 1)
+
+
 def main():
     cfg = json.loads((ROOT / "league.config.json").read_text(encoding="utf-8"))
     current = load("current.json")
@@ -698,8 +879,13 @@ def main():
 
     conference_from = int(cfg.get("eras", {}).get("conference_from", 2022))
     all_seasons = [current] + history
-    indexed = [S.index_season(s, conference_from) for s in all_seasons]
-    trades = S.count_trades([s.get("transactions") for s in all_seasons], indexed)
+    # A week still being played is not a result yet, so the current season only
+    # counts as far as its last finished week.
+    through = last_complete_week(state, current.get("season"))
+    indexed = [S.index_season(s, conference_from, through if s is current else None)
+               for s in all_seasons]
+    transactions = [s.get("transactions") for s in all_seasons]
+    trades = S.count_trades(transactions, indexed)
     career = S.all_time(indexed, trades)
 
     teams = manager_lookup(cfg, current.get("users", []), current.get("rosters", []))
@@ -743,6 +929,10 @@ def main():
                     + "<section>" + sechead("The two eras") + era_note(cfg) + "</section>"
                     + history_sections(cfg, indexed, names))
     (DOCS / "history.html").write_text(page(cfg, "History", "History", history_body), encoding="utf-8")
+
+    waiver = S.waiver_record(transactions, indexed, players)
+    (DOCS / "records.html").write_text(
+        page(cfg, "Records", "Records", records_page(cfg, indexed, career, names, waiver)), encoding="utf-8")
 
     print("Built docs/ for " + str(current.get("season")) + " week " + str(week) + ": "
           + str(len(teams)) + " teams, " + str(len(indexed)) + " seasons, "

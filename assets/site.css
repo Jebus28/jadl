@@ -377,4 +377,17 @@
   .finish-head{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
   .finish-head h3{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
   .finish-head .note{font-size:12px;color:var(--muted)}
-  .finish th:nth-child(2){text-align:left}
+  .finish th:nth-child(2),.finish td:nth-child(2){text-align:left}
+  .finish th.l,.finish td.l{text-align:left}
+
+  /* ---------- records ---------- */
+  .stack{display:grid;gap:16px}
+  .tag{display:inline-block;margin-left:6px;font-family:"Public Sans",system-ui,sans-serif;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+  .waiver{
+    background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--brass);
+    border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;
+    display:flex;align-items:baseline;gap:18px;flex-wrap:wrap;
+  }
+  .waiver .bid{font-size:28px;font-weight:600;color:var(--brass)}
+  .waiver .what{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:18px}
+  .waiver .when{font-size:13px;color:var(--muted)}

@@ -47,8 +47,12 @@ def final_places(brackets: dict, roster_owner: dict, playoff_teams: int) -> dict
     return out if len(out) == len(roster_owner) else {}
 
 
-def index_season(season: dict, conference_from: int) -> dict:
-    """Flatten one season into something the all-time maths can walk."""
+def index_season(season: dict, conference_from: int, through_week: int | None = None) -> dict:
+    """
+    Flatten one season into something the all-time maths can walk. `through_week`
+    is the last week whose games are over; later weeks are left out, so a week
+    still being played never counts as a result or sets a record.
+    """
     year = int(season.get("season") or 0)
     rosters = season.get("rosters") or []
     settings = season.get("settings") or {}
@@ -59,6 +63,8 @@ def index_season(season: dict, conference_from: int) -> dict:
 
     fixtures = {}
     for wk, entries in (season.get("matchups") or {}).items():
+        if through_week is not None and int(wk) > through_week:
+            continue
         grouped = defaultdict(list)
         for entry in entries:
             if entry.get("matchup_id") is not None:
@@ -74,11 +80,18 @@ def index_season(season: dict, conference_from: int) -> dict:
         fixtures[int(wk)] = rows
 
     playoff_teams = settings.get("playoff_teams") or 6
+    playoff_week_start = settings.get("playoff_week_start") or 15
+    starters = [p for p in season.get("roster_positions") or [] if p not in ("BN", "IR", "TAXI")]
     return {
         "season": year,
         "era": "conference" if year >= conference_from else "bce",
-        "playoff_week_start": settings.get("playoff_week_start") or 15,
+        "playoff_week_start": playoff_week_start,
         "playoff_teams": playoff_teams,
+        # The last regular-season week has been played, so the table is final.
+        "regular_done": any(a[1] or b[1] for a, b in fixtures.get(playoff_week_start - 1, [])),
+        "flex": starters.count("FLEX"),
+        # Starting slots a player fills. DEF is a team, so it is not one.
+        "players": len([p for p in starters if p != "DEF"]),
         "final": final_places(brackets, roster_owner, playoff_teams),
         "roster_owner": roster_owner,
         "roster_div": roster_div,
@@ -87,6 +100,31 @@ def index_season(season: dict, conference_from: int) -> dict:
         "losers": bracket_pairs(brackets.get("losers_bracket")),
         "rosters": rosters,
     }
+
+
+def games(season: dict):
+    """
+    Every game that counts in an indexed season, in week order, as
+    (week, phase, (roster_id, points), (roster_id, points)), phase being
+    "regular", "playoffs" or "consolation". Unplayed weeks are skipped, and so
+    are playoff-week games in neither bracket: Sleeper still pairs eliminated
+    teams off against each other, and counting those would inflate records.
+    """
+    cutoff = season["playoff_week_start"]
+    for wk, rows in sorted(season["fixtures"].items()):
+        for a, b in rows:
+            if a[1] == 0 and b[1] == 0:
+                continue
+            pairing = frozenset((a[0], b[0]))
+            if wk < cutoff:
+                phase = "regular"
+            elif pairing in season["winners"]:
+                phase = "playoffs"
+            elif pairing in season["losers"]:
+                phase = "consolation"
+            else:
+                continue
+            yield wk, phase, a, b
 
 
 def blank_record() -> dict:
@@ -134,64 +172,50 @@ def all_time(seasons: list[dict], transactions: dict | None = None) -> dict:
     for season in sorted(seasons, key=lambda s: s["season"]):
         owner = season["roster_owner"]
         div = season["roster_div"]
-        cutoff = season["playoff_week_start"]
         era = season["era"]
 
-        for wk, rows in sorted(season["fixtures"].items()):
-            for (rid_a, pts_a), (rid_b, pts_b) in rows:
-                # A week nobody has played yet is not a result.
-                if pts_a == 0 and pts_b == 0:
-                    continue
-                ua, ub = owner.get(rid_a), owner.get(rid_b)
-                if not ua or not ub:
-                    continue
+        for wk, phase, (rid_a, pts_a), (rid_b, pts_b) in games(season):
+            ua, ub = owner.get(rid_a), owner.get(rid_b)
+            if not ua or not ub:
+                continue
 
-                pairing = frozenset((rid_a, rid_b))
-                if wk < cutoff:
-                    phase = "regular"
-                elif pairing in season["winners"]:
-                    phase = "playoffs"
-                elif pairing in season["losers"]:
-                    phase = "consolation"
-                else:
-                    # Playoff-week game that isn't in either bracket: ignore it,
-                    # Sleeper still pairs eliminated teams off against each other.
-                    continue
+            for me, opp, mine, theirs, opp_rid in (
+                (ua, ub, pts_a, pts_b, rid_b),
+                (ub, ua, pts_b, pts_a, rid_a),
+            ):
+                s = stats[me]
+                s["seasons_played"].add(season["season"])
+                h2h = s["h2h"][opp]
 
-                for me, opp, mine, theirs, my_rid, opp_rid in (
-                    (ua, ub, pts_a, pts_b, rid_a, rid_b),
-                    (ub, ua, pts_b, pts_a, rid_b, rid_a),
-                ):
-                    s = stats[me]
-                    s["seasons_played"].add(season["season"])
-                    h2h = s["h2h"][opp]
+                # Best and worst weeks span every game, playoffs included - Dave's
+                # 204.86 came in a playoff week. A side yet to score has not played.
+                if mine:
+                    best = s["best_week"]
+                    if best is None or mine > best[0]:
+                        s["best_week"] = (mine, season["season"], wk)
+                    worst = s["worst_week"]
+                    if worst is None or mine < worst[0]:
+                        s["worst_week"] = (mine, season["season"], wk)
 
-                    if phase == "regular":
-                        _log(s["career"], mine, theirs)
-                        s["pf"] += mine
-                        s["pa"] += theirs
-                        s["games"] += 1
+                if phase == "regular":
+                    _log(s["career"], mine, theirs)
+                    s["pf"] += mine
+                    s["pa"] += theirs
+                    s["games"] += 1
 
-                        if era == "bce":
-                            _log(s["bce"], mine, theirs)
-                            _log(h2h["bce"], mine, theirs)
-                        else:
-                            bucket = "vs_lfc" if div.get(opp_rid) == "1" else "vs_mfc"
-                            _log(s[bucket], mine, theirs)
-                            _log(h2h["conference"], mine, theirs)
-                            h2h["opponent_division"] = div.get(opp_rid)
-
-                        best = s["best_week"]
-                        if best is None or mine > best[0]:
-                            s["best_week"] = (mine, season["season"], wk)
-                        worst = s["worst_week"]
-                        if worst is None or mine < worst[0]:
-                            s["worst_week"] = (mine, season["season"], wk)
+                    if era == "bce":
+                        _log(s["bce"], mine, theirs)
+                        _log(h2h["bce"], mine, theirs)
                     else:
-                        _log(s[phase], mine, theirs)
-                        _log(h2h[phase], mine, theirs)
-                        if phase == "playoffs":
-                            s["playoff_seasons"].add(season["season"])
+                        bucket = "vs_lfc" if div.get(opp_rid) == "1" else "vs_mfc"
+                        _log(s[bucket], mine, theirs)
+                        _log(h2h["conference"], mine, theirs)
+                        h2h["opponent_division"] = div.get(opp_rid)
+                else:
+                    _log(s[phase], mine, theirs)
+                    _log(h2h[phase], mine, theirs)
+                    if phase == "playoffs":
+                        s["playoff_seasons"].add(season["season"])
 
     for owner_id, s in stats.items():
         played = s["career"]["w"] + s["career"]["l"] + s["career"]["t"]
@@ -269,3 +293,113 @@ def season_table(season: dict, players: dict | None = None) -> list[dict]:
     for i, row in enumerate(rows, 1):
         row["place"] = i
     return rows
+
+
+# --------------------------------------------------------------------------- #
+# the record books - rebuilt from the Google Sheets on the old History page
+# --------------------------------------------------------------------------- #
+def weekly_scores(seasons: list[dict]) -> list[dict]:
+    """
+    One row per side per game that counts - regular season, playoffs and toilet
+    bowl alike, as Matt's sheets have it. A side yet to score is left out.
+    """
+    out = []
+    for season in seasons:
+        owner = season["roster_owner"]
+        for wk, phase, a, b in games(season):
+            for (rid, pts), (opp_rid, against) in ((a, b), (b, a)):
+                if pts and owner.get(rid):
+                    out.append({"owner_id": owner[rid], "opponent_id": owner.get(opp_rid),
+                                "points": pts, "against": against, "season": season["season"],
+                                "week": wk, "phase": phase, "flex": season["flex"]})
+    return out
+
+
+def season_records(seasons: list[dict]) -> list[dict]:
+    """
+    One row per manager per finished regular season, for the Dominators and the
+    Loser-minators. Points are Sleeper's own season total, as on the History and
+    Standings pages; summing the games can differ by a point where a stat
+    correction landed late. Points per player per game divide by the starting
+    slots less DEF, which puts one-flex and two-flex seasons on the same footing.
+    """
+    out = []
+    for season in seasons:
+        if not season["regular_done"]:
+            continue
+        tally = defaultdict(lambda: {"w": 0, "l": 0, "t": 0, "pf": 0.0})
+        for _wk, phase, a, b in games(season):
+            if phase == "regular":
+                for (rid, pts), (_opp, against) in ((a, b), (b, a)):
+                    _log(tally[rid], pts, against)
+                    tally[rid]["pf"] += pts
+        in_conferences = season["era"] == "conference"
+        conf = conference_finish(season) if in_conferences else {}
+        table = season_table(season)
+        overall = {row["owner_id"]: row["place"] for row in table}
+        official = {row["roster_id"]: row["fpts"] for row in table}
+        for rid, t in tally.items():
+            uid = season["roster_owner"].get(rid)
+            played = t["w"] + t["l"] + t["t"]
+            if not uid or not played:
+                continue
+            out.append({
+                "owner_id": uid, "season": season["season"],
+                "division": season["roster_div"].get(rid) if in_conferences else None,
+                "w": t["w"], "l": t["l"], "t": t["t"],
+                "win_pct": (t["w"] + 0.5 * t["t"]) / played,
+                "pf": official.get(rid, round(t["pf"], 2)),
+                "per_player": official.get(rid, t["pf"]) / played / max(season["players"], 1),
+                "regular_place": conf[uid][1] if uid in conf else overall.get(uid),
+                "final_place": season["final"].get(uid),
+            })
+    return out
+
+
+def streaks(seasons: list[dict]) -> dict:
+    """
+    owner_id -> {"W": run, "L": run}: each manager's longest winning and losing
+    runs, as lists of (season, week). Runs carry across seasons and through the
+    playoffs and the toilet bowl. A bye is no game, so it neither extends nor
+    breaks a run; a tie breaks both. Of equal runs, the first stands.
+    """
+    results = defaultdict(list)
+    for season in sorted(seasons, key=lambda s: s["season"]):
+        owner = season["roster_owner"]
+        for wk, _phase, a, b in games(season):
+            for (rid, pts), (_opp, against) in ((a, b), (b, a)):
+                if owner.get(rid):
+                    res = "W" if pts > against else "L" if pts < against else "T"
+                    results[owner[rid]].append((season["season"], wk, res))
+    out = {}
+    for uid, played in results.items():
+        best = {"W": [], "L": []}
+        run, kind = [], None
+        for season, wk, res in played:
+            if res != kind:
+                run, kind = [], res
+            run.append((season, wk))
+            if res in best and len(run) > len(best[res]):
+                best[res] = list(run)
+        out[uid] = best
+    return out
+
+
+def waiver_record(seasons_transactions: list[dict], seasons: list[dict], players: dict) -> dict | None:
+    """The biggest winning FAAB bid there has been. The first to reach it keeps it."""
+    best = None
+    for season, txns in zip(seasons, seasons_transactions):
+        for wk, items in sorted((txns or {}).items(), key=lambda kv: int(kv[0])):
+            for txn in items:
+                if txn.get("type") != "waiver" or txn.get("status") != "complete":
+                    continue
+                bid = (txn.get("settings") or {}).get("waiver_bid") or 0
+                if best is not None and bid <= best["bid"]:
+                    continue
+                adds = txn.get("adds") or {}
+                pid = next(iter(adds), None)
+                rid = adds.get(pid) if pid else (txn.get("roster_ids") or [None])[0]
+                best = {"bid": bid, "owner_id": season["roster_owner"].get(rid),
+                        "player": (players.get(pid) or {}).get("full_name") or pid,
+                        "season": season["season"], "week": int(wk)}
+    return best

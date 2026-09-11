@@ -101,6 +101,41 @@ make you Loser of All Losers. The first history page got this wrong — it badge
 the regular-season 10th and 7th — which misnamed three Losers of All Losers
 (2021, 2022, 2025) and gave the 2022 Bijan Bowl to a playoff team.
 
+Regular-season honours (conference titles) belong on the **team pages**, not
+History — Matt asked for that in September 2026; it is on the backlog.
+
+### The record books (Records tab)
+
+Rebuilt from the Google Sheets embedded on the old History page — Record Low
+Scores, Low Scores – 2 Flex, Season High Scores, Dominator, Loser-minator, Mind
+the Gap, Streakers — plus the hand-typed waiver record and Sleeper's all-time
+standings (a screenshot on the old page). All computed, in `stats.py`'s record
+book functions. The rules, as Matt's sheets use them:
+
+- Single-week scores, margins and streaks count **every game**: regular season,
+  playoffs and toilet bowl. Season tables are regular season only.
+- **Points per player per game** divide by the starting slots less DEF (a team,
+  not a player): 9 in the one-flex years 2020–22, 10 from 2023. Dominators rank
+  on win %, then that; Loser-minators the other way up.
+- Streaks carry across seasons. A playoff bye is no game.
+- Season totals are Sleeper's own figure (roster `fpts`), as on History and
+  Standings. Summing the games can differ — by a point where a stat correction
+  landed late (Lee 2023: 2,065.96 official, 2,066.96 summed; the sheet has the
+  official one) or by a hundredth of rounding (Mike 2025: 2,095.99 official,
+  2,096.00 summed; the sheet has the sum). Career PF/PA, as on the team pages,
+  are summed from the games.
+
+Checked line by line in September 2026. Every row matched except these, where
+the data shows the sheet is wrong: Alex's 57.36 and Gareth's 64.46 were 2022
+week **9**, not 10; the two-flex low-score sheet misses Alex's 69.60 in 2023
+week 3 (the losing side of Lee's 120.60 win, #2 in Mind the Gap); Ross's 2020
+run is **7** wins — the sheet's 8 counts his week-14 bye; Chris's 10-game losing
+run began in week 6, not 5; and Mike 2025 as above. The all-time standings
+screenshot (through 2024) matched every W–L;
+PF/PA differ by 1–3 points for five managers, most likely Sleeper stat
+corrections since. The waiver record needs completed waiver claims, which
+`fetch_data.py` now keeps (it used to keep trades only).
+
 Champion GIFs and loser pictures in `Website\Winners and Losers\` were matched to
 seasons by file date and the brackets. As of September 2026 there is no 2025
 loser picture; drop one in with `prepare_media.py` and the page picks it up.
@@ -217,6 +252,12 @@ Two bugs were found and fixed this way, both in `stats.py`:
    0.00, which would have stuck permanently. Weeks where a team has scored zero
    are now skipped for those records.
 
+Both regressed before September 2026 — the team pages showed 2026 week 1's
+half-played scores as all-time lows, and record weeks were regular season only
+again. Fixed properly this time: `build_site.last_complete_week` reads Sleeper's
+state and the current season is indexed only up to the last finished week, so a
+week in progress is neither a result nor a record anywhere on the site.
+
 **When numbers disagree with the old site, check the live week first.** Records
 shift mid-week while games are in flight and settle when they finish. One real
 discrepancy remains: this computes 43 career trades for Dave where the old page
@@ -251,7 +292,8 @@ Roughly in the order discussed with Matt, though he has not yet picked:
    Matt explicitly wants replaced.
 3. **Team honours and uniforms.** Championships, conference titles, trophies, top
    scorer, player high score, plus the uniform images. Brings team pages level
-   with the old site.
+   with the old site. Matt specifically wants the regular-season (conference)
+   honours shown here.
 4. **The archive.** Trade Centre back to 2020, rules PDFs, commissioner updates,
    official team statements, Lee's Stat Corner.
 5. **Conference landing pages** (LC/MC) and a **calendar**, both on the old site

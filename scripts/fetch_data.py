@@ -125,10 +125,18 @@ def fetch_season(league_id: str, weeks: int, want_matchups: bool = True) -> dict
     for wk in range(1, weeks + 1):
         got = get(f"{API}/league/{league_id}/transactions/{wk}")
         if got:
-            # only trades matter for the record books; drop the waiver noise
-            trades = [t for t in got if t.get("type") == "trade"]
-            if trades:
-                season["transactions"][str(wk)] = trades
+            # Trades whole, for the trade counts. Of the rest, only completed
+            # waiver claims, trimmed to what the waiver record needs: who, whom
+            # and the FAAB bid. Free-agent pickups and failed bids are noise.
+            keep = [t for t in got if t.get("type") == "trade"]
+            keep += [
+                {k: t.get(k) for k in ("type", "status", "roster_ids", "adds", "settings",
+                                       "leg", "created", "transaction_id")}
+                for t in got
+                if t.get("type") == "waiver" and t.get("status") == "complete"
+            ]
+            if keep:
+                season["transactions"][str(wk)] = keep
 
     return season
 
