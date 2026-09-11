@@ -77,15 +77,19 @@ def optimal_points(entry, roster_positions, players):
     return round(total, 2)
 
 
-def sleeper_logo(user):
+def sleeper_logo(user, own=None):
     """
-    The team logo as Sleeper shows it: the team's own logo in this league, or the
-    manager's Sleeper picture where they have not set one. Linked, not copied, so
-    a new logo in Sleeper is on the site at the next refresh.
+    The team logo as Sleeper shows it: the team's own logo in this league. Where
+    a team has none, the logo named for that manager in league.config.json (a
+    file in assets/teams/), and failing that the manager's Sleeper picture.
+    Sleeper's are linked, not copied, so a logo uploaded there is on the site at
+    the next refresh and takes over from the config one.
     """
     meta = user.get("metadata") or {}
     if meta.get("avatar"):
         return meta["avatar"]
+    if own and (ASSETS / "teams" / own).exists():
+        return "assets/teams/" + own
     return "https://sleepercdn.com/avatars/" + user["avatar"] if user.get("avatar") else ""
 
 
@@ -104,7 +108,7 @@ def manager_lookup(cfg, users, rosters):
             "manager": conf.get("name") or user.get("display_name") or "Unknown",
             "team": team, "slug": slugify(team),
             # The AI crest is for the Scoreboard only; everywhere else has Sleeper's logo.
-            "image": conf.get("image"), "logo": sleeper_logo(user),
+            "image": conf.get("image"), "logo": sleeper_logo(user, conf.get("logo")),
             "division": str(st.get("division") or "1"),
             "wins": st.get("wins", 0), "losses": st.get("losses", 0), "ties": st.get("ties", 0),
             "fpts": pts(st, "fpts"), "fpts_against": pts(st, "fpts_against"),

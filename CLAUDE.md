@@ -271,9 +271,13 @@ once the computed one matched it.
   square-cropped to 320px, used as the crests on the fixtures. Everywhere else —
   the Teams cards, team pages and Trade Centre — shows the team logo as Sleeper
   has it (`build_site.sleeper_logo`). That is the league team logo
-  (`user.metadata.avatar`), or the manager's Sleeper picture where there is none;
-  Neil has none as of September 2026. The logos are linked from Sleeper's CDN,
-  not copied, so a new one is on the site at the next refresh.
+  (`user.metadata.avatar`). A team without one falls back to the `logo` file named
+  for that manager in `league.config.json` (in `assets/teams/`), and then to the
+  manager's Sleeper picture. Neil has no Sleeper logo as of September 2026, so
+  he uses `neil-logo.jpg`. Matt chose it: `Team Logos\IMG_9374.jpg`, squared to
+  400px like Sleeper's. The Sleeper logos are linked from Sleeper's CDN, not
+  copied, so a new one is on the site at the next refresh and takes over from
+  any config logo.
 - The stylesheet defines a complete light palette on bare `:root`, then overrides
   tokens under `prefers-color-scheme: dark` and `[data-theme="dark"]`. Do not put
   a colour's only definition inside a media query.
