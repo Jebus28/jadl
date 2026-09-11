@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 DOCS = ROOT / "docs"
 ASSETS = ROOT / "assets"
+RECORDS = ASSETS / "records"
 
 SLOT_ELIGIBILITY = {
     "QB": {"QB"}, "RB": {"RB"}, "WR": {"WR"}, "TE": {"TE"}, "K": {"K"}, "DEF": {"DEF"},
@@ -380,23 +381,23 @@ def power_section(cfg, rankings):
             + "".join(rows) + "</div></section>")
 
 
-def honours_section(cfg):
-    champs = cfg.get("champions", {})
-    consolation = (cfg.get("side_competitions") or {}).get("consolation_by_season", {})
-    year = str(cfg["season"]["year"])
-    note = "Every champion since " + str(cfg["league"]["established"]) + "."
+def placed(season, place):
+    """Whoever finished in `place` once the placement games were played, or None."""
+    return next((uid for uid, p in season["final"].items() if p == place), None)
+
+
+def honours_section(cfg, indexed, names):
+    note = "Every champion since " + str(cfg["league"]["established"]) + ", from the playoff brackets."
     cards = []
-    for season in sorted(set(list(champs) + [year])):
-        winner = champs.get(season)
-        trophy = consolation.get(season) or ""
-        current = season == year and not winner
+    for season in sorted(indexed, key=lambda s: s["season"]):
+        winner = names.get(placed(season, 1))
+        current = not season["final"]
         cap = "In progress" if current else "Champion"
-        extra = '<span class="trophy">' + e(trophy) + "</span>" if trophy else ""
         cards.append(f"""
       <div class="yr{' current' if current else ''}">
-        <span class="season">{e(season)}</span>
+        <span class="season">{e(season['season'])}</span>
         <span class="winner">{e(winner) if winner else "&mdash;"}</span>
-        <span class="cap">{cap}</span>{extra}
+        <span class="cap">{cap}</span>
       </div>""")
     return ("<section>" + sechead("Honours", note) + '<div class="honours">'
             + "".join(cards) + "</div></section>")
@@ -543,7 +544,44 @@ def teams_index(cfg, teams, rankings, career):
             + '<div class="teamgrid">' + "".join(cards) + "</div></section>")
 
 
+def record_media(season, kind):
+    """assets/records/<season>-<kind>.*, as scripts/prepare_media.py leaves it."""
+    for ext in ("webp", "jpg", "jpeg", "png", "gif"):
+        if (RECORDS / f"{season}-{kind}.{ext}").exists():
+            return f"assets/records/{season}-{kind}.{ext}"
+    return ""
+
+
+def honour_figure(cls, role, who, media):
+    if media:
+        pic = ('<div class="media"><img src="' + e(media) + '" alt="' + e(who + ", " + role)
+               + '" loading="lazy"></div>')
+    else:
+        pic = '<div class="media none"><span>No picture yet</span></div>'
+    return (f'<figure class="honour {cls}">{pic}<figcaption>'
+            f'<span class="role">{e(role)}</span><span class="who">{e(who)}</span></figcaption></figure>')
+
+
+def finish_card(title, note, head, rows):
+    return f"""
+      <div class="finish">
+        <div class="finish-head"><h3>{e(title)}</h3><span class="note">{e(note)}</span></div>
+        <div class="tablewrap"><table>
+          <thead><tr>{head}</tr></thead>
+          <tbody>{''.join(rows)}</tbody>
+        </table></div>
+      </div>"""
+
+
 def history_sections(cfg, indexed, names):
+    """
+    Two sets of finishes a season, kept apart because they are different things.
+    The regular season is decided on record; the playoffs and the toilet bowl
+    decide the final places. Topping your conference does not make you champion,
+    and finishing bottom of the table does not make you Loser of All Losers.
+    The only honours are the regular-season conference winners, the champion,
+    7th (the consolation bracket and the 1.01) and 10th.
+    """
     side = cfg.get("side_competitions") or {}
     consolation = side.get("consolation_by_season", {})
     spoon = side.get("wooden_spoon", "Loser of All Losers")
@@ -552,32 +590,99 @@ def history_sections(cfg, indexed, names):
         table = S.season_table(season)
         if not table:
             continue
-        era_key = "bce" if season["era"] == "bce" else "conference"
-        era = cfg["eras"].get(era_key, {})
-        rows = []
+        year = season["season"]
+        in_conferences = season["era"] == "conference"
+        era = cfg["eras"].get(season["era"], {})
+        division_of = {row["owner_id"]: row["division"] for row in table}
+        cup = consolation.get(str(year)) or "Consolation bracket"
+        first_loser = season["playoff_teams"] + 1
+        last = len(season["final"])
+
+        def who(uid):
+            return names.get(uid) or "Unknown"
+
+        def short(uid):
+            return cfg["conferences"].get(division_of.get(uid), {}).get("short", "")
+
+        # Regular season: on record, and within each conference once there were any.
+        # Nobody has won a conference until the last regular-season week is played.
+        cutoff = season["playoff_week_start"]
+        regular = [rows for wk, rows in season["fixtures"].items() if wk < cutoff]
+        decided = bool(season["final"]) or (bool(regular) and all(
+            any(a[1] or b[1] for a, b in rows) for rows in regular))
+        standing = S.conference_finish(season) if in_conferences else {}
+        if in_conferences:
+            table.sort(key=lambda r: (r["division"], standing.get(r["owner_id"], ("", 99))[1]))
+        reg_rows = []
         for row in table:
-            conf = cfg["conferences"].get(row["division"], {})
-            badge = ""
-            if row["place"] == 10:
-                badge = '<span class="badge spoon">' + e(spoon) + "</span>"
-            elif row["place"] == 7 and consolation.get(str(season["season"])):
-                badge = '<span class="badge trophy">' + e(consolation[str(season["season"])]) + "</span>"
-            conf_cell = e(conf.get("short", "")) if season["era"] != "bce" else "&mdash;"
-            rows.append(f"""<tr>
-              <td class="num">{row['place']}</td>
-              <td><div class="tm"><span class="nm">{e(names.get(row['owner_id']) or 'Unknown')}</span>{badge}</div></td>
-              <td>{conf_cell}</td>
+            uid, badge = row["owner_id"], ""
+            if in_conferences:
+                place = standing.get(uid, ("", 0))[1]
+                pos = short(uid) + " " + ordinal(place)
+                if place == 1 and decided:
+                    cls = "lc" if row["division"] == "1" else "mc"
+                    badge = '<span class="badge ' + cls + '">' + e(short(uid)) + " winner</span>"
+            else:
+                pos = ordinal(row["place"])
+            reg_rows.append(f"""<tr>
+              <td class="num">{e(pos)}</td>
+              <td><div class="tm"><span class="nm">{e(who(uid))}</span>{badge}</div></td>
               <td class="num">{row['wins']}&ndash;{row['losses']}</td>
               <td class="num">{row['fpts']:,.2f}</td>
               <td class="num">{row['max_points']:,.2f}</td>
             </tr>""")
+        reg_card = finish_card("Regular season", "On record, then points for.",
+                               "<th>Pos</th><th>Manager</th><th>W&ndash;L</th><th>PF</th><th>Max PF</th>",
+                               reg_rows)
+
+        if not season["final"]:
+            blocks.append(f"""
+  <section class="seasonblock">
+    {sechead(str(year) + " Season", "In progress")}
+    <div class="finishes">{reg_card}</div>
+  </section>""")
+            continue
+
+        # Final standings: settled in the playoffs and the toilet bowl.
+        fin_rows = []
+        for uid, place in sorted(season["final"].items(), key=lambda kv: kv[1]):
+            badge = ""
+            if place == 1:
+                badge = '<span class="badge trophy">Champion</span>'
+            elif place == first_loser:
+                badge = '<span class="badge trophy">' + e(cup) + "</span>"
+            elif place == last:
+                badge = '<span class="badge spoon">' + e(spoon) + "</span>"
+            conf_cell = "<td>" + e(short(uid)) + "</td>" if in_conferences else ""
+            fin_rows.append(f"""<tr>
+              <td class="num">{ordinal(place)}</td>
+              <td><div class="tm"><span class="nm">{e(who(uid))}</span>{badge}</div></td>{conf_cell}
+            </tr>""")
+        fin_card = finish_card("Final standings", "Settled in the playoffs and the toilet bowl.",
+                               "<th>Pos</th><th>Manager</th>" + ("<th>Conf</th>" if in_conferences else ""),
+                               fin_rows)
+
+        # The honours: champion and Loser of All Losers with their pictures, then
+        # the conference winners and the 1.01.
+        podium = [
+            honour_figure("champion", "Champion", who(placed(season, 1)), record_media(year, "champion")),
+            honour_figure("spoon", spoon, who(placed(season, last)), record_media(year, "loser")),
+        ]
+        also = []
+        for division in (sorted(cfg["conferences"]) if in_conferences else []):
+            winner = next((u for u, (d, p) in standing.items() if d == division and p == 1), None)
+            cls = "lc" if division == "1" else "mc"
+            label = cfg["conferences"][division].get("short", "") + " regular season"
+            also.append(f'<div class="{cls}"><dt>{e(label)}</dt><dd>{e(who(winner))}</dd></div>')
+        also.append(f'<div class="trophy"><dt>{e(cup)}</dt><dd>{e(who(placed(season, first_loser)))}'
+                    f'<span class="sub">{ordinal(first_loser)}, and the 1.01</span></dd></div>')
+        podium.append('<dl class="honourlist">' + "".join(also) + "</dl>")
+
         blocks.append(f"""
-  <section>
-    {sechead(str(season['season']) + " Season", era.get('label',''))}
-    <div class="tablewrap"><table>
-      <thead><tr><th>#</th><th>Manager</th><th>Conf</th><th>W&ndash;L</th><th>PF</th><th>Max PF</th></tr></thead>
-      <tbody>{''.join(rows)}</tbody>
-    </table></div>
+  <section class="seasonblock">
+    {sechead(str(year) + " Season", era.get('label', ''))}
+    <div class="seasonhonours">{''.join(podium)}</div>
+    <div class="finishes">{fin_card}{reg_card}</div>
   </section>""")
     return "".join(blocks)
 
@@ -620,7 +725,7 @@ def main():
     (DOCS / ".nojekyll").write_text("", encoding="utf-8")
 
     home = (scoreboard(cfg, teams, results, week, career, prev_finish)
-            + power_section(cfg, rankings) + honours_section(cfg))
+            + power_section(cfg, rankings) + honours_section(cfg, indexed, names))
     (DOCS / "index.html").write_text(page(cfg, "Scoreboard", "Scoreboard", home), encoding="utf-8")
 
     (DOCS / "standings.html").write_text(
@@ -634,7 +739,7 @@ def main():
         (DOCS / ("team-" + team["slug"] + ".html")).write_text(
             team_page(cfg, team, career, names), encoding="utf-8")
 
-    history_body = (honours_section(cfg)
+    history_body = (honours_section(cfg, indexed, names)
                     + "<section>" + sechead("The two eras") + era_note(cfg) + "</section>"
                     + history_sections(cfg, indexed, names))
     (DOCS / "history.html").write_text(page(cfg, "History", "History", history_body), encoding="utf-8")

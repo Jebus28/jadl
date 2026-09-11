@@ -95,14 +95,6 @@
       "portrait": "gareth.jpg"
     }
   },
-  "champions": {
-    "2020": "Ross",
-    "2021": "Dave",
-    "2022": "Jebus",
-    "2023": "Jebus",
-    "2024": "Jebus",
-    "2025": "Mike"
-  },
   "divisional_weeks": {
     "_comment": "Weeks 10-14 are mostly in-conference. Each of those weeks also carries one inter-conference game between the two teams that finished in the same place in their conference last season - 5th v 5th first, working up to the two conference winners in the final week. Sleeper already schedules these; we only name them. Keys are last season's conference finishing position. Rename freely.",
     "from_week": 10,
@@ -122,7 +114,7 @@
     "17": "The Championship"
   },
   "side_competitions": {
-    "_comment": "10th is always Loser of All Losers. The consolation bracket winner takes 7th and the 1.01, and is renamed each year after the leading college prospect.",
+    "_comment": "Champions, 7th and 10th are read from the Sleeper brackets, never typed here. 10th is always Loser of All Losers. The consolation bracket winner takes 7th and the 1.01; that trophy is renamed each year after the leading college prospect. Blank shows as 'Consolation bracket'. Champion GIFs and loser pictures go in assets/records via scripts/prepare_media.py.",
     "wooden_spoon": "Loser of All Losers",
     "consolation_by_season": {
       "2020": "Trevor Trophy",
@@ -130,7 +122,7 @@
       "2022": "Bijan Bowl",
       "2023": "Caleb Cup",
       "2024": "Shedeur Bowl",
-      "2025": "",
+      "2025": "Mendoza Marathon",
       "2026": ""
     },
     "labels": {

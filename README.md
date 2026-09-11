@@ -21,9 +21,20 @@ Edit **`league.config.json`** and nothing else. It holds:
 - the current Sleeper league ID (change it when you roll over to a new season)
 - conference names and colours
 - manager names and their image filenames
-- the champions list
+- the name of each year's consolation trophy
+
+Champions, the 1.01 winner and Loser of All Losers are read from the Sleeper
+brackets, so there is no list of them to keep.
 
 Team images live in `assets/teams/`. Drop new ones in and point `league.config.json` at them.
+
+Each season's champion GIF and Loser of All Losers picture go in `assets/records/`.
+This shrinks them and names them so the history page finds them on its own:
+
+```
+python scripts/prepare_media.py 2026 champion "path/to/the.gif"
+python scripts/prepare_media.py 2026 loser "path/to/the-photo.jpg"
+```
 
 ## Running it yourself
 

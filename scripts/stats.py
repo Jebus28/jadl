@@ -30,6 +30,23 @@ def bracket_pairs(bracket: list | None) -> set:
     return pairs
 
 
+def final_places(brackets: dict, roster_owner: dict, playoff_teams: int) -> dict:
+    """
+    owner_id -> final place, from the placement games. The winners bracket settles
+    1st to 6th. The losers bracket - the toilet bowl - settles the rest, winners
+    advancing, so its p=1 game is for 7th (and the 1.01) and the loser of its last
+    game is 10th, Loser of All Losers. Empty until every placement game is played.
+    """
+    out = {}
+    for name, offset in (("winners_bracket", 0), ("losers_bracket", playoff_teams)):
+        for match in brackets.get(name) or []:
+            p, w, l = match.get("p"), match.get("w"), match.get("l")
+            if p and w and l and roster_owner.get(w) and roster_owner.get(l):
+                out[roster_owner[w]] = offset + p
+                out[roster_owner[l]] = offset + p + 1
+    return out if len(out) == len(roster_owner) else {}
+
+
 def index_season(season: dict, conference_from: int) -> dict:
     """Flatten one season into something the all-time maths can walk."""
     year = int(season.get("season") or 0)
@@ -56,10 +73,13 @@ def index_season(season: dict, conference_from: int) -> dict:
                 ))
         fixtures[int(wk)] = rows
 
+    playoff_teams = settings.get("playoff_teams") or 6
     return {
         "season": year,
         "era": "conference" if year >= conference_from else "bce",
         "playoff_week_start": settings.get("playoff_week_start") or 15,
+        "playoff_teams": playoff_teams,
+        "final": final_places(brackets, roster_owner, playoff_teams),
         "roster_owner": roster_owner,
         "roster_div": roster_div,
         "fixtures": fixtures,

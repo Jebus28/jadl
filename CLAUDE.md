@@ -38,10 +38,12 @@ Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.ap
 
 | Path | What it is |
 |---|---|
-| `league.config.json` | **The only file Matt should ever need to edit.** Season, league ID, conferences, managers, champions, trophy names. |
+| `league.config.json` | **The only file Matt should ever need to edit.** Season, league ID, conferences, managers, consolation trophy names. Champions are *not* in it — they come from the brackets. |
 | `scripts/fetch_data.py` | Pulls league, users, rosters, matchups, brackets and trades for every season, walking `previous_league_id` back to 2020. |
 | `scripts/stats.py` | All-time maths: career records, era splits, head-to-head, trades, season tables. |
 | `scripts/build_site.py` | Renders the HTML. |
+| `scripts/prepare_media.py` | Turns a champion GIF or loser photo into `assets/records/<season>-<champion\|loser>.*` — GIFs become silent looping WebPs under 2.5MB, photos are straightened and shrunk. |
+| `assets/records/` | One champion loop and one Loser of All Losers picture per season, found by filename. No config entry. |
 | `assets/site.css` | One stylesheet, themed light and dark via CSS custom properties. |
 | `assets/teams/` | `<manager>.jpg` portraits and `<manager>-crest.jpg` square crops. |
 | `data/` | Fetched JSON. Committed so builds are reproducible; regenerated every run. |
@@ -79,7 +81,29 @@ explicitly — say "two eras, three tables".
   trophy is renamed every year after the leading college prospect:
   2020 Trevor Trophy (Trevor Lawrence), 2021 Corral Cup, 2022 Bijan Bowl,
   2023 Caleb Cup, 2024 Shedeur Bowl, 2025 Mendoza Marathon. 2026 is TBC —
-  candidates were Arch Manning and Jeremiah Smith. Blank means no badge is drawn.
+  candidates were Arch Manning and Jeremiah Smith. A blank name shows as
+  "Consolation bracket" — 7th is still an honour.
+
+### Two sets of finishes
+
+Matt's rule: a season has **two** sets of finishes and they are held separately.
+
+- **Regular season** — on record (then points for), within each conference in
+  the conference era. Its only honour is **conference winner** (LFC and MFC).
+- **Final standings** — settled in the playoffs and the toilet bowl, read from
+  the bracket placement games (`stats.final_places`). Winners bracket p=1/3/5
+  give 1st–6th; the losers bracket advances its winners, so its p=1 game is for
+  **7th** (the 1.01) and the loser of its p=3 game is **10th**, Loser of All Losers.
+
+The only honours are those four: conference winners, champion, 7th and 10th.
+Topping the table does not make you champion and finishing bottom of it does not
+make you Loser of All Losers. The first history page got this wrong — it badged
+the regular-season 10th and 7th — which misnamed three Losers of All Losers
+(2021, 2022, 2025) and gave the 2022 Bijan Bowl to a playoff team.
+
+Champion GIFs and loser pictures in `Website\Winners and Losers\` were matched to
+seasons by file date and the brackets. As of September 2026 there is no 2025
+loser picture; drop one in with `prepare_media.py` and the page picks it up.
 
 ### Divisional weeks and the playoff rounds
 
@@ -158,7 +182,9 @@ Five-round rookie drafts. Seven seasons on Sleeper, 2020 through 2026, linked by
 
 ### Champions
 
-2020 Ross, 2021 Dave, 2022–2024 Jebus (a three-peat), 2025 Mike.
+2020 Ross, 2021 Dave, 2022–2024 Jebus (a three-peat), 2025 Mike. Computed from
+the winners bracket; the hand-kept list in `league.config.json` was removed
+once the computed one matched it.
 
 ## Conventions
 
@@ -251,3 +277,9 @@ Roughly in the order discussed with Matt, though he has not yet picked:
   `PATH` either — use the copy inside GitHub Desktop's `app-*\resources\app\git\cmd`.
   A local `build_site.py` run reproduces the committed `docs/` exactly apart from
   the "Last refreshed" timestamp, so a clean local build can be trusted.
+- That command-line `git` has **no GitHub credentials**, so `git push` fails with
+  "could not read Username". Commit locally and have Matt press **Push origin**
+  in GitHub Desktop. Every push triggers the bot, which commits a refresh a few
+  minutes later — fast-forward to it (`git pull --ff-only`) before the next
+  commit. If local `docs/` edits block that, discard them with
+  `git checkout -- docs/` and rebuild; they are generated anyway.

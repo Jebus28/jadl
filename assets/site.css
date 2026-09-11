@@ -337,5 +337,44 @@
   /* ---------- badges ---------- */
   .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:4px;margin-left:6px;white-space:nowrap}
   .badge.trophy{background:var(--brass-soft);color:var(--brass)}
-  .badge.spoon{background:var(--lombardi-soft);color:var(--lombardi)}
-  .yr .trophy{font-size:10.5px;color:var(--brass);margin-top:4px;display:block}
+  /* Neutral, so Loser of All Losers never reads as a Lombardi honour. */
+  .badge.spoon{background:var(--surface-2);color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line-strong)}
+  .badge.lc{background:var(--lombardi-soft);color:var(--lombardi)}
+  .badge.mc{background:var(--madden-soft);color:var(--madden)}
+
+  /* ---------- a season in the history ---------- */
+  /* The honours first - champion and Loser of All Losers with their pictures,
+     then the conference winners and the 1.01 - and below them the two sets of
+     finishes, kept apart: final standings from the brackets, regular season on
+     record. */
+  .seasonhonours{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px;align-items:start}
+  .honour{
+    margin:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;
+  }
+  .honour.champion{border-color:var(--brass);box-shadow:var(--shadow), inset 0 3px 0 var(--brass)}
+  .honour .media{aspect-ratio:1/1;background:var(--surface-2);display:grid;place-items:center}
+  .honour .media img{width:100%;height:100%;object-fit:contain;display:block}
+  .honour .media.none span{font-size:12px;color:var(--muted)}
+  .honour figcaption{padding:10px 14px 12px;display:grid;gap:1px;border-top:1px solid var(--line)}
+  .honour .role{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+  .honour.champion .role{color:var(--brass)}
+  .honour .who{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:18px;letter-spacing:-.01em}
+  .honourlist{
+    margin:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;
+  }
+  .honourlist > div{padding:13px 15px;border-bottom:1px solid var(--line);border-left:3px solid var(--line-strong);display:grid;gap:1px}
+  .honourlist > div:last-child{border-bottom:0}
+  .honourlist > div.lc{border-left-color:var(--lombardi)}
+  .honourlist > div.mc{border-left-color:var(--madden)}
+  .honourlist > div.trophy{border-left-color:var(--brass)}
+  .honourlist dt{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .honourlist dd{margin:0;font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:17px}
+  .honourlist .sub{display:block;font-family:"Public Sans",system-ui,sans-serif;font-weight:400;font-size:12px;color:var(--muted)}
+  .finishes{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start}
+  .finish{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .finish-head{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .finish-head h3{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+  .finish-head .note{font-size:12px;color:var(--muted)}
+  .finish th:nth-child(2){text-align:left}
