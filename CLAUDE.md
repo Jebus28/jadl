@@ -40,7 +40,7 @@ Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.ap
 |---|---|
 | `league.config.json` | **The only file Matt should ever need to edit.** Season, league ID, conferences, managers, consolation trophy names, and the draft-day trades Sleeper never recorded (`manual_trades`). Champions are *not* in it — they come from the brackets. |
 | `scripts/fetch_data.py` | Pulls league, users, rosters, matchups, brackets, trades, completed waiver claims, cross-team commissioner moves and the rookie drafts for every season, walking `previous_league_id` back to 2020. |
-| `scripts/stats.py` | All-time maths: career records, era splits, head-to-head, trades, season tables. |
+| `scripts/stats.py` | All-time maths: career records, era splits, head-to-head, trades, season tables, team honours. |
 | `scripts/build_site.py` | Renders the HTML. |
 | `scripts/prepare_media.py` | Turns a champion GIF or loser photo into `assets/records/<season>-<champion\|loser>.*` — GIFs become silent looping WebPs under 2.5MB, photos are straightened and shrunk. |
 | `assets/records/` | One champion loop and one Loser of All Losers picture per season, found by filename. No config entry. |
@@ -106,7 +106,49 @@ the regular-season 10th and 7th — which misnamed three Losers of All Losers
 (2021, 2022, 2025) and gave the 2022 Bijan Bowl to a playoff team.
 
 Regular-season honours (conference titles) belong on the **team pages**, not
-History — Matt asked for that in September 2026; it is on the backlog.
+History — Matt asked for that in September 2026, and they are there now, in the
+Honours cabinet below.
+
+### Team honours (team-*.html)
+
+Rebuilt in September 2026 from the Honours block on the old team pages. All
+computed, in `stats.honours` and `stats.best_managers`, and each honour appears
+only once it is settled:
+
+- From the brackets, once every placement game is played: **champion** (with
+  the final's score), the **consolation bracket** (7th and the 1.01, under that
+  year's cup name) and **Loser of All Losers**.
+- From the finished regular season: the **regular-season winner**, each
+  conference's in the conference era and the whole league's in BCE, with its
+  record; and the **top scorer**, on Sleeper's own season total.
+- From the finished season, every game counting as in the record books: the
+  **weekly high score**, the **weekly low score** and the **player high score**
+  (starters only).
+- **Best Manager** is weekly: the regular-season week's highest score as a
+  share of max points. That is the rule in Matt's 2025 and 2026 workbooks (the
+  Awards sheet's Manager Best, from each Week sheet's PF/MPF). Max points is
+  worked out as Sleeper does it: the best lineup from every rostered player's
+  score, a player filling his position or any position he was started at that
+  season. Sleeper now files Travis Hunter as a DB, though he played WR in 2025.
+- A gold star beside the team name for each championship, as the old pages had.
+
+Checked against all ten old pages in September 2026. Every honour they list
+matches, and they had missed several since: the 2023 and 2024 Losers of All
+Losers, the Caleb Cup and Shedeur Bowl winners, Alex's 2024 LFC title, Lee's
+2023 top score, Ross's 2024 player high and Gareth's 2024 low. Two differences,
+both the old pages':
+
+- Neil's 2021 weekly low, 64.70, was in week **12**, not 11.
+- **Best Manager in 2020 and 2024.** Matt picked those two seasons on fewest
+  points missed rather than share of max points; 2021–23 and 2025 match exactly.
+  The site applies one rule to every season, so seven managers' 2020 counts
+  change (Chris 2→1, Dave 0→1, Gareth 0→1, Mike 3→1, Neil 3→2, Rich 1→2,
+  Ross 1→2) and two in 2024 (Chris 2→1, Neil 0→1). Matt has been told.
+
+Max points summed over a season match Sleeper's own total (roster `ppts`) for
+all but a few team-seasons: Mike 2020 (+31.94) and 2021 (+23.12), Gareth 2023
+(+12.48) and 2024 (+22.18), and four more by a point or two. Not traced. It
+changes no Best Manager in the seasons that could be checked.
 
 ### The record books (Records tab)
 
@@ -389,10 +431,8 @@ Roughly in the order discussed with Matt, though he has not yet picked:
    Dynasty Daddy has no public API — do not go looking for one.
 2. **Colour scheme and identity.** The current claret and teal are placeholders
    Matt explicitly wants replaced.
-3. **Team honours and uniforms.** Championships, conference titles, trophies, top
-   scorer, player high score, plus the uniform images. Brings team pages level
-   with the old site. Matt specifically wants the regular-season (conference)
-   honours shown here.
+3. **Team uniforms.** The uniform images from the old team pages, the last thing
+   they have that the new ones do not. (The honours were done in September 2026.)
 4. **The archive.** Official team statements, Lee's Stat Corner. (The Trade
    Centre, Commissioner Updates and Rules were done in September 2026.)
 5. **Conference landing pages** (LC/MC) and a **calendar**, both on the old site

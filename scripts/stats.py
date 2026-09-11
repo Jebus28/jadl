@@ -16,6 +16,43 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from datetime import date, datetime, time, timedelta, timezone
 
+SLOT_ELIGIBILITY = {
+    "QB": {"QB"}, "RB": {"RB"}, "WR": {"WR"}, "TE": {"TE"}, "K": {"K"}, "DEF": {"DEF"},
+    "FLEX": {"RB", "WR", "TE"},
+    "WRRB_FLEX": {"RB", "WR"},
+    "REC_FLEX": {"WR", "TE"},
+    "SUPER_FLEX": {"QB", "RB", "WR", "TE"},
+}
+SINGLE_SLOTS = {"QB", "RB", "WR", "TE", "K", "DEF"}
+
+
+def optimal_points(scores: dict | None, roster_positions: list, players: dict,
+                   played_as: dict | None = None) -> float:
+    """
+    The most a lineup could have scored - Sleeper's max points - from every
+    rostered player's score that week. A player fills his position, or any
+    position he was started at that season: Sleeper re-files players now and
+    then, and Travis Hunter is a DB in its index now but played WR in 2025.
+    """
+    pool = []
+    for pid, score in (scores or {}).items():
+        eligible = set((played_as or {}).get(pid, ()))
+        if (players.get(pid) or {}).get("position"):
+            eligible.add(players[pid]["position"])
+        if eligible:
+            pool.append((pid, eligible, float(score or 0)))
+    pool.sort(key=lambda row: row[2], reverse=True)
+    slots = sorted((s for s in roster_positions if s in SLOT_ELIGIBILITY),
+                   key=lambda s: len(SLOT_ELIGIBILITY[s]))
+    used, total = set(), 0.0
+    for slot in slots:
+        for pid, eligible, score in pool:
+            if pid not in used and eligible & SLOT_ELIGIBILITY[slot]:
+                used.add(pid)
+                total += score
+                break
+    return round(total, 2)
+
 
 def _pts(settings: dict, key: str) -> float:
     return round((settings.get(key) or 0) + (settings.get(f"{key}_decimal") or 0) / 100, 2)
@@ -61,8 +98,9 @@ def index_season(season: dict, conference_from: int, through_week: int | None = 
 
     roster_owner = {r["roster_id"]: r.get("owner_id") for r in rosters}
     roster_div = {r["roster_id"]: str((r.get("settings") or {}).get("division") or "1") for r in rosters}
+    positions = season.get("roster_positions") or []
 
-    fixtures, lineups = {}, {}
+    fixtures, lineups, squads, played_as = {}, {}, {}, defaultdict(set)
     for wk, entries in (season.get("matchups") or {}).items():
         if through_week is not None and int(wk) > through_week:
             continue
@@ -76,6 +114,11 @@ def index_season(season: dict, conference_from: int, through_week: int | None = 
                     for pid, pts in zip(entry.get("starters") or [], entry.get("starters_points") or [])
                     if pid and pid != "0"
                 ]
+                # Every rostered player's score, for max points and Best Manager.
+                squads.setdefault(int(wk), {})[entry["roster_id"]] = entry.get("players_points") or {}
+                for slot, pid in zip(positions, entry.get("starters") or []):
+                    if slot in SINGLE_SLOTS and pid and pid != "0":
+                        played_as[pid].add(slot)
         rows = []
         for sides in grouped.values():
             if len(sides) == 2:
@@ -104,6 +147,12 @@ def index_season(season: dict, conference_from: int, through_week: int | None = 
         "roster_div": roster_div,
         "fixtures": fixtures,
         "lineups": lineups,
+        "squads": squads,
+        "played_as": dict(played_as),
+        "roster_positions": positions,
+        # The final: the winners bracket's game for 1st, as (winner, loser) roster ids.
+        "title_game": next(((m["w"], m["l"]) for m in brackets.get("winners_bracket") or []
+                            if m.get("p") == 1 and m.get("w") and m.get("l")), None),
         "winners": bracket_pairs(brackets.get("winners_bracket")),
         "losers": bracket_pairs(brackets.get("losers_bracket")),
         "rosters": rosters,
@@ -634,3 +683,88 @@ def waiver_record(seasons_transactions: list[dict], seasons: list[dict], players
                         "player": (players.get(pid) or {}).get("full_name") or pid,
                         "season": season["season"], "week": int(wk)}
     return best
+
+
+# --------------------------------------------------------------------------- #
+# team honours - rebuilt from the Honours block on the old team pages
+# --------------------------------------------------------------------------- #
+def best_managers(seasons: list[dict], players: dict) -> dict:
+    """
+    owner_id -> {season: [weeks]}, the weeks each manager was Best Manager: the
+    highest score as a share of max points, which is the Awards sheet's rule in
+    Matt's 2025 and 2026 workbooks. Regular season only. A tie shares the week.
+    """
+    out = defaultdict(lambda: defaultdict(list))
+    for season in seasons:
+        owner, shares = season["roster_owner"], defaultdict(dict)
+        for wk, phase, a, b in games(season):
+            if phase != "regular":
+                continue
+            for rid, pts in (a, b):
+                most = optimal_points(season["squads"].get(wk, {}).get(rid), season["roster_positions"],
+                                      players, season["played_as"])
+                if pts and most and owner.get(rid):
+                    shares[wk][owner[rid]] = round(pts / most, 9)
+        for wk, week in sorted(shares.items()):
+            top = max(week.values())
+            for uid, share in week.items():
+                if share == top:
+                    out[uid][season["season"]].append(wk)
+    return out
+
+
+def honours(seasons: list[dict]) -> dict:
+    """
+    owner_id -> every honour won, newest season first, each appearing once it is
+    settled and never before. From the brackets, once the placement games are
+    all played: champion (with the final), the consolation bracket (7th, the
+    1.01) and Loser of All Losers. From the finished regular season: the
+    conference winners - the whole league's in BCE - and the top scorer, on
+    Sleeper's own season total. From the finished season: its highest and lowest
+    weekly scores, and its best player week. Single weeks count every game, as
+    the record books do.
+    """
+    out = defaultdict(list)
+    for season in sorted(seasons, key=lambda s: s["season"], reverse=True):
+        year, final, owner = season["season"], season["final"], season["roster_owner"]
+
+        def add(uid, kind, **detail):
+            if uid:
+                out[uid].append(dict(detail, kind=kind, season=year))
+
+        if final:
+            placed = {p: uid for uid, p in final.items()}
+            detail = {}
+            if season["title_game"]:
+                won, lost = season["title_game"]
+                for _wk, phase, a, b in games(season):
+                    if phase == "playoffs" and frozenset((a[0], b[0])) == frozenset((won, lost)):
+                        mine, theirs = (a, b) if a[0] == won else (b, a)
+                        detail = {"opponent": owner.get(lost), "points": mine[1], "against": theirs[1]}
+            add(placed.get(1), "champion", **detail)
+            add(placed.get(season["playoff_teams"] + 1), "consolation", place=season["playoff_teams"] + 1)
+            add(placed.get(len(final)), "spoon", place=len(final))
+
+        if season["regular_done"]:
+            table = season_table(season)
+            if season["era"] == "conference":
+                standing = conference_finish(season)
+                winners = [r for r in table if standing.get(r["owner_id"], ("", 0))[1] == 1]
+            else:
+                winners = table[:1]
+            for row in sorted(winners, key=lambda r: r["division"]):
+                add(row["owner_id"], "regular", w=row["wins"], l=row["losses"], t=row["ties"],
+                    division=row["division"] if season["era"] == "conference" else None)
+            top = max(table, key=lambda r: r["fpts"])
+            add(top["owner_id"], "top_scorer", points=top["fpts"])
+
+        if final:
+            scores = weekly_scores([season])
+            for kind, pick in (("high_week", max), ("low_week", min)):
+                row = pick(scores, key=lambda r: (r["points"], -r["week"] if pick is max else r["week"]))
+                add(row["owner_id"], kind, points=row["points"], week=row["week"], phase=row["phase"])
+            best = max(player_weeks([season]), key=lambda r: (r["points"], -r["week"]), default=None)
+            if best:
+                add(best["owner_id"], "player_week", player_id=best["player_id"], points=best["points"],
+                    week=best["week"], phase=best["phase"])
+    return out

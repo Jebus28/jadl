@@ -24,14 +24,6 @@ DOCS = ROOT / "docs"
 ASSETS = ROOT / "assets"
 RECORDS = ASSETS / "records"
 
-SLOT_ELIGIBILITY = {
-    "QB": {"QB"}, "RB": {"RB"}, "WR": {"WR"}, "TE": {"TE"}, "K": {"K"}, "DEF": {"DEF"},
-    "FLEX": {"RB", "WR", "TE"},
-    "WRRB_FLEX": {"RB", "WR"},
-    "REC_FLEX": {"WR", "TE"},
-    "SUPER_FLEX": {"QB", "RB", "WR", "TE"},
-}
-
 
 def load(name, default=None):
     path = DATA / name
@@ -54,28 +46,6 @@ def pts(settings, key="fpts"):
 def rec(r):
     base = str(r["w"]) + "&ndash;" + str(r["l"])
     return base + "&ndash;" + str(r["t"]) if r.get("t") else base
-
-
-def optimal_points(entry, roster_positions, players):
-    scores = entry.get("players_points") or {}
-    if not scores:
-        return 0.0
-    pool = []
-    for pid, score in scores.items():
-        pos = (players.get(pid) or {}).get("position")
-        if pos:
-            pool.append((pid, pos, float(score or 0)))
-    pool.sort(key=lambda row: row[2], reverse=True)
-    slots = sorted((s for s in roster_positions if s in SLOT_ELIGIBILITY),
-                   key=lambda s: len(SLOT_ELIGIBILITY[s]))
-    used, total = set(), 0.0
-    for slot in slots:
-        for pid, pos, score in pool:
-            if pid not in used and pos in SLOT_ELIGIBILITY[slot]:
-                used.add(pid)
-                total += score
-                break
-    return round(total, 2)
 
 
 def sleeper_logo(user, own=None):
@@ -132,9 +102,9 @@ def weekly_results(season, players):
             a, b = sides
             fixtures.append({
                 "home": {"roster_id": a["roster_id"], "points": round(float(a.get("points") or 0), 2),
-                         "optimal": optimal_points(a, positions, players)},
+                         "optimal": S.optimal_points(a.get("players_points"), positions, players)},
                 "away": {"roster_id": b["roster_id"], "points": round(float(b.get("points") or 0), 2),
-                         "optimal": optimal_points(b, positions, players)},
+                         "optimal": S.optimal_points(b.get("players_points"), positions, players)},
             })
         out[int(wk)] = fixtures
     return out
@@ -457,7 +427,107 @@ def h2h_table(title, entries, note=""):
       </div>"""
 
 
-def team_page(cfg, team, career, names):
+def week_list(weeks):
+    """[1, 3, 4, 10, 11, 12] -> '1, 3–4, 10–12'."""
+    runs = []
+    for wk in sorted(weeks):
+        if runs and wk == runs[-1][1] + 1:
+            runs[-1][1] = wk
+        else:
+            runs.append([wk, wk])
+    return ", ".join(str(a) if a == b else f"{a}&ndash;{b}" for a, b in runs)
+
+
+def team_honours(cfg, uid, won, best_weeks, names, players):
+    """
+    The trophy cabinet, as the old team pages' Honours block had it: a card for
+    each honour and a row in it for every season it was won, all computed
+    (stats.honours, stats.best_managers). The titles lead; the two dishonours,
+    Loser of All Losers and the season's lowest score, come last.
+    """
+    side = cfg.get("side_competitions") or {}
+    labels, cups = side.get("labels", {}), side.get("consolation_by_season", {})
+    phase_tag = {"playoffs": labels.get("playoffs", "Playoffs"),
+                 "consolation": labels.get("consolation", "Toilet Bowl")}
+
+    def when(h):
+        tag = phase_tag.get(h["phase"])
+        return "week " + str(h["week"]) + (", " + e(tag).lower() if tag else "")
+
+    def detail(h):
+        kind = h["kind"]
+        if kind == "champion" and h.get("opponent"):
+            return (f'Beat {e(names.get(h["opponent"]) or "Unknown")} in the final, '
+                    f'<span class="num">{h["points"]:.2f}&ndash;{h["against"]:.2f}</span>')
+        if kind == "regular":
+            record = f'<span class="num">{rec(h)}</span>'
+            if h["division"]:
+                cls = "lc" if h["division"] == "1" else "mc"
+                short = cfg["conferences"].get(h["division"], {}).get("short", "")
+                return f'<span class="badge {cls}">{e(short)}</span>{record}'
+            return f'<span class="badge era">{e(cfg["eras"]["bce"].get("label", "BCE"))}</span>{record}'
+        if kind == "consolation":
+            cup = cups.get(str(h["season"])) or "Consolation bracket"
+            return e(cup) + " &middot; " + ordinal(h["place"]) + ", and the 1.01"
+        if kind == "spoon":
+            return ordinal(h["place"]) + " place"
+        if kind == "top_scorer":
+            return f'<span class="num">{h["points"]:,.2f}</span> points'
+        if kind in ("high_week", "low_week"):
+            return f'<span class="num">{h["points"]:.2f}</span> &middot; {when(h)}'
+        if kind == "player_week":
+            name = (players.get(h["player_id"]) or {}).get("full_name") or h["player_id"]
+            return f'{e(name)} &middot; <span class="num">{h["points"]:.2f}</span> &middot; {when(h)}'
+        return ""
+
+    mine = won.get(uid, [])
+    cards = [("champion", "Champion", "champion", ""),
+             ("regular", "Regular-season winner", "regular", "Top of the conference on record, then points for."),
+             ("consolation", "Consolation bracket", "trophy", ""),
+             ("top_scorer", "Top scorer", "", "Most points in the regular season."),
+             ("high_week", "Weekly high score", "", "The season's biggest score, playoffs included."),
+             ("player_week", "Player high score", "", "The season's best week by a starter."),
+             ("best", "Best Manager", "", "The week's highest score as a share of max points. Regular season."),
+             ("spoon", side.get("wooden_spoon", "Loser of All Losers"), "spoon", ""),
+             ("low_week", "Weekly low score", "spoon", "The season's smallest score.")]
+    html_cards = []
+    for kind, title, cls, note in cards:
+        if kind == "best":
+            seasons = sorted((best_weeks.get(uid) or {}).items(), reverse=True)
+            count = sum(len(w) for _yr, w in seasons)
+            rows = [(yr, f'<span class="num">{len(w)}</span> &middot; week{"s" if len(w) > 1 else ""} {week_list(w)}')
+                    for yr, w in seasons]
+        else:
+            rows = [(h["season"], detail(h)) for h in mine if h["kind"] == kind]
+            count = len(rows)
+        if not rows:
+            continue
+        items = "".join(f'<li><span class="hy num">{yr}</span><span class="hdet">{det}</span></li>'
+                        for yr, det in rows)
+        foot = '<p class="hnote">' + e(note) + "</p>" if note else ""
+        html_cards.append(f"""
+      <div class="hcard{' ' + cls if cls else ''}">
+        <div class="hhead"><h3>{e(title)}</h3><span class="hcount num">{count}<span class="x">&times;</span></span></div>
+        <ul class="hrows">{items}</ul>{foot}
+      </div>""")
+
+    inner = ('<div class="cabinet">' + "".join(html_cards) + "</div>") if html_cards else \
+        '<p class="empty">Nothing in the cabinet yet.</p>'
+    return ("<section>" + sechead("Honours", "Each one appears once it is settled, straight from Sleeper.")
+            + inner + "</section>")
+
+
+def title_stars(uid, won):
+    """A star for every championship beside the team name, as the old pages had it."""
+    years = [str(h["season"]) for h in won.get(uid, []) if h["kind"] == "champion"]
+    if not years:
+        return ""
+    label = str(len(years)) + " championship" + ("s" if len(years) > 1 else "")
+    return (f'<span class="stars" role="img" aria-label="{label}" title="Champion {", ".join(reversed(years))}">'
+            + "&#9733;" * len(years) + "</span>")
+
+
+def team_page(cfg, team, career, names, won, best_weeks, players):
     s = career.get(team["user_id"])
     conf = cfg["conferences"].get(team["division"], {})
     logo = ('<img class="teamlogo" src="' + e(team["logo"]) + '" alt="' + e(team["team"])
@@ -479,7 +549,8 @@ def team_page(cfg, team, career, names):
         ("Points against", format(s["pa"], ",.2f")),
         ("Record week", format(best[0], ".2f") if best else "&mdash;"),
         ("Lowest week", format(worst[0], ".2f") if worst else "&mdash;"),
-        ("Playoffs", str(s["playoff_appearances"]) + " apps, " + rec(s["playoffs"])),
+        ("Playoffs", str(s["playoff_appearances"]) + (" app, " if s["playoff_appearances"] == 1 else " apps, ")
+         + rec(s["playoffs"])),
         ("Trades", '<a href="trades.html#' + e(slugify(team["manager"])) + '">' + str(s["trades"]) + "</a>"),
     ]
     fact_html = "".join("<div><dt>" + e(label) + '</dt><dd class="num">' + value + "</dd></div>"
@@ -513,10 +584,12 @@ def team_page(cfg, team, career, names):
     {logo}
     <div class="teamtitle">
       <span class="eyebrow">{e(conf.get('name',''))}</span>
-      <h1>{e(team['team'])}</h1>
+      <h1>{e(team['team'])}{title_stars(team['user_id'], won)}</h1>
       <p class="lede">{e(team['manager'])} &middot; {rec(s['career'])} all-time &middot; {len(s['seasons_played'])} seasons</p>
     </div>
   </section>
+
+  {team_honours(cfg, team['user_id'], won, best_weeks, names, players)}
 
   <section>
     {sechead("Record", " ".join(sub))}
@@ -1461,9 +1534,10 @@ def main():
     (DOCS / "teams.html").write_text(
         page(cfg, "Teams", "Teams", teams_index(cfg, teams, rankings, career)), encoding="utf-8")
 
+    won, best_weeks = S.honours(indexed), S.best_managers(indexed, players)
     for team in teams.values():
         (DOCS / ("team-" + team["slug"] + ".html")).write_text(
-            team_page(cfg, team, career, names), encoding="utf-8")
+            team_page(cfg, team, career, names, won, best_weeks, players), encoding="utf-8")
 
     history_body = (honours_section(cfg, indexed, names)
                     + "<section>" + sechead("The two eras") + era_note(cfg) + "</section>"

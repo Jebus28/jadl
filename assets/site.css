@@ -311,6 +311,42 @@
   .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);font-weight:700}
   .lede{margin:0;color:var(--muted);font-size:14.5px}
   @media (max-width:640px){.teamhead{gap:16px}}
+  .stars{
+    color:var(--brass);font-size:.52em;letter-spacing:.06em;white-space:nowrap;
+    margin-left:.4em;vertical-align:.4em;
+  }
+
+  /* ---------- team honours: the trophy cabinet ---------- */
+  /* A card per honour, a row in it for each season it was won. The title card
+     is gold, the silverware cards carry a gold rule, and the two dishonours at
+     the end sit back on the page colour. */
+  .cabinet{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:12px;align-items:start}
+  .hcard{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow), inset 0 3px 0 var(--line-strong);overflow:hidden;
+  }
+  .hcard.champion{
+    border-color:var(--brass);box-shadow:var(--shadow), inset 0 3px 0 var(--brass);
+    background:linear-gradient(180deg,var(--brass-soft),var(--surface) 96px);
+  }
+  .hcard.trophy{box-shadow:var(--shadow), inset 0 3px 0 var(--brass)}
+  .hcard.regular{box-shadow:var(--shadow), inset 0 3px 0 var(--ink-2)}
+  .hcard.spoon{background:var(--surface-2);box-shadow:inset 0 3px 0 var(--line)}
+  .hhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:15px 15px 9px}
+  .hhead h3{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
+  .hcard.champion .hhead h3{color:var(--brass)}
+  .hcount{font-size:22px;font-weight:600;line-height:1;color:var(--ink)}
+  .hcount .x{font-size:14px;color:var(--muted);margin-left:1px}
+  .hcard.champion .hcount{color:var(--brass)}
+  .hcard.spoon .hcount{color:var(--ink-2)}
+  .hrows{list-style:none;margin:0;padding:0 15px 13px;display:grid;gap:7px}
+  .hrows li{display:grid;grid-template-columns:3.1em minmax(0,1fr);gap:8px;align-items:baseline;font-size:13.5px;line-height:1.4}
+  .hy{font-size:12.5px;font-weight:600;color:var(--ink)}
+  .hdet{color:var(--ink-2);overflow-wrap:anywhere}
+  .hdet .num{font-size:12.5px;color:var(--ink);white-space:nowrap}
+  .hdet .badge{margin:0 6px 0 0;vertical-align:1px}
+  .badge.era{background:var(--surface-2);color:var(--muted);box-shadow:inset 0 0 0 1px var(--line-strong)}
+  .hnote{margin:0;padding:8px 15px 11px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
 
   /* ---------- fact grid ---------- */
   .factgrid{
