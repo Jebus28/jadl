@@ -118,6 +118,9 @@ book functions. The rules, as Matt's sheets use them:
   not a player): 9 in the one-flex years 2020–22, 10 from 2023. Dominators rank
   on win %, then that; Loser-minators the other way up.
 - Streaks carry across seasons. A playoff bye is no game.
+- **Best player weeks** are starters only (Sleeper's `starters_points`, kept per
+  side in `index_season` as `lineups`), in games that count. Bench points and
+  playoff-week games outside both brackets won nothing, so they set no record.
 - Season totals are Sleeper's own figure (roster `fpts`), as on History and
   Standings. Summing the games can differ — by a point where a stat correction
   landed late (Lee 2023: 2,065.96 official, 2,066.96 summed; the sheet has the

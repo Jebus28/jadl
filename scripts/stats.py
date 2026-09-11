@@ -61,7 +61,7 @@ def index_season(season: dict, conference_from: int, through_week: int | None = 
     roster_owner = {r["roster_id"]: r.get("owner_id") for r in rosters}
     roster_div = {r["roster_id"]: str((r.get("settings") or {}).get("division") or "1") for r in rosters}
 
-    fixtures = {}
+    fixtures, lineups = {}, {}
     for wk, entries in (season.get("matchups") or {}).items():
         if through_week is not None and int(wk) > through_week:
             continue
@@ -69,6 +69,12 @@ def index_season(season: dict, conference_from: int, through_week: int | None = 
         for entry in entries:
             if entry.get("matchup_id") is not None:
                 grouped[entry["matchup_id"]].append(entry)
+                # Who started and what each scored, for the player records.
+                lineups.setdefault(int(wk), {})[entry["roster_id"]] = [
+                    (pid, round(float(pts or 0), 2))
+                    for pid, pts in zip(entry.get("starters") or [], entry.get("starters_points") or [])
+                    if pid and pid != "0"
+                ]
         rows = []
         for sides in grouped.values():
             if len(sides) == 2:
@@ -96,6 +102,7 @@ def index_season(season: dict, conference_from: int, through_week: int | None = 
         "roster_owner": roster_owner,
         "roster_div": roster_div,
         "fixtures": fixtures,
+        "lineups": lineups,
         "winners": bracket_pairs(brackets.get("winners_bracket")),
         "losers": bracket_pairs(brackets.get("losers_bracket")),
         "rosters": rosters,
@@ -312,6 +319,25 @@ def weekly_scores(seasons: list[dict]) -> list[dict]:
                     out.append({"owner_id": owner[rid], "opponent_id": owner.get(opp_rid),
                                 "points": pts, "against": against, "season": season["season"],
                                 "week": wk, "phase": phase, "flex": season["flex"]})
+    return out
+
+
+def player_weeks(seasons: list[dict]) -> list[dict]:
+    """
+    Every starter's score in every game that counts. Bench points won nothing,
+    and nor did a game outside both brackets in a playoff week, so neither sets
+    a record however big.
+    """
+    out = []
+    for season in seasons:
+        owner = season["roster_owner"]
+        for wk, phase, a, b in games(season):
+            for rid, _team_points in (a, b):
+                if not owner.get(rid):
+                    continue
+                for pid, pts in season["lineups"].get(wk, {}).get(rid, []):
+                    out.append({"player_id": pid, "points": pts, "owner_id": owner[rid],
+                                "season": season["season"], "week": wk, "phase": phase})
     return out
 
 

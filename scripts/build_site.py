@@ -688,7 +688,7 @@ def history_sections(cfg, indexed, names):
 FLEX_WORDS = {1: "one flex", 2: "two flex", 3: "three flex"}
 
 
-def records_page(cfg, indexed, career, names, waiver):
+def records_page(cfg, indexed, career, names, waiver, players):
     """
     The all-time record books: Sleeper's all-time standings and the Google Sheets
     that sat on the old History page, all computed. Single weeks, margins and
@@ -766,6 +766,20 @@ def records_page(cfg, indexed, career, names, waiver):
                                 sorted((r for r in scores if r["season"] >= flex_from), key=low_key)[:10]))
     weeks.append(score_card("Highest scores", "All time.",
                             sorted(scores, key=lambda r: (-r["points"], r["season"], r["week"]))[:10]))
+
+    # The best individual weeks: a starter's points, in a game that counted.
+    best = sorted(S.player_weeks(indexed), key=lambda r: (-r["points"], r["season"], r["week"]))[:10]
+    player_body = []
+    for i, r in enumerate(best, 1):
+        p = players.get(r["player_id"]) or {}
+        pos = '<span class="tag">' + e(p["position"]) + "</span>" if p.get("position") else ""
+        player_body.append(f"""<tr><td class="num">{i}</td>
+          <td><span class="nm">{e(p.get('full_name') or r['player_id'])}</span>{pos}</td>
+          <td class="l">{who(r['owner_id'])}</td><td class="num">{r['season']}</td>
+          <td class="num">{week_cell(r)}</td><td class="num">{r['points']:.2f}</td></tr>""")
+    weeks.append(finish_card("Best player weeks", "Starters only.",
+                             '<th>#</th><th>Player</th><th class="l">Manager</th><th>Season</th>'
+                             '<th>Week</th><th>Points</th>', player_body))
 
     # Seasons.
     seasons = S.season_records(indexed)
@@ -932,7 +946,7 @@ def main():
 
     waiver = S.waiver_record(transactions, indexed, players)
     (DOCS / "records.html").write_text(
-        page(cfg, "Records", "Records", records_page(cfg, indexed, career, names, waiver)), encoding="utf-8")
+        page(cfg, "Records", "Records", records_page(cfg, indexed, career, names, waiver, players)), encoding="utf-8")
 
     print("Built docs/ for " + str(current.get("season")) + " week " + str(week) + ": "
           + str(len(teams)) + " teams, " + str(len(indexed)) + " seasons, "
