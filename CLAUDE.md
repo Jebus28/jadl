@@ -49,6 +49,7 @@ Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.ap
 | `assets/rules/` | Every edition of the rulebook as a PDF, the Word file of the current one, and the auction procedure. |
 | `docs/assets/covers/` | First-page pictures of the PDFs, drawn by the build and named by content hash so each is drawn once. |
 | `assets/site.css` | One stylesheet, themed light and dark via CSS custom properties. |
+| `assets/league/` | `league-logo.jpg`, the league logo exactly as Matt made it, named by `league.logo` in the config. |
 | `assets/teams/` | `<manager>-crest.jpg` square crops of the AI portraits, for the Scoreboard. The full `<manager>.jpg` portraits are no longer shown anywhere. |
 | `data/` | Fetched JSON. Committed so builds are reproducible; regenerated every run. |
 | `docs/` | Generated output. **Never edit by hand** — it is overwritten. |
@@ -84,7 +85,8 @@ explicitly — say "two eras, three tables".
 - 7th place wins the **consolation bracket** and takes the **1.01 pick**. The
   trophy is renamed every year after the leading college prospect:
   2020 Trevor Trophy (Trevor Lawrence), 2021 Corral Cup, 2022 Bijan Bowl,
-  2023 Caleb Cup, 2024 Shedeur Bowl, 2025 Mendoza Marathon. 2026 is TBC —
+  2023 Caleb Cup, 2024 Shedeur Bowl, 2025 Mendoza Marathon (Chris's old team
+  page called it the Love Bowl; Matt confirmed Mendoza Marathon). 2026 is TBC —
   candidates were Arch Manning and Jeremiah Smith. A blank name shows as
   "Consolation bracket" — 7th is still an honour.
 
@@ -143,7 +145,8 @@ both the old pages':
   points missed rather than share of max points; 2021–23 and 2025 match exactly.
   The site applies one rule to every season, so seven managers' 2020 counts
   change (Chris 2→1, Dave 0→1, Gareth 0→1, Mike 3→1, Neil 3→2, Rich 1→2,
-  Ross 1→2) and two in 2024 (Chris 2→1, Neil 0→1). Matt has been told.
+  Ross 1→2) and two in 2024 (Chris 2→1, Neil 0→1). Matt confirmed this in September 2026: one rule, share of max
+  points, for every season. Do not bring back the old 2020 and 2024 counts.
 
 Max points summed over a season match Sleeper's own total (roster `ppts`) for
 all but a few team-seasons: Mike 2020 (+31.94) and 2021 (+23.12), Gareth 2023
@@ -309,6 +312,11 @@ the stars over a starless crest from the computed figure; `IMG_3384.PNG` in that
 folder is a starless M and would be a starting point. Until that is done, check
 the crests whenever a season ends.
 
+The **league logo** carries the same stars, on its L and its M, so it goes stale
+with them. Matt makes a new one after each final (`JADL 5.JPG` after 2024,
+`JADL 6.jpg` after 2025, in the same folder); copy the newest over
+`assets/league/league-logo.jpg` unchanged.
+
 Playoffs run **in conference** until the final and the toilet bowl itself:
 week 15 is the **Divisional Round**, week 16 the **Conference Championships**,
 week 17 **The Championship**. These are in `playoff_rounds`, keyed by week.
@@ -372,6 +380,17 @@ once the computed one matched it.
 - The stylesheet defines a complete light palette on bare `:root`, then overrides
   tokens under `prefers-color-scheme: dark` and `[data-theme="dark"]`. Do not put
   a colour's only definition inside a media query.
+- **The league logo is THE logo** (Matt, September 2026). It is shown exactly as
+  he made it, white background and all, in light and dark mode. Never cut it
+  out, recolour it or make a dark version. The masthead is a white band in both
+  themes for that reason; the page only trims the empty white margin round the
+  artwork with CSS (`.leaguelogo`), and the file is a byte-for-byte copy.
+- **The palette comes from the logo** (September 2026). Red is the accent,
+  from DYNASTY and the Lombardi L: the active tab's underline, links, the rule
+  on each section heading. Navy is the NFL shield and the Madden M: the nav bar,
+  and the whole of dark mode, which is NFL navy rather than black, as Matt asked.
+  Gold (`--gold`) is for trophies only: champions, the 1.01, the title stars.
+  Headings are Roboto Slab, after the slab lettering of DYNASTY.
 - Power rankings reproduce Matt's own spreadsheet formula:
   `((cumulative wins + own points) / 2) − opponent points`, averaged over weeks
   played. His workbook used projected points he typed in each week; this uses real
@@ -429,8 +448,10 @@ Roughly in the order discussed with Matt, though he has not yet picked:
    team's scoring distribution and the real fixture list; publish playoff, bye and
    conference-title odds. Replaces the Dynasty Daddy screenshots he pastes in now.
    Dynasty Daddy has no public API — do not go looking for one.
-2. **Colour scheme and identity.** The current claret and teal are placeholders
-   Matt explicitly wants replaced.
+2. **Conference crests with computed stars.** The colour scheme and identity
+   were done in September 2026 (see Conventions). What is left of it is drawing
+   the stars on the crests from the computed title count, so they stop going
+   stale (see "The stars on the conference crests").
 3. **Team uniforms.** The uniform images from the old team pages, the last thing
    they have that the new ones do not. (The honours were done in September 2026.)
 4. **The archive.** Official team statements, Lee's Stat Corner. (The Trade

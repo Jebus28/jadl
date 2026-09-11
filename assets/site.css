@@ -1,68 +1,86 @@
-/* Palette taken from the league's own furniture: the crimson-and-gold Lombardi L,
-   the navy-and-gold Madden M, and the cream the old site sat on. Gold is the
-   accent throughout — it is the trophy colour, so it marks champions and the
-   current season. Every colour is defined here on bare :root and only
-   *overridden* in the two dark blocks below, never introduced there. */
+/* Palette taken from the league logo (assets/league/league-logo.jpg): the red of
+   DYNASTY and the Lombardi L, the navy of the NFL shield and the Madden M, on the
+   logo's white. Red is the accent throughout. Gold is the trophy colour only -
+   the stars on the L and the M - so it marks champions and silverware and
+   nothing else. Dark mode is NFL navy, not black. Every colour is defined here
+   on bare :root and only *overridden* in the two dark blocks below, never
+   introduced there. The --band and --flag colours are never overridden: the
+   logo's band is white in both themes, and the red rule is the same red. */
 :root{
-    --ground:#F2EFE8;
+    --ground:#F2F4F9;
     --surface:#FFFFFF;
-    --surface-2:#FAF8F3;
-    --ink:#16181D;
-    --ink-2:#3E434C;
-    --muted:#6E7480;
-    --line:#E2DDD2;
-    --line-strong:#C8C1B3;
-    --brass:#A9741A;
-    --brass-soft:#F7EACD;
-    --lombardi:#C0102A;
-    --lombardi-soft:#FBE4E6;
-    --madden:#1F4E9C;
-    --madden-soft:#E3EAF7;
+    --surface-2:#F7F8FC;
+    --ink:#0D1530;
+    --ink-2:#353F5C;
+    --muted:#646D87;
+    --line:#DDE1EB;
+    --line-strong:#C1C8D8;
+    --accent:#B02828;
+    --accent-soft:#FBE7E6;
+    --navy:#13285E;
+    --gold:#A9741A;
+    --gold-soft:#F7EACD;
+    --lombardi:#B00018;
+    --lombardi-soft:#FBE3E6;
+    --madden:#083878;
+    --madden-soft:#E1E9F5;
     --live:#1F7A45;
     --live-soft:#DDEFE3;
-    --shadow:0 1px 2px rgba(22,24,29,.06), 0 8px 24px -16px rgba(22,24,29,.28);
+    --band:#FFFFFF;
+    --band-ink:#13285E;
+    --band-muted:#5C6682;
+    --band-live:#1F7A45;
+    --band-live-soft:#DDEFE3;
+    --flag:#D8232A;
+    --shadow:0 1px 2px rgba(13,21,48,.06), 0 8px 24px -16px rgba(13,21,48,.30);
     --radius:10px;
     --maxw:1080px;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --ground:#12141A;
-      --surface:#191C24;
-      --surface-2:#1F232C;
-      --ink:#EEEFF2;
-      --ink-2:#C0C5CE;
-      --muted:#8A919D;
-      --line:#2A2F3A;
-      --line-strong:#3A404D;
-      --brass:#E8B75A;
-      --brass-soft:#3A2E14;
-      --lombardi:#F0868F;
-      --lombardi-soft:#3A1A1E;
-      --madden:#7FA9E8;
-      --madden-soft:#16233A;
+      --ground:#061431;
+      --surface:#0C1D42;
+      --surface-2:#11264F;
+      --ink:#EEF2F9;
+      --ink-2:#C2CCE0;
+      --muted:#8C99B8;
+      --line:#1C315F;
+      --line-strong:#2B4679;
+      --accent:#F25C5C;
+      --accent-soft:#3A1830;
+      --navy:#0F2D66;
+      --gold:#E8B75A;
+      --gold-soft:#3A2E14;
+      --lombardi:#F0808A;
+      --lombardi-soft:#3D1627;
+      --madden:#8DB2EE;
+      --madden-soft:#132B57;
       --live:#5FCB8B;
-      --live-soft:#12301F;
-      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+      --live-soft:#0F3328;
+      --shadow:0 1px 2px rgba(0,0,0,.45), 0 8px 24px -16px rgba(0,0,0,.8);
     }
   }
   :root[data-theme="dark"]{
-    --ground:#12141A;
-    --surface:#191C24;
-    --surface-2:#1F232C;
-    --ink:#EEEFF2;
-    --ink-2:#C0C5CE;
-    --muted:#8A919D;
-    --line:#2A2F3A;
-    --line-strong:#3A404D;
-    --brass:#E8B75A;
-    --brass-soft:#3A2E14;
-    --lombardi:#F0868F;
-    --lombardi-soft:#3A1A1E;
-    --madden:#7FA9E8;
-    --madden-soft:#16233A;
+    --ground:#061431;
+    --surface:#0C1D42;
+    --surface-2:#11264F;
+    --ink:#EEF2F9;
+    --ink-2:#C2CCE0;
+    --muted:#8C99B8;
+    --line:#1C315F;
+    --line-strong:#2B4679;
+    --accent:#F25C5C;
+    --accent-soft:#3A1830;
+    --navy:#0F2D66;
+    --gold:#E8B75A;
+    --gold-soft:#3A2E14;
+    --lombardi:#F0808A;
+    --lombardi-soft:#3D1627;
+    --madden:#8DB2EE;
+    --madden-soft:#132B57;
     --live:#5FCB8B;
-    --live-soft:#12301F;
-    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+    --live-soft:#0F3328;
+    --shadow:0 1px 2px rgba(0,0,0,.45), 0 8px 24px -16px rgba(0,0,0,.8);
   }
 
   *{box-sizing:border-box}
@@ -75,24 +93,41 @@
     -webkit-font-smoothing:antialiased;
   }
   .wrap{max-width:var(--maxw);margin:0 auto;padding-inline:20px;padding-block:0}
-  h1,h2,h3{font-family:"Bricolage Grotesque","Public Sans",system-ui,sans-serif;text-wrap:balance;margin:0}
+  h1,h2,h3{font-family:"Roboto Slab","Public Sans",system-ui,sans-serif;text-wrap:balance;margin:0}
   .num{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
 
   /* ---------- masthead ---------- */
-  .masthead{
-    border-bottom:1px solid var(--line);
-    background:var(--surface);
-  }
+  /* The league logo is THE logo, shown as Matt made it, white ground and all. So
+     the masthead is a white band in both themes, with the logo in the middle of
+     it, and nothing on it is recoloured for dark mode. */
+  .masthead{background:var(--band);border-bottom:1px solid #DDE1EB}
   .masthead .wrap{
-    display:flex;align-items:center;justify-content:space-between;gap:16px;
-    padding-block:14px;flex-wrap:wrap;
+    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;
+    padding-block:10px;
   }
-  .brand{display:flex;align-items:baseline;gap:10px}
-  .brand .mark{
-    font-family:"Bricolage Grotesque",system-ui,sans-serif;
-    font-weight:800;font-size:22px;letter-spacing:-.02em;color:var(--ink);
+  .leaguename{
+    margin:0;font-family:"Roboto Slab",Georgia,serif;font-weight:800;font-size:12px;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--band-ink);line-height:1.5;
   }
-  .brand .full{font-size:12.5px;color:var(--muted);letter-spacing:.01em}
+  .leaguename small{
+    display:block;font-family:"Public Sans",system-ui,sans-serif;font-weight:500;
+    font-size:12px;letter-spacing:0;text-transform:none;color:var(--band-muted);
+  }
+  /* The artwork sits in the middle of a 1242x773 white canvas. The file is left
+     as it is; this only trims the empty white margin, keeping a little round the
+     logo. A new logo drawn to the same template needs no change here. */
+  .leaguelogo{display:block;position:relative;overflow:hidden;width:clamp(190px,24vw,240px);aspect-ratio:686/485}
+  .leaguelogo img{position:absolute;max-width:none;width:181.05%;height:auto;left:-40.23%;top:-25.77%}
+  .masthead .mark{
+    font-family:"Roboto Slab",Georgia,serif;font-weight:900;font-size:28px;
+    letter-spacing:.06em;color:var(--band-ink);text-decoration:none;
+  }
+  .masthead .statuspill{justify-self:end;background:var(--band-live-soft);color:var(--band-live)}
+  @media (max-width:640px){
+    .masthead .wrap{grid-template-columns:1fr;justify-items:center;gap:6px;padding-block:6px 12px}
+    .leaguename{display:none}
+    .masthead .statuspill{justify-self:center}
+  }
   .statuspill{
     display:inline-flex;align-items:center;gap:8px;
     background:var(--live-soft);color:var(--live);
@@ -104,20 +139,27 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
   @media (prefers-reduced-motion: reduce){.dot{animation:none}}
 
-  nav.sitenav{border-bottom:1px solid var(--line);background:var(--surface-2)}
+  /* NFL navy in both themes, the page you are on underlined in red. */
+  nav.sitenav{background:var(--navy);border-bottom:1px solid rgba(255,255,255,.08)}
   nav.sitenav .wrap{display:flex;gap:2px;overflow-x:auto;padding-block:0}
+  /* Centred, but still scrolls from the first tab when it does not fit. */
+  nav.sitenav .wrap > a:first-child{margin-left:auto}
+  nav.sitenav .wrap > a:last-child{margin-right:auto}
   nav.sitenav a{
-    color:var(--muted);text-decoration:none;font-size:13px;font-weight:500;
-    padding:11px 12px;white-space:nowrap;border-bottom:2px solid transparent;
+    color:rgba(255,255,255,.76);text-decoration:none;font-size:13px;font-weight:600;letter-spacing:.02em;
+    padding:12px 13px 10px;white-space:nowrap;border-bottom:3px solid transparent;
   }
-  nav.sitenav a:hover{color:var(--ink)}
-  nav.sitenav a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--brass);font-weight:600}
-  nav.sitenav a:focus-visible{outline:2px solid var(--brass);outline-offset:-2px;border-radius:4px}
+  nav.sitenav a:hover{color:#FFFFFF;border-bottom-color:rgba(255,255,255,.28)}
+  nav.sitenav a[aria-current="page"]{color:#FFFFFF;border-bottom-color:var(--flag)}
+  nav.sitenav a:focus-visible{outline:2px solid #FFFFFF;outline-offset:-3px;border-radius:4px}
 
   /* ---------- sections ---------- */
   section{padding-block:34px}
   .sechead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
-  .sechead h2{font-size:15px;font-weight:700;letter-spacing:.10em;text-transform:uppercase}
+  .sechead h2{
+    font-size:15px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;line-height:1.15;
+    border-left:4px solid var(--flag);padding-left:10px;
+  }
   .sechead .note{font-size:12.5px;color:var(--muted)}
 
   /* ---------- fixtures ---------- */
@@ -132,7 +174,7 @@
   .crest{
     width:36px;height:36px;flex:none;border-radius:8px;
     display:grid;place-items:center;
-    font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:13px;letter-spacing:-.02em;
+    font-family:"Roboto Slab",sans-serif;font-weight:800;font-size:13px;letter-spacing:-.02em;
   }
   .crest.lc{background:var(--lombardi-soft);color:var(--lombardi)}
   .crest.mc{background:var(--madden-soft);color:var(--madden)}
@@ -151,8 +193,8 @@
      is allowed to shout: gold rule, gold billing, the rest of the card as normal. */
   .fixture.featured{
     grid-template-areas:"billing billing billing" "home vs away";
-    border-color:var(--brass);
-    box-shadow:var(--shadow), inset 0 3px 0 var(--brass);
+    border-color:var(--accent);
+    box-shadow:var(--shadow), inset 0 3px 0 var(--accent);
     padding-top:0;
   }
   .fixture.featured .billing{grid-area:billing}
@@ -160,8 +202,8 @@
   .fixture.featured .vs{grid-area:vs}
   .fixture.featured .side.away{grid-area:away}
   .billing{
-    text-align:center;color:var(--brass);
-    font-family:"Bricolage Grotesque",system-ui,sans-serif;
+    text-align:center;color:var(--accent);
+    font-family:"Roboto Slab",system-ui,sans-serif;
     font-weight:800;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
     padding:12px 8px 10px;
   }
@@ -207,7 +249,7 @@
   .tm .hd{font-size:11.5px;color:var(--muted)}
   .champ{
     display:inline-block;margin-left:6px;vertical-align:1px;
-    background:var(--brass-soft);color:var(--brass);
+    background:var(--gold-soft);color:var(--gold);
     font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
     padding:2px 6px;border-radius:4px;
   }
@@ -227,7 +269,7 @@
     font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
     font-size:13px;font-weight:600;color:var(--muted);text-align:right;
   }
-  .prrow.top .prrank{color:var(--brass)}
+  .prrow.top .prrank{color:var(--accent)}
   .prname{font-weight:600;font-size:14px}
   .bar{height:7px;border-radius:4px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
   .bar span{display:block;height:100%;background:var(--madden);border-radius:3px}
@@ -243,11 +285,11 @@
     background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
     padding:14px;display:flex;flex-direction:column;gap:3px;
   }
-  .yr.current{border-color:var(--brass);background:linear-gradient(180deg,var(--brass-soft),var(--surface) 70%)}
+  .yr.current{border-color:var(--accent);background:linear-gradient(180deg,var(--accent-soft),var(--surface) 70%)}
   .yr .season{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--muted);letter-spacing:.04em}
-  .yr .winner{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:17px;letter-spacing:-.01em}
+  .yr .winner{font-family:"Roboto Slab",sans-serif;font-weight:700;font-size:17px;letter-spacing:-.01em}
   .yr .cap{font-size:11.5px;color:var(--muted)}
-  .yr.current .season,.yr.current .cap{color:var(--brass)}
+  .yr.current .season,.yr.current .cap{color:var(--accent)}
 
   /* ---------- preview note ---------- */
   .previewnote{
@@ -280,7 +322,7 @@
   .sitefoot{border-top:1px solid var(--line);background:var(--surface-2);margin-top:28px}
   .sitefoot .wrap{padding-block:20px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
   .sitefoot p{margin:0;font-size:12.5px;color:var(--muted)}
-  .sitefoot a{color:var(--brass)}
+  .sitefoot a{color:var(--accent)}
 
   /* Team logos, as on Sleeper. Square artwork, so shown whole as rounded tiles.
      The AI crests are the Scoreboard's alone. */
@@ -297,7 +339,7 @@
   .team a:hover, .nm a:hover, .prname a:hover{text-decoration:underline}
   a.teamcard{text-decoration:none;color:inherit;transition:border-color .15s ease, transform .15s ease}
   a.teamcard:hover{border-color:var(--line-strong);transform:translateY(-1px)}
-  a:focus-visible{outline:2px solid var(--brass);outline-offset:2px;border-radius:4px}
+  a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
   @media (prefers-reduced-motion: reduce){a.teamcard{transition:none}a.teamcard:hover{transform:none}}
 
   /* ---------- team page header ---------- */
@@ -307,12 +349,12 @@
     background:var(--surface-2);box-shadow:var(--shadow);
   }
   .teamtitle{display:grid;gap:6px}
-  .teamtitle h1{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-size:clamp(26px,4.4vw,40px);font-weight:800;letter-spacing:-.02em;margin:0;line-height:1.05}
-  .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);font-weight:700}
+  .teamtitle h1{font-family:"Roboto Slab",system-ui,sans-serif;font-size:clamp(26px,4.4vw,40px);font-weight:800;letter-spacing:-.02em;margin:0;line-height:1.05}
+  .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700}
   .lede{margin:0;color:var(--muted);font-size:14.5px}
   @media (max-width:640px){.teamhead{gap:16px}}
   .stars{
-    color:var(--brass);font-size:.52em;letter-spacing:.06em;white-space:nowrap;
+    color:var(--gold);font-size:.52em;letter-spacing:.06em;white-space:nowrap;
     margin-left:.4em;vertical-align:.4em;
   }
 
@@ -326,18 +368,18 @@
     box-shadow:var(--shadow), inset 0 3px 0 var(--line-strong);overflow:hidden;
   }
   .hcard.champion{
-    border-color:var(--brass);box-shadow:var(--shadow), inset 0 3px 0 var(--brass);
-    background:linear-gradient(180deg,var(--brass-soft),var(--surface) 96px);
+    border-color:var(--gold);box-shadow:var(--shadow), inset 0 3px 0 var(--gold);
+    background:linear-gradient(180deg,var(--gold-soft),var(--surface) 96px);
   }
-  .hcard.trophy{box-shadow:var(--shadow), inset 0 3px 0 var(--brass)}
+  .hcard.trophy{box-shadow:var(--shadow), inset 0 3px 0 var(--gold)}
   .hcard.regular{box-shadow:var(--shadow), inset 0 3px 0 var(--ink-2)}
   .hcard.spoon{background:var(--surface-2);box-shadow:inset 0 3px 0 var(--line)}
   .hhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:15px 15px 9px}
   .hhead h3{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
-  .hcard.champion .hhead h3{color:var(--brass)}
+  .hcard.champion .hhead h3{color:var(--gold)}
   .hcount{font-size:22px;font-weight:600;line-height:1;color:var(--ink)}
   .hcount .x{font-size:14px;color:var(--muted);margin-left:1px}
-  .hcard.champion .hcount{color:var(--brass)}
+  .hcard.champion .hcount{color:var(--gold)}
   .hcard.spoon .hcount{color:var(--ink-2)}
   .hrows{list-style:none;margin:0;padding:0 15px 13px;display:grid;gap:7px}
   .hrows li{display:grid;grid-template-columns:3.1em minmax(0,1fr);gap:8px;align-items:baseline;font-size:13.5px;line-height:1.4}
@@ -362,15 +404,15 @@
   .eras{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:18px}
   .era{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;display:grid;gap:3px}
   .era.bce{border-left:3px solid var(--muted)}
-  .era.con{border-left:3px solid var(--brass)}
-  .eralabel{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:15px}
+  .era.con{border-left:3px solid var(--accent)}
+  .eralabel{font-family:"Roboto Slab",sans-serif;font-weight:700;font-size:15px}
   .erayears{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
   .era p{margin:4px 0 0;font-size:13px;color:var(--ink-2, var(--muted));line-height:1.5}
 
   /* ---------- head to head ---------- */
   .h2hgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;align-items:start}
   .h2hblock{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
-  .h2hblock h4{margin:0;padding:12px 14px 4px;font-family:"Bricolage Grotesque",sans-serif;font-size:14px;font-weight:700}
+  .h2hblock h4{margin:0;padding:12px 14px 4px;font-family:"Roboto Slab",sans-serif;font-size:14px;font-weight:700}
   .h2hnote{margin:0;padding:0 14px 10px;font-size:11.5px;color:var(--muted)}
   .h2hblock table{font-size:13px}
   .h2hblock th,.h2hblock td{padding:7px 14px}
@@ -378,7 +420,7 @@
 
   /* ---------- badges ---------- */
   .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:4px;margin-left:6px;white-space:nowrap}
-  .badge.trophy{background:var(--brass-soft);color:var(--brass)}
+  .badge.trophy{background:var(--gold-soft);color:var(--gold)}
   /* Neutral, so Loser of All Losers never reads as a Lombardi honour. */
   .badge.spoon{background:var(--surface-2);color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line-strong)}
   .badge.lc{background:var(--lombardi-soft);color:var(--lombardi)}
@@ -394,14 +436,14 @@
     margin:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
     box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;
   }
-  .honour.champion{border-color:var(--brass);box-shadow:var(--shadow), inset 0 3px 0 var(--brass)}
+  .honour.champion{border-color:var(--gold);box-shadow:var(--shadow), inset 0 3px 0 var(--gold)}
   .honour .media{aspect-ratio:1/1;background:var(--surface-2);display:grid;place-items:center}
   .honour .media img{width:100%;height:100%;object-fit:contain;display:block}
   .honour .media.none span{font-size:12px;color:var(--muted)}
   .honour figcaption{padding:10px 14px 12px;display:grid;gap:1px;border-top:1px solid var(--line)}
   .honour .role{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
-  .honour.champion .role{color:var(--brass)}
-  .honour .who{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:18px;letter-spacing:-.01em}
+  .honour.champion .role{color:var(--gold)}
+  .honour .who{font-family:"Roboto Slab",system-ui,sans-serif;font-weight:700;font-size:18px;letter-spacing:-.01em}
   .honourlist{
     margin:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
     box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;
@@ -410,9 +452,9 @@
   .honourlist > div:last-child{border-bottom:0}
   .honourlist > div.lc{border-left-color:var(--lombardi)}
   .honourlist > div.mc{border-left-color:var(--madden)}
-  .honourlist > div.trophy{border-left-color:var(--brass)}
+  .honourlist > div.trophy{border-left-color:var(--gold)}
   .honourlist dt{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
-  .honourlist dd{margin:0;font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:17px}
+  .honourlist dd{margin:0;font-family:"Roboto Slab",system-ui,sans-serif;font-weight:700;font-size:17px}
   .honourlist .sub{display:block;font-family:"Public Sans",system-ui,sans-serif;font-weight:400;font-size:12px;color:var(--muted)}
   .finishes{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start}
   .finish{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
@@ -426,12 +468,12 @@
   .stack{display:grid;gap:16px}
   .tag{display:inline-block;margin-left:6px;font-family:"Public Sans",system-ui,sans-serif;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
   .waiver{
-    background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--brass);
+    background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);
     border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;
     display:flex;align-items:baseline;gap:18px;flex-wrap:wrap;
   }
-  .waiver .bid{font-size:28px;font-weight:600;color:var(--brass)}
-  .waiver .what{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:18px}
+  .waiver .bid{font-size:28px;font-weight:600;color:var(--accent)}
+  .waiver .what{font-family:"Roboto Slab",system-ui,sans-serif;font-weight:700;font-size:18px}
   .waiver .when{font-size:13px;color:var(--muted)}
 
   /* ---------- trade centre ---------- */
@@ -449,12 +491,12 @@
     font:inherit;font-size:14px;color:var(--ink);background:var(--surface);
     border:1px solid var(--line-strong);border-radius:8px;padding:6px 10px;
   }
-  .tradefilter select:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+  .tradefilter select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .tradewindow{padding-block:24px 10px}
   .trades{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr));gap:12px;align-items:start}
   .trade{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
   .tradehead{display:flex;align-items:baseline;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);background:var(--surface-2)}
-  .tradeno{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase}
+  .tradeno{font-family:"Roboto Slab",system-ui,sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase}
   .tradehead .tag{margin-left:0}
   .tradehead .badge{margin-left:0}
   .tradewhen{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
@@ -474,7 +516,7 @@
   .tside li.none{color:var(--muted)}
   .tradenote{margin:0;padding:8px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
   .badge.hand{background:var(--surface);color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line-strong)}
-  .looseends{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--brass);border-radius:var(--radius);padding:12px 18px}
+  .looseends{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--radius);padding:12px 18px}
   .looseends ul{margin:0;padding-left:18px;display:grid;gap:6px;font-size:13.5px}
   .looseends p{margin:10px 0 0;font-size:12.5px;color:var(--muted)}
   .looseends code{font-family:"IBM Plex Mono",monospace;font-size:12px}
@@ -493,11 +535,11 @@
   /* Commissioner Updates shows a season at a time: the season chips are tabs. */
   .seasontabs{scroll-margin-top:12px}
   .seasontabs a{padding:6px 13px;font-size:13.5px}
-  .seasontabs a[aria-current]{background:var(--brass-soft);border-color:var(--brass);color:var(--ink);font-weight:600}
+  .seasontabs a[aria-current]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink);font-weight:600}
   .seasontabs .count{margin-left:7px;font-size:11px;font-weight:400;color:var(--muted)}
-  .seasontabs a[aria-current] .count{color:var(--brass)}
+  .seasontabs a[aria-current] .count{color:var(--accent)}
   .seasonnext{margin:20px 0 0;text-align:right;font-size:13.5px}
-  .seasonnext a{color:var(--brass);font-weight:600}
+  .seasonnext a{color:var(--accent);font-weight:600}
   .docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,170px),1fr));gap:14px;align-items:start}
   a.doccard{
     display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);
@@ -509,14 +551,14 @@
   .doccard .cover{aspect-ratio:210/297;background:var(--surface-2);border-bottom:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
   .doccard .cover img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
   .doccard .cover.none span{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;text-align:center;padding:10px}
-  .doccard .cover.link{background:linear-gradient(160deg,var(--surface-2),var(--brass-soft))}
-  .doccard .cover.link span{color:var(--brass)}
+  .doccard .cover.link{background:linear-gradient(160deg,var(--surface-2),var(--accent-soft))}
+  .doccard .cover.link span{color:var(--accent)}
   .docmeta{padding:10px 12px 12px;display:grid;gap:2px}
   .doctype{font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
   .doctitle{font-weight:600;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
   .docwhen{font-size:11.5px;color:var(--muted)}
-  a.doccard.latest{border-color:var(--brass);box-shadow:var(--shadow), inset 0 3px 0 var(--brass)}
-  .doccard.latest .doctype{color:var(--brass)}
+  a.doccard.latest{border-color:var(--accent);box-shadow:var(--shadow), inset 0 3px 0 var(--accent)}
+  .doccard.latest .doctype{color:var(--accent)}
   /* Two to a row on a phone, where one full-width A4 cover each made a season a long scroll. */
   @media (max-width:560px){
     .docs{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -528,7 +570,7 @@
      rules.html#rule-40 is paragraph 40 and "para 40" in the text links there. */
   .bookhead{padding-block:28px 8px;display:grid;gap:10px}
   .bookhead h1{font-size:clamp(26px,4.4vw,40px);font-weight:800;letter-spacing:-.02em;line-height:1.05}
-  .bookhead .lede a{color:var(--brass)}
+  .bookhead .lede a{color:var(--accent)}
   .booktoc{padding-block:6px 20px}
   .booktoc a{font-size:12px;padding:3px 10px}
   .rulebook{
@@ -543,9 +585,9 @@
   .rulebook p.rule.sub{margin-left:3em}
   .rulebook p.cont{margin-left:3em}
   .rulebook .rn{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);text-align:right;padding-top:2px;text-decoration:none}
-  .rulebook a.rn:hover{color:var(--brass)}
-  .rulebook p.rule:target{background:var(--brass-soft);box-shadow:0 0 0 6px var(--brass-soft)}
-  .rulebook p a{color:var(--brass)}
+  .rulebook a.rn:hover{color:var(--accent)}
+  .rulebook p.rule:target{background:var(--accent-soft);box-shadow:0 0 0 6px var(--accent-soft)}
+  .rulebook p a{color:var(--accent)}
   .rulebook .tablewrap{margin:4px 0 16px;border:1px solid var(--line);border-radius:8px}
   .rulebook table.doc th,.rulebook table.doc td{text-align:left;white-space:normal;vertical-align:top;padding:8px 12px;font-size:13.5px}
   .rulebook table.doc th{font-size:10.5px}
@@ -562,16 +604,16 @@
   /* Editions: newest first, each with what changed from the one before. */
   .editions{display:grid;gap:10px}
   .edition{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-  .edition.current{border-color:var(--brass);box-shadow:var(--shadow), inset 3px 0 0 var(--brass)}
+  .edition.current{border-color:var(--accent);box-shadow:var(--shadow), inset 3px 0 0 var(--accent)}
   .edhead{display:flex;align-items:baseline;gap:4px 10px;padding:12px 16px;flex-wrap:wrap}
-  .edname{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:15.5px}
+  .edname{font-family:"Roboto Slab",system-ui,sans-serif;font-weight:700;font-size:15.5px}
   .edhead .badge{margin-left:0}
   .edwhen{font-size:12.5px;color:var(--muted)}
-  .edhead a{margin-left:auto;font-size:13px;color:var(--brass);white-space:nowrap}
+  .edhead a{margin-left:auto;font-size:13px;color:var(--accent);white-space:nowrap}
   .edition details{border-top:1px solid var(--line)}
   .edition summary{padding:10px 16px;cursor:pointer;font-size:13px;color:var(--ink-2)}
   .edition summary:hover{color:var(--ink)}
-  .edition summary:focus-visible{outline:2px solid var(--brass);outline-offset:-2px}
+  .edition summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .ednote{margin:0;padding:10px 16px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
   .changes{list-style:none;margin:0;padding:0 16px 14px;display:grid;gap:8px}
   .changes li{font-size:13.5px;line-height:1.55;color:var(--muted);padding:9px 12px;background:var(--surface-2);border-radius:6px;overflow-wrap:anywhere}

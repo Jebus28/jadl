@@ -147,6 +147,13 @@ def page(cfg, title, active, body):
     for href, label in NAV:
         attr = ' aria-current="page"' if label == active else ""
         bits.append('<a href="' + href + '"' + attr + '>' + label + "</a>")
+    # The league logo is THE logo: shown exactly as Matt made it, white ground and all.
+    logo = league.get("logo")
+    if logo and (ASSETS / "league" / logo).exists():
+        mark = ('<a class="leaguelogo" href="index.html"><img src="assets/league/' + e(logo)
+                + '" alt="' + e(league["name"]) + '"></a>')
+    else:
+        mark = '<a class="mark" href="index.html">' + e(league["short_name"]) + "</a>"
     return f"""<!doctype html>
 <html lang="en-GB">
 <head>
@@ -156,16 +163,14 @@ def page(cfg, title, active, body):
 <meta name="description" content="{e(league['name'])} &mdash; {e(cfg['site']['tagline'])}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@600;700;800;900&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
 <header class="masthead">
   <div class="wrap">
-    <div class="brand">
-      <a class="mark" href="index.html">{e(league['short_name'])}</a>
-      <span class="full">{e(league['name'])} &middot; est. {e(league['established'])}</span>
-    </div>
+    <p class="leaguename">{e(league['name'])}<small>{e(cfg['site']['tagline'])}</small></p>
+    {mark}
     <span class="statuspill"><span class="dot" aria-hidden="true"></span>{e(season['year'])} season</span>
   </div>
 </header>
