@@ -15,6 +15,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+import documents as D
 import stats as S
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -165,7 +166,8 @@ def power_rankings(teams, results, upto):
 
 
 NAV = [("index.html", "Scoreboard"), ("standings.html", "Standings"), ("teams.html", "Teams"),
-       ("trades.html", "Trade Centre"), ("history.html", "History"), ("records.html", "Records")]
+       ("updates.html", "Commissioner Updates"), ("trades.html", "Trade Centre"),
+       ("history.html", "History"), ("records.html", "Records"), ("rules.html", "Rules")]
 
 
 def page(cfg, title, active, body):
@@ -1074,6 +1076,274 @@ def trade_centre(cfg, log, table, board, ends, names, players, teams, state):
             + "".join(blocks) + loose_ends_section(ends, names, players) + TRADE_FILTER_JS)
 
 
+def doc_card(item, latest=False):
+    """One document as a card: a picture of its first page, what it is, and when."""
+    if item["cover"]:
+        pic = '<div class="cover"><img src="assets/covers/' + e(item["cover"]) + '" alt="" loading="lazy"></div>'
+    elif item["link"]:
+        pic = '<div class="cover none link"><span>' + e(item["link"]) + " &#8599;</span></div>"
+    else:
+        pic = '<div class="cover none"><span>PDF</span></div>'
+    meta = []
+    if item["date"]:
+        meta.append(f"{item['date'].day} {item['date']:%b %Y}")
+    if item["pages"]:
+        meta.append(f"{item['pages']} page{'' if item['pages'] == 1 else 's'}")
+    if item["link"]:
+        meta.append("On " + e(item["link"]))
+    kind = e(item["kind"])
+    if latest:
+        kind = "Latest" + (" &middot; " + kind if kind else "")
+    return (f'<a class="doccard{" latest" if latest else ""}" href="{e(item["href"])}">{pic}<div class="docmeta">'
+            + (f'<span class="doctype">{kind}</span>' if kind else "")
+            + f'<span class="doctitle">{e(item["title"])}</span>'
+            + (f'<span class="docwhen">{" &middot; ".join(meta)}</span>' if meta else "") + "</div></a>")
+
+
+def updates_page(cfg, seasons):
+    """
+    The commissioner's updates, rebuilt from the old site's season pages of
+    embedded Drive files: draft and season previews, schedules, the mid-season
+    and regular-season reviews, and the season reviews. A PDF saved into
+    assets/updates/<season>/ is on the page at the next build; see documents.py.
+    """
+    if not seasons:
+        return "<section>" + sechead("Commissioner updates") + '<p class="empty">Nothing published yet.</p></section>'
+    dated = [it for items in seasons.values() for it in items if it["date"]]
+    newest = max(dated, key=lambda it: it["date"]) if dated else None
+    total = sum(len(items) for items in seasons.values())
+    jump = ('<nav class="jump" aria-label="Seasons">' + "".join(
+        f'<a class="num" href="#season-{year}">{year}</a>' for year in sorted(seasons, reverse=True)) + "</nav>")
+    blocks = ["<section>" + sechead("Commissioner updates", f"{total} previews, reviews and schedules since "
+                                    f"{min(seasons)}. Newest first.") + jump + "</section>"]
+    for year in sorted(seasons, reverse=True):
+        items = seasons[year]
+        count = f"{len(items)} document{'' if len(items) == 1 else 's'}"
+        blocks.append(f'<section class="docseason" id="season-{year}">' + sechead(f"{year} season", count)
+                      + '<div class="docs">' + "".join(doc_card(it, it is newest) for it in items) + "</div></section>")
+    return "".join(blocks)
+
+
+LINEUP_NAMES = {"FLEX": "Flex", "SUPER_FLEX": "Superflex", "WRRB_FLEX": "RB/WR flex",
+                "REC_FLEX": "WR/TE flex", "IDP_FLEX": "IDP flex"}
+
+# Sleeper's scoring keys, grouped and named as a rulebook would list them. Any key
+# not here still shows, under Other, so a new setting is never hidden.
+SCORING = [
+    ("Passing", [("pass_yd", "Passing yards"), ("pass_td", "Passing TD"), ("pass_2pt", "Two-point conversion"),
+                 ("pass_int", "Interception thrown"), ("pass_int_td", "Pick six thrown")]),
+    ("Rushing", [("rush_yd", "Rushing yards"), ("rush_td", "Rushing TD"), ("rush_2pt", "Two-point conversion")]),
+    ("Receiving", [("rec", "Reception"), ("bonus_rec_te", "TE reception bonus"), ("rec_yd", "Receiving yards"),
+                   ("rec_td", "Receiving TD"), ("rec_2pt", "Two-point conversion")]),
+    ("Fumbles", [("fum", "Fumble"), ("fum_lost", "Fumble lost"), ("fum_rec_td", "Fumble recovery TD")]),
+    ("Kicking", [("fgm", "Field goal"), ("fgm_yds_over_30", "Field goal yards over 30"),
+                 ("fgmiss", "Field goal missed"), ("xpm", "Extra point"), ("xpmiss", "Extra point missed")]),
+    ("Defence", [("sack", "Sack"), ("int", "Interception"), ("fum_rec", "Fumble recovery"), ("ff", "Forced fumble"),
+                 ("safe", "Safety"), ("def_td", "Defensive TD"), ("blk_kick", "Blocked kick"),
+                 ("def_st_td", "Special teams TD"), ("def_st_ff", "Special teams forced fumble"),
+                 ("def_st_fum_rec", "Special teams fumble recovery")]),
+    ("Points allowed", [("pts_allow_0", "Shutout"), ("pts_allow_1_6", "1&ndash;6"), ("pts_allow_7_13", "7&ndash;13"),
+                        ("pts_allow_14_20", "14&ndash;20"), ("pts_allow_21_27", "21&ndash;27"),
+                        ("pts_allow_28_34", "28&ndash;34"), ("pts_allow_35p", "35 or more")]),
+    ("Player special teams", [("st_td", "Special teams TD"), ("st_ff", "Forced fumble"),
+                              ("st_fum_rec", "Fumble recovery")]),
+]
+
+
+def score_value(key, value):
+    if key.endswith("_yd") or key == "fgm_yds_over_30":
+        per = 1 / value if value else 0
+        if value > 0 and abs(per - round(per)) < 1e-6:
+            return f"1 per {round(per)} yards"
+        return f"{value:g} a yard"
+    return (f"{value:+g}" if value else "0").replace("-", "&minus;")
+
+
+def scoring_groups(scoring):
+    """Sleeper's scoring settings as small tables, every non-zero setting shown."""
+    s = {k: float(v) for k, v in scoring.items() if isinstance(v, (int, float))}
+    kicking = dict(SCORING)["Kicking"]
+    buckets = sorted((k for k in s if re.fullmatch(r"fgm_(\d+_\d+|\d+p)", k)),
+                     key=lambda k: int(re.findall(r"\d+", k)[0]))
+    if buckets and len({s[k] for k in buckets}) == 1:
+        s["fgm"] = s[buckets[0]]
+        for k in buckets:
+            del s[k]
+    else:
+        kicking = [(k, "Field goal " + k[4:].replace("_", "&ndash;").replace("p", "+") + " yards")
+                   for k in buckets] + kicking
+    groups, seen = [], set()
+    for group, keys in SCORING:
+        if group == "Kicking":
+            keys = kicking
+        rows = []
+        for key, label in keys:
+            seen.add(key)
+            if key in s and (s[key] or group == "Points allowed"):
+                rows.append((label, score_value(key, s[key])))
+        if rows:
+            groups.append((group, rows))
+    other = [(e(k.replace("_", " ")), score_value(k, v)) for k, v in sorted(s.items()) if k not in seen and v]
+    if other:
+        groups.append(("Other", other))
+    return groups
+
+
+def sleeper_section(current):
+    """The league as Sleeper has it set up, read at every refresh."""
+    st = current.get("settings") or {}
+    slots = current.get("roster_positions") or []
+    counts = {}
+    for slot in slots:
+        if slot != "BN":
+            counts[slot] = counts.get(slot, 0) + 1
+    lineup = " &middot; ".join(f"{n} {e(LINEUP_NAMES.get(p, p))}" for p, n in counts.items())
+    taxi_note = ", ".join(filter(None, ["Rookies" if not st.get("taxi_allow_vets") else "",
+                                        f"up to {st['taxi_years']} years" if st.get("taxi_years") else ""]))
+    facts = [
+        ("wide", "Starting lineup", lineup, f"{sum(counts.values())} starters"),
+        ("num", "Bench", str(slots.count("BN")), ""),
+        ("num", "Injured reserve", str(st.get("reserve_slots", 0)), ""),
+        ("num", "Taxi", str(st.get("taxi_slots", 0)), taxi_note.capitalize()),
+        ("num", "FAAB", f"${st.get('waiver_budget', 0):,}", "Blind bidding" if st.get("waiver_type") == 2 else ""),
+        ("num", "Playoffs", f"{st.get('playoff_teams', '')} teams",
+         f"From week {st['playoff_week_start']}" if st.get("playoff_week_start") else ""),
+        ("num", "Rookie draft", f"{st.get('draft_rounds', '')} rounds", ""),
+    ]
+    grid = "".join(f'<div{" class=" + chr(34) + "wide" + chr(34) if kind == "wide" else ""}><dt>{e(label)}</dt>'
+                   f'<dd{" class=" + chr(34) + "num" + chr(34) if kind == "num" else ""}>{value}'
+                   + (f'<span class="sub">{e(note)}</span>' if note else "") + "</dd></div>"
+                   for kind, label, value, note in facts)
+    cards = "".join(
+        f'<div class="h2hblock"><h4>{e(group)}</h4><div class="tablewrap"><table><tbody>'
+        + "".join(f'<tr><td>{label}</td><td class="num">{value}</td></tr>' for label, value in rows)
+        + "</tbody></table></div></div>" for group, rows in scoring_groups(current.get("scoring_settings") or {}))
+    return ('<section id="on-sleeper">' + sechead("On Sleeper", "Read from the league's settings at every refresh, "
+                                                  "so this is what the app is set to today.")
+            + f'<div class="stack"><dl class="factgrid">{grid}</dl><div class="h2hgrid scoregrid">{cards}</div></div></section>')
+
+
+def doc_table(rows, text):
+    width = max((sum(c["span"] for c in r["cells"]) for r in rows), default=1)
+    out = []
+    for r in rows:
+        cells = r["cells"]
+        if width > 1 and len(cells) == 1 and cells[0]["span"] >= width:
+            out.append(f'<tr class="band"><th colspan="{width}">' + "<br>".join(map(text, cells[0]["lines"]))
+                       + "</th></tr>")
+            continue
+        tag = "th" if r["header"] else "td"
+        out.append("<tr>" + "".join(f'<{tag}{" colspan=" + chr(34) + str(c["span"]) + chr(34) if c["span"] > 1 else ""}>'
+                                    + "<br>".join(map(text, c["lines"])) + f"</{tag}>" for c in cells) + "</tr>")
+    return '<div class="tablewrap"><table class="doc">' + "".join(out) + "</table></div>"
+
+
+def rulebook_html(book):
+    """The rulebook's blocks as HTML, and its chapters for the contents."""
+    rules = {b["label"].rstrip(".") for b in book["blocks"] if b.get("rule")}
+    ids, toc, out = set(), [], []
+
+    def text(t):
+        # The rules refer to each other by paragraph number; link those that exist.
+        body = e(t).replace("\n", "<br>")
+        return re.sub(r"\b(paras?\.?|paragraphs?)(\s+)(\d{1,3})\b",
+                      lambda m: m.group(0) if m.group(3) not in rules
+                      else f'{m.group(1)}{m.group(2)}<a href="#rule-{m.group(3)}">{m.group(3)}</a>', body)
+
+    def anchor(t):
+        base = slugify(t)
+        slug, n = base, 2
+        while slug in ids:
+            slug, n = f"{base}-{n}", n + 1
+        ids.add(slug)
+        return slug
+
+    for b in book["blocks"]:
+        if b["type"] in ("h1", "h2"):
+            slug, tag = anchor(b["text"]), "h2" if b["type"] == "h1" else "h3"
+            if b["type"] == "h1":
+                toc.append((slug, b["text"]))
+            out.append(f'<{tag} id="{slug}">{e(b["text"])}</{tag}>')
+        elif b["type"] == "table":
+            out.append(doc_table(b["rows"], text))
+        elif b["rule"]:
+            n = e(b["label"].rstrip("."))
+            out.append(f'<p class="rule" id="rule-{n}"><a class="rn" href="#rule-{n}">{e(b["label"])}</a>'
+                       f'<span>{text(b["text"])}</span></p>')
+        elif b["label"]:
+            out.append(f'<p class="rule sub"><span class="rn">{e(b["label"])}</span><span>{text(b["text"])}</span></p>')
+        else:
+            out.append(f'<p{" class=" + chr(34) + "cont" + chr(34) if b["list"] else ""}>{text(b["text"])}</p>')
+    return "".join(out), toc
+
+
+def change_html(runs):
+    tags = {"old": ("<del>", "</del>"), "new": ("<ins>", "</ins>"), "same": ("", "")}
+    return " ".join(tags[kind][0] + e(words) + tags[kind][1] for kind, words in runs)
+
+
+def editions_section(editions):
+    """Every edition, newest first, with what changed from the one before it."""
+    items = []
+    for ed in reversed(editions):
+        current = ed is editions[-1]
+        revised = ed.get("previous") == ed["number"]
+        when = ed["month"] + (f", revised {ed['date']:%B %Y}" if revised and ed["date"] else "")
+        head = (f'<div class="edhead"><span class="edname">{ordinal(ed["number"])} Edition</span>'
+                + ('<span class="badge trophy">In force</span>' if current else "")
+                + f'<span class="edwhen">{e(when)}</span>'
+                + f'<a href="{e(ed["href"])}">PDF &middot; {ed["pages"]} pages</a></div>')
+        found = ed.get("changes")
+        if "previous" not in ed:
+            detail = '<p class="ednote">The first edition.</p>'
+        elif not found:
+            detail = '<p class="ednote">No change to the wording.</p>'
+        else:
+            what = "in the revision" if revised else "from the " + ordinal(ed["previous"]) + " Edition"
+            detail = (f'<details><summary>What changed {what} &middot; {len(found)} '
+                      f'change{"" if len(found) == 1 else "s"}</summary><ul class="changes">'
+                      + "".join("<li>&hellip; " + change_html(runs) + " &hellip;</li>" for runs in found)
+                      + "</ul></details>")
+        items.append(f'<div class="edition{" current" if current else ""}">{head}{detail}</div>')
+    note = (f"{len(editions)} since {editions[0]['month']}, newest first. What changed is worked out word by word "
+            "from the PDFs, so nobody has to write it up.")
+    return ('<section id="editions">' + sechead("Editions", note)
+            + '<div class="editions">' + "".join(items) + "</div></section>")
+
+
+def rules_page(cfg, current, book, editions, others):
+    """
+    The Rules tab. The old one embedded each edition's PDF with a line on what
+    had changed; this one sets out the current rulebook as a page, straight from
+    Matt's Word file, then what Sleeper is set to, then every edition with its
+    changes worked out from the PDFs. A new edition is its Word file and PDF saved
+    into assets/rules/.
+    """
+    pdf = next((ed for ed in reversed(editions) if book and ed["number"] == book["number"]), None)
+    parts = []
+    if book:
+        body, toc = rulebook_html(book)
+        lede = e(book["edition"]) + (f' &middot; <a href="{e(pdf["href"])}">PDF, {pdf["pages"]} pages</a>' if pdf else "")
+        chips = toc + [("on-sleeper", "On Sleeper")] + ([("editions", "Editions")] if editions else [])
+        parts.append(f'<section class="bookhead"><span class="eyebrow">Rules</span>'
+                     f'<h1>{e(book["title"] or cfg["league"]["name"] + " Rules")}</h1><p class="lede">{lede}</p></section>'
+                     '<nav class="jump booktoc" aria-label="Contents">'
+                     + "".join(f'<a href="#{slug}">{e(label)}</a>' for slug, label in chips) + "</nav>"
+                     f'<article class="rulebook">{body}</article>')
+    elif editions:
+        latest = editions[-1]
+        parts.append("<section>" + sechead("Rules", ordinal(latest["number"]) + " Edition, " + latest["month"])
+                     + f'<p><a href="{e(latest["href"])}">The rulebook, as a PDF</a>. Save its Word file into '
+                     "<code>assets/rules/</code> and it is set out here in full.</p></section>")
+    parts.append(sleeper_section(current))
+    if editions:
+        parts.append(editions_section(editions))
+    if others:
+        parts.append("<section>" + sechead("Other documents") + '<div class="docs">'
+                     + "".join(doc_card(it) for it in others) + "</div></section>")
+    return "".join(parts)
+
+
 def last_complete_week(state, season):
     """
     The last week of `season` whose games are all over, by Sleeper's clock, or
@@ -1166,9 +1436,25 @@ def main():
         page(cfg, "Trade Centre", "Trade Centre",
              trade_centre(cfg, trade_log, trade_table, board, ends, names, players, teams, state)), encoding="utf-8")
 
+    # The documents: files saved into assets/, found where they sit (documents.py).
+    covers = DOCS / "assets" / "covers"
+    updates = D.commissioner_updates(ASSETS / "updates", ASSETS, covers)
+    (DOCS / "updates.html").write_text(
+        page(cfg, "Commissioner Updates", "Commissioner Updates", updates_page(cfg, updates)), encoding="utf-8")
+    book = D.current_rulebook(ASSETS / "rules")
+    editions, others = D.rule_editions(ASSETS / "rules", ASSETS, covers)
+    (DOCS / "rules.html").write_text(
+        page(cfg, "Rules", "Rules", rules_page(cfg, current, book, editions, others)), encoding="utf-8")
+    D.prune_covers(covers, {it["cover"] for it in others + [i for items in updates.values() for i in items]
+                            if it["cover"]})
+
     print("Built docs/ for " + str(current.get("season")) + " week " + str(week) + ": "
           + str(len(teams)) + " teams, " + str(len(indexed)) + " seasons, "
-          + str(len(career)) + " managers with career records, " + str(len(trade_log)) + " trades.")
+          + str(len(career)) + " managers with career records, " + str(len(trade_log)) + " trades, "
+          + str(sum(len(items) for items in updates.values())) + " commissioner updates, "
+          + str(len(editions)) + " rule editions.")
+    if D.pdfium is None:
+        print("  pypdfium2 is not installed: no document covers, and no changes between rule editions.")
     for end in ends:
         print("  Trade Centre loose end: " + end["kind"] + " " + str(end.get("pick") or end.get("player_id")))
     return 0

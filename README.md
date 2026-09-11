@@ -38,6 +38,28 @@ python scripts/prepare_media.py 2026 champion "path/to/the.gif"
 python scripts/prepare_media.py 2026 loser "path/to/the-photo.jpg"
 ```
 
+## Commissioner updates and the rules
+
+Both tabs are drawn from files in `assets/`, found by where they sit — nothing to
+add to `league.config.json`.
+
+- **A new update:** save the PDF into `assets/updates/<season>/`. Its file name is
+  its title and the date Word stamped on it puts it in order, newest first.
+- **A video**, or anything else too big for GitHub: leave it on Google Drive, drag
+  its link from the browser into the season folder, and rename the shortcut that
+  makes. Add a line `Date=2027-01-20` to the shortcut to put it in order; without
+  one it goes to the top of its season.
+- **A new edition of the rules:** save the Word file and its PDF into
+  `assets/rules/`. The Rules page is set out from the newest Word file, and what
+  changed from the last edition is worked out from the PDFs.
+
+The covers and the changes between editions need two Python packages. The
+Action installs them; to build locally with them too:
+
+```
+python -m pip install pypdfium2 pillow
+```
+
 ## Running it yourself
 
 ```

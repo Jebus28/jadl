@@ -44,6 +44,10 @@ Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.ap
 | `scripts/build_site.py` | Renders the HTML. |
 | `scripts/prepare_media.py` | Turns a champion GIF or loser photo into `assets/records/<season>-<champion\|loser>.*` — GIFs become silent looping WebPs under 2.5MB, photos are straightened and shrunk. |
 | `assets/records/` | One champion loop and one Loser of All Losers picture per season, found by filename. No config entry. |
+| `scripts/documents.py` | Reads the two document tabs' files: PDF dates, covers and text, `.url` shortcuts, the rulebook's Word file, and the changes between editions. |
+| `assets/updates/<season>/` | The Commissioner Updates: PDFs, and `.url` shortcuts to the videos on Drive. Found by folder. No config entry. |
+| `assets/rules/` | Every edition of the rulebook as a PDF, the Word file of the current one, and the auction procedure. |
+| `docs/assets/covers/` | First-page pictures of the PDFs, drawn by the build and named by content hash so each is drawn once. |
 | `assets/site.css` | One stylesheet, themed light and dark via CSS custom properties. |
 | `assets/teams/` | `<manager>-crest.jpg` square crops of the AI portraits, for the Scoreboard. The full `<manager>.jpg` portraits are no longer shown anywhere. |
 | `data/` | Fetched JSON. Committed so builds are reproducible; regenerated every run. |
@@ -178,6 +182,47 @@ kept by hand explains.
 Champion GIFs and loser pictures in `Website\Winners and Losers\` were matched to
 seasons by file date and the brackets. As of September 2026 there is no 2025
 loser picture; drop one in with `prepare_media.py` and the page picks it up.
+
+### Commissioner Updates and Rules (updates.html, rules.html)
+
+Rebuilt in September 2026. On the old site both were pages of Drive embeds: Rules
+had the 5th to 8th editions of the rulebook, each with a one-line note on what
+changed, plus the auction procedure; Commissioner Updates had a page a season of
+PDFs and a few videos. Now both are files in `assets/`, read by
+`scripts/documents.py`, with nothing in `league.config.json`.
+
+- **Updates** live in `assets/updates/<season>/`. A PDF's title is its file name,
+  title-cased, and its date is Word's creation stamp inside the PDF, which puts
+  the season in order, newest first. The videos are 400–800MB, too big for
+  GitHub, so they stay on Drive as `.url` shortcuts with a `Date=` line. A
+  shortcut with no date goes to the top of its season, as just added.
+- **What's in:** everything the old site posted, plus documents of the same
+  kind it never got round to: the 2023 Season Preview, both 2025 mid-season
+  reviews, the 2025 Regular Season Review, and the 2026 schedule, draft preview
+  and season preview. **Left out**, pending Matt: the AGM agendas and minutes,
+  and four Drive videos the old site never posted (the 2020 and 2021 season
+  reviews, a January 2023 video and the 2023 hype video), since their Drive
+  sharing is unknown.
+- **The rulebook** is set out from its Word file (`assets/rules/*.docx`; the
+  newest edition wins), numbered exactly as Word numbers it. The rules cite each
+  other by paragraph ("subject to para 40"), so `rules.html#rule-40` is paragraph
+  40 and those references are links. Checked against the 8th Edition PDF: all 99
+  numbered paragraphs (92 rules, plus the tiebreakers and sanctions) match.
+- **Editions come from the PDFs, not the Word files.** Matt's Word files were
+  saved over: the 2023 file holds the 8th Edition, and the 2022 and 2022a files
+  both say 6th. Only the PDFs are a true record. Each edition's label is read
+  from its PDF, and what changed is a word diff with the contents page, running
+  heads and paragraph numbers taken out. The 2022a PDF is a February 2023
+  revision of the 6th Edition (a 26-man roster and the second flex), listed as
+  revised. The diffs reproduce the old site's notes: the 7th Edition added
+  sanctions and the 8th amended roster cuts.
+- **On Sleeper** shows the lineup, bench, IR, taxi, FAAB, playoffs, draft rounds
+  and every scoring setting, read from the league settings. As of September 2026
+  the rulebook disagrees with Sleeper twice. It says **5** IR slots where Sleeper
+  has **8** (the 2026 AGM agreed three more), and it never mentions the **0.5 TE
+  premium**. The page shows each as it stands; the rulebook is Matt's to update.
+- The workflow installs pypdfium2 and Pillow for the covers and the diffs.
+  Without them the build still runs, with neither.
 
 ### Divisional weeks and the playoff rounds
 
@@ -344,8 +389,8 @@ Roughly in the order discussed with Matt, though he has not yet picked:
    scorer, player high score, plus the uniform images. Brings team pages level
    with the old site. Matt specifically wants the regular-season (conference)
    honours shown here.
-4. **The archive.** Rules PDFs, commissioner updates, official team statements,
-   Lee's Stat Corner. (The Trade Centre, back to 2020, was done in September 2026.)
+4. **The archive.** Official team statements, Lee's Stat Corner. (The Trade
+   Centre, Commissioner Updates and Rules were done in September 2026.)
 5. **Conference landing pages** (LC/MC) and a **calendar**, both on the old site
    and not yet rebuilt.
 
@@ -375,3 +420,7 @@ Roughly in the order discussed with Matt, though he has not yet picked:
   minutes later — fast-forward to it (`git pull --ff-only`) before the next
   commit. If local `docs/` edits block that, discard them with
   `git checkout -- docs/` and rebuild; they are generated anyway.
+- pypdfium2 and Pillow are installed for that local Python with `pip --user`, so
+  a local build draws covers and diffs as CI does. To preview the built site,
+  the Browser pane's `jadl-site` entry in `.claude/launch.json` serves `docs/` on
+  port 8765; opening the files directly loses the stylesheet.

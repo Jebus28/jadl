@@ -442,3 +442,88 @@
   .looseends ul{margin:0;padding-left:18px;display:grid;gap:6px;font-size:13.5px}
   .looseends p{margin:10px 0 0;font-size:12.5px;color:var(--muted)}
   .looseends code{font-family:"IBM Plex Mono",monospace;font-size:12px}
+
+  /* ---------- documents: commissioner updates and the rules ---------- */
+  /* Each document is a card with a picture of its first page, like the embeds
+     on the old site but without loading forty PDF viewers at once. */
+  .jump{display:flex;flex-wrap:wrap;gap:6px}
+  .jump a{
+    font-size:12.5px;font-weight:500;color:var(--ink-2);text-decoration:none;
+    background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px 11px;
+  }
+  .jump a.num{font-family:"IBM Plex Mono",monospace}
+  .jump a:hover{border-color:var(--line-strong);color:var(--ink)}
+  .docseason{padding-block:24px 10px;scroll-margin-top:8px}
+  .docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,170px),1fr));gap:14px;align-items:start}
+  a.doccard{
+    display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;text-decoration:none;color:inherit;
+    transition:border-color .15s ease, transform .15s ease;
+  }
+  a.doccard:hover{border-color:var(--line-strong);transform:translateY(-1px)}
+  @media (prefers-reduced-motion: reduce){a.doccard{transition:none}a.doccard:hover{transform:none}}
+  .doccard .cover{aspect-ratio:210/297;background:var(--surface-2);border-bottom:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
+  .doccard .cover img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+  .doccard .cover.none span{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;text-align:center;padding:10px}
+  .doccard .cover.link{background:linear-gradient(160deg,var(--surface-2),var(--brass-soft))}
+  .doccard .cover.link span{color:var(--brass)}
+  .docmeta{padding:10px 12px 12px;display:grid;gap:2px}
+  .doctype{font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+  .doctitle{font-weight:600;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
+  .docwhen{font-size:11.5px;color:var(--muted)}
+  a.doccard.latest{border-color:var(--brass);box-shadow:var(--shadow), inset 0 3px 0 var(--brass)}
+  .doccard.latest .doctype{color:var(--brass)}
+
+  /* The rulebook, drawn from Matt's Word file: numbered as Word numbers it, so
+     rules.html#rule-40 is paragraph 40 and "para 40" in the text links there. */
+  .bookhead{padding-block:28px 8px;display:grid;gap:10px}
+  .bookhead h1{font-size:clamp(26px,4.4vw,40px);font-weight:800;letter-spacing:-.02em;line-height:1.05}
+  .bookhead .lede a{color:var(--brass)}
+  .booktoc{padding-block:6px 20px}
+  .booktoc a{font-size:12px;padding:3px 10px}
+  .rulebook{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:4px clamp(16px,4vw,44px) 26px;
+  }
+  .rulebook h2{font-size:19px;font-weight:700;letter-spacing:-.01em;margin:30px 0 12px;padding-top:14px;border-top:1px solid var(--line);scroll-margin-top:10px}
+  .rulebook h2:first-child{border-top:0;padding-top:10px;margin-top:14px}
+  .rulebook h3{font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin:22px 0 8px;scroll-margin-top:10px}
+  .rulebook p{margin:0 0 10px;max-width:76ch;color:var(--ink-2);overflow-wrap:anywhere}
+  .rulebook p.rule{display:grid;grid-template-columns:3em minmax(0,1fr);column-gap:6px;border-radius:6px;scroll-margin-top:10px}
+  .rulebook p.rule.sub{margin-left:3em}
+  .rulebook p.cont{margin-left:3em}
+  .rulebook .rn{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);text-align:right;padding-top:2px;text-decoration:none}
+  .rulebook a.rn:hover{color:var(--brass)}
+  .rulebook p.rule:target{background:var(--brass-soft);box-shadow:0 0 0 6px var(--brass-soft)}
+  .rulebook p a{color:var(--brass)}
+  .rulebook .tablewrap{margin:4px 0 16px;border:1px solid var(--line);border-radius:8px}
+  .rulebook table.doc th,.rulebook table.doc td{text-align:left;white-space:normal;vertical-align:top;padding:8px 12px;font-size:13.5px}
+  .rulebook table.doc th{font-size:10.5px}
+  .rulebook table.doc td:first-child{font-weight:600;color:var(--ink);min-width:9em}
+  .rulebook table.doc tr.band th{background:var(--surface-2);color:var(--ink-2);text-transform:none;letter-spacing:0;font-size:12.5px}
+  .rulebook table.doc tr:last-child td{border-bottom:0}
+  .factgrid > div.wide{grid-column:1/-1}
+  .factgrid .sub{display:block;font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0}
+  /* Sleeper's scoring, a small table per group. Wider than a head-to-head card,
+     and allowed to wrap, so nothing scrolls inside a card. */
+  .scoregrid{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+  .scoregrid td{white-space:normal}
+
+  /* Editions: newest first, each with what changed from the one before. */
+  .editions{display:grid;gap:10px}
+  .edition{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .edition.current{border-color:var(--brass);box-shadow:var(--shadow), inset 3px 0 0 var(--brass)}
+  .edhead{display:flex;align-items:baseline;gap:4px 10px;padding:12px 16px;flex-wrap:wrap}
+  .edname{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:15.5px}
+  .edhead .badge{margin-left:0}
+  .edwhen{font-size:12.5px;color:var(--muted)}
+  .edhead a{margin-left:auto;font-size:13px;color:var(--brass);white-space:nowrap}
+  .edition details{border-top:1px solid var(--line)}
+  .edition summary{padding:10px 16px;cursor:pointer;font-size:13px;color:var(--ink-2)}
+  .edition summary:hover{color:var(--ink)}
+  .edition summary:focus-visible{outline:2px solid var(--brass);outline-offset:-2px}
+  .ednote{margin:0;padding:10px 16px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+  .changes{list-style:none;margin:0;padding:0 16px 14px;display:grid;gap:8px}
+  .changes li{font-size:13.5px;line-height:1.55;color:var(--muted);padding:9px 12px;background:var(--surface-2);border-radius:6px;overflow-wrap:anywhere}
+  .changes del{color:var(--ink-2);text-decoration:line-through;text-decoration-color:var(--muted)}
+  .changes ins{color:var(--live);background:var(--live-soft);text-decoration:none;font-weight:600;border-radius:3px;padding:0 3px}
