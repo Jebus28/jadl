@@ -163,30 +163,39 @@
   .sechead .note{font-size:12.5px;color:var(--muted)}
 
   /* ---------- fixtures ---------- */
-  .fixtures{display:flex;flex-direction:column;gap:8px}
+  /* Each side leads with the manager's AI picture, large and uncropped - Matt
+     makes a new set every season and the detail is the point - with the team,
+     manager and score beneath it. On a phone the two sides stack. */
+  .fixtures{display:flex;flex-direction:column;gap:14px}
   .fixture{
     background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
-    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;
-    padding:14px 16px;box-shadow:var(--shadow);
+    display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;gap:14px;
+    padding:14px;box-shadow:var(--shadow);
   }
-  .side{display:flex;align-items:center;gap:12px;min-width:0}
-  .side.away{flex-direction:row-reverse;text-align:right}
-  .crest{
-    width:36px;height:36px;flex:none;border-radius:8px;
-    display:grid;place-items:center;
-    font-family:"Roboto Slab",sans-serif;font-weight:800;font-size:13px;letter-spacing:-.02em;
-  }
-  .crest.lc{background:var(--lombardi-soft);color:var(--lombardi)}
-  .crest.mc{background:var(--madden-soft);color:var(--madden)}
+  .side{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .shot{position:relative;display:block;aspect-ratio:3/2;border-radius:8px;overflow:hidden;background:var(--surface-2)}
+  a.shot{cursor:zoom-in}
+  a.shot:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .shot img{position:absolute;inset:0;width:100%;height:100%;display:block}
+  /* A portrait picture leaves the sides of the frame empty, and a blurred,
+     darkened copy of itself fills them. A landscape one fills the frame exactly. */
+  .shot .blur{object-fit:cover;filter:blur(20px) brightness(.5);transform:scale(1.15)}
+  .shot .pic{object-fit:contain}
+  .shot.none{display:grid;place-items:center;font-family:"Roboto Slab",sans-serif;font-weight:800;font-size:30px}
+  .shot.none.lc{background:var(--lombardi-soft);color:var(--lombardi)}
+  .shot.none.mc{background:var(--madden-soft);color:var(--madden)}
+  .line{display:flex;align-items:center;gap:12px;min-width:0;padding-inline:2px}
+  .side.away .line{flex-direction:row-reverse;text-align:right}
   .who{min-width:0;flex:1}
   .team{font-weight:600;font-size:14.5px;line-height:1.25;overflow-wrap:anywhere}
+  .line .team{font-size:16px}
   .mgr{font-size:12px;color:var(--muted)}
-  .score{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:19px;font-weight:600;flex:none}
+  .score{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:24px;font-weight:600;flex:none}
   .score.lead{color:var(--ink)}
   .score.trail{color:var(--muted)}
   .vs{
     font-size:10.5px;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);
-    text-align:center;padding-inline:6px;
+    text-align:center;padding-inline:4px;align-self:center;
   }
 
   /* The named inter-conference game in a divisional week. One per week, so it
@@ -217,13 +226,11 @@
   .confband h3{font-size:12px;font-weight:700;letter-spacing:.10em;text-transform:uppercase}
   .confband.lc h3{color:var(--lombardi)}
   .confband.mc h3{color:var(--madden)}
-  @media (max-width:560px){
+  @media (max-width:640px){
+    .fixture{grid-template-columns:1fr;gap:10px}
     .fixture.featured{grid-template-areas:"billing" "home" "vs" "away"}
-  }
-  @media (max-width:560px){
-    .fixture{grid-template-columns:1fr;gap:6px}
-    .side.away{flex-direction:row;text-align:left}
-    .vs{text-align:left;padding-inline:0}
+    .side.away .line{flex-direction:row;text-align:left}
+    .vs{text-align:left;padding-inline:2px}
   }
 
   /* ---------- standings ---------- */
@@ -308,13 +315,10 @@
     background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
     box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;gap:12px;
   }
-  .teamcard .crest{width:44px;height:44px}
-  .teamcard .crest.img{object-fit:cover}
   .teamstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0;padding-top:12px;border-top:1px solid var(--line)}
   .teamstats div{display:flex;flex-direction:column;gap:2px}
   .teamstats dt{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
   .teamstats dd{margin:0;font-size:16px;font-weight:600}
-  .crest.img{border-radius:8px;display:block}
   .prname .hd{font-size:11.5px;color:var(--muted);font-weight:400}
   .empty{color:var(--muted);padding:20px;text-align:center;background:var(--surface);border:1px dashed var(--line);border-radius:var(--radius)}
 
@@ -324,12 +328,13 @@
   .sitefoot p{margin:0;font-size:12.5px;color:var(--muted)}
   .sitefoot a{color:var(--accent)}
 
-  /* Team logos, as on Sleeper. Square artwork, so shown whole as rounded tiles.
-     The AI crests are the Scoreboard's alone. */
+  /* Team logos: Sleeper's squares, or Matt's own artwork where Sleeper cropped
+     it. Always shown whole, at the logo's own shape - never cropped to fit. The
+     AI pictures are the Scoreboard's alone. */
   .teamcardhead{display:flex;align-items:center;gap:14px;min-width:0}
   .teamcard .logo{
-    width:64px;height:64px;flex:none;border-radius:12px;object-fit:cover;display:block;
-    background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line);
+    height:64px;width:auto;max-width:112px;flex:none;border-radius:10px;object-fit:contain;display:block;
+    background:var(--surface-2);box-shadow:0 0 0 1px var(--line);
   }
   .teamcard{position:relative}
 
@@ -345,8 +350,8 @@
   /* ---------- team page header ---------- */
   .teamhead{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center;padding-block:28px}
   .teamhead .teamlogo{
-    width:clamp(88px,18vw,148px);aspect-ratio:1;border-radius:18px;display:block;object-fit:cover;
-    background:var(--surface-2);box-shadow:var(--shadow);
+    height:clamp(88px,18vw,148px);width:auto;max-width:min(46vw,240px);border-radius:14px;
+    display:block;object-fit:contain;background:var(--surface-2);box-shadow:var(--shadow);
   }
   .teamtitle{display:grid;gap:6px}
   .teamtitle h1{font-family:"Roboto Slab",system-ui,sans-serif;font-size:clamp(26px,4.4vw,40px);font-weight:800;letter-spacing:-.02em;margin:0;line-height:1.05}
@@ -503,7 +508,7 @@
   .tradesides{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;background:var(--line)}
   .tside{background:var(--surface);padding:12px 14px 14px;min-width:0}
   .tside h4{margin:0 0 9px;display:flex;align-items:center;gap:7px;font-size:14px;font-weight:600}
-  .tside h4 img{width:24px;height:24px;border-radius:6px;object-fit:cover;flex:none}
+  .tside h4 img{height:24px;width:auto;max-width:40px;border-radius:5px;object-fit:contain;flex:none}
   .tside h4 a{color:inherit;text-decoration:none}
   .tside h4 a:hover{text-decoration:underline}
   .tside h4 .rcv{font-size:11.5px;font-weight:400;color:var(--muted)}

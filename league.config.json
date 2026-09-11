@@ -48,7 +48,8 @@
     "572154314147561472": {
       "name": "Jebus",
       "image": "jebus-crest.jpg",
-      "portrait": "jebus.jpg"
+      "portrait": "jebus.jpg",
+      "logo": "jebus-logo.png"
     },
     "600292303692689408": {
       "name": "Lee",
@@ -63,7 +64,8 @@
     "600805479135911936": {
       "name": "Dave",
       "image": "dave-crest.jpg",
-      "portrait": "dave.jpg"
+      "portrait": "dave.jpg",
+      "logo": "dave-logo.jpg"
     },
     "600979696255041536": {
       "name": "Mike",

@@ -50,7 +50,7 @@ Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.ap
 | `docs/assets/covers/` | First-page pictures of the PDFs, drawn by the build and named by content hash so each is drawn once. |
 | `assets/site.css` | One stylesheet, themed light and dark via CSS custom properties. |
 | `assets/league/` | `league-logo.jpg`, the league logo exactly as Matt made it, named by `league.logo` in the config. |
-| `assets/teams/` | `<manager>-crest.jpg` square crops of the AI portraits, for the Scoreboard. The full `<manager>.jpg` portraits are no longer shown anywhere. |
+| `assets/teams/` | `<manager>.jpg`, the AI pictures, shown whole on the Scoreboard; `<manager>-crest.jpg` square crops, now only a fallback; and `<manager>-logo.*`, team logos that override Sleeper's. |
 | `data/` | Fetched JSON. Committed so builds are reproducible; regenerated every run. |
 | `docs/` | Generated output. **Never edit by hand** — it is overwritten. |
 
@@ -366,17 +366,29 @@ once the computed one matched it.
   regenerates team images every year and adjusts the playoff setup, and wants to
   do that himself without touching code.
 - **Team images: the AI pictures are for the Scoreboard only.** Matt asked for
-  this in September 2026. The AI images are portraits from his `Team AI` folder,
-  square-cropped to 320px, used as the crests on the fixtures. Everywhere else —
-  the Teams cards, team pages and Trade Centre — shows the team logo as Sleeper
-  has it (`build_site.sleeper_logo`). That is the league team logo
-  (`user.metadata.avatar`). A team without one falls back to the `logo` file named
-  for that manager in `league.config.json` (in `assets/teams/`), and then to the
-  manager's Sleeper picture. Neil has no Sleeper logo as of September 2026, so
-  he uses `neil-logo.jpg`. Matt chose it: `Team Logos\IMG_9374.jpg`, squared to
-  400px like Sleeper's. The Sleeper logos are linked from Sleeper's CDN, not
-  copied, so a new one is on the site at the next refresh and takes over from
-  any config logo.
+  this in September 2026. The AI pictures (`portrait` in the config, the 1400px
+  `<manager>.jpg` from his `Team AI` folder) are shown **whole and large** on
+  every fixture: Matt spends a long time on them and wants the detail seen
+  (September 2026). Never crop them. Each sits uncropped in a 3:2 frame, a
+  portrait one over a blurred copy of itself (`build_site.shot`). The 320px
+  square `<manager>-crest.jpg` crops (`image`) are only a fallback now.
+- **Team logos** show everywhere else: the Teams cards, team pages and Trade
+  Centre (`build_site.sleeper_logo`). They are always shown whole at their own
+  shape, never cropped to a square. A `logo` file named for a manager in
+  `league.config.json` (in `assets/teams/`) comes first. It is Matt's own
+  artwork, for a team whose Sleeper logo is squared off or missing. Then the
+  team's Sleeper logo (`user.metadata.avatar`, linked from Sleeper's CDN, so a
+  new one shows at the next refresh), then the manager's Sleeper picture. As of
+  September 2026 three teams have one:
+  - **Jebus**: `jebus-logo.png`, a copy of `League Logos\ROTL 3.png`. Sleeper's
+    square cut off half of "Raiders of the Lost Yard".
+  - **Dave**: `dave-logo.jpg`, a copy of `Team Logos\72ca1498-….JPG`. Sleeper's
+    square lost the caption.
+  - **Neil**: `neil-logo.jpg`, from `Team Logos\IMG_9374.jpg`. He has no
+    Sleeper logo.
+
+  A config logo overrides Sleeper's, so when one of those teams gets a new
+  logo, update the file too.
 - The stylesheet defines a complete light palette on bare `:root`, then overrides
   tokens under `prefers-color-scheme: dark` and `[data-theme="dark"]`. Do not put
   a colour's only definition inside a media query.

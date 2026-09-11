@@ -50,17 +50,18 @@ def rec(r):
 
 def sleeper_logo(user, own=None):
     """
-    The team logo as Sleeper shows it: the team's own logo in this league. Where
-    a team has none, the logo named for that manager in league.config.json (a
-    file in assets/teams/), and failing that the manager's Sleeper picture.
-    Sleeper's are linked, not copied, so a logo uploaded there is on the site at
-    the next refresh and takes over from the config one.
+    The team logo. The one named for that manager in league.config.json (a file
+    in assets/teams/) comes first: Matt's own artwork, whole, for a team whose
+    logo Sleeper has squared off - the Raiders lost half their lettering. Then
+    the team's own logo in this league on Sleeper, and failing that the
+    manager's Sleeper picture. Sleeper's are linked, not copied, so a new one
+    there is on the site at the next refresh, unless the config names a logo.
     """
+    if own and (ASSETS / "teams" / own).exists():
+        return "assets/teams/" + own
     meta = user.get("metadata") or {}
     if meta.get("avatar"):
         return meta["avatar"]
-    if own and (ASSETS / "teams" / own).exists():
-        return "assets/teams/" + own
     return "https://sleepercdn.com/avatars/" + user["avatar"] if user.get("avatar") else ""
 
 
@@ -78,8 +79,9 @@ def manager_lookup(cfg, users, rosters):
             "roster_id": r["roster_id"], "user_id": uid,
             "manager": conf.get("name") or user.get("display_name") or "Unknown",
             "team": team, "slug": slugify(team),
-            # The AI crest is for the Scoreboard only; everywhere else has Sleeper's logo.
-            "image": conf.get("image"), "logo": sleeper_logo(user, conf.get("logo")),
+            # The AI pictures are for the Scoreboard only; everywhere else has the team logo.
+            "image": conf.get("image"), "portrait": conf.get("portrait"),
+            "logo": sleeper_logo(user, conf.get("logo")),
             "division": str(st.get("division") or "1"),
             "wins": st.get("wins", 0), "losses": st.get("losses", 0), "ties": st.get("ties", 0),
             "fpts": pts(st, "fpts"), "fpts_against": pts(st, "fpts_against"),
@@ -189,12 +191,25 @@ def page(cfg, title, active, body):
 """
 
 
-def crest(team, cfg):
-    conf = cfg["conferences"].get(team["division"], {})
-    cls = "lc" if team["division"] == "1" else "mc"
-    if team.get("image"):
-        return '<img class="crest img" src="assets/teams/' + e(team["image"]) + '" alt="" loading="lazy">'
-    return '<div class="crest ' + cls + '">' + e(conf.get("short", "")) + "</div>"
+def shot(team, cfg):
+    """
+    The manager's AI picture on the Scoreboard, whole and large: Matt makes a new
+    set every season and the detail is the point. Some are landscape and some
+    portrait, so each sits uncropped in a 3:2 frame, over a blurred copy of
+    itself that fills whatever it leaves, and opens full size when clicked. The
+    square crest crop is the fallback.
+    """
+    pic = next((p for p in (team.get("portrait"), team.get("image"))
+                if p and (ASSETS / "teams" / p).exists()), None)
+    if not pic:
+        conf = cfg["conferences"].get(team["division"], {})
+        cls = "lc" if team["division"] == "1" else "mc"
+        return '<div class="shot none ' + cls + '"><span>' + e(conf.get("short", "")) + "</span></div>"
+    src = "assets/teams/" + e(pic)
+    return ('<a class="shot" href="' + src + '" title="Open full size">'
+            '<img class="blur" src="' + src + '" alt="" aria-hidden="true" loading="lazy">'
+            '<img class="pic" src="' + src + '" alt="' + e(team["manager"] + ", " + team["team"])
+            + '" loading="lazy"></a>')
 
 
 def sechead(title, note=""):
@@ -294,21 +309,25 @@ def scoreboard(cfg, teams, results, week, career, prev_finish):
       <article class="fixture{' featured' if billing else ''}">
         {marquee}
         <div class="side home">
-          {crest(home, cfg)}
-          <div class="who">
-            <div class="team"><a href="team-{e(home['slug'])}.html">{e(home['team'])}</a></div>
-            <div class="mgr">{e(home['manager'])} &middot; {home['wins']}&ndash;{home['losses']} &middot; {e(places.get(home['roster_id'], ''))}</div>
+          {shot(home, cfg)}
+          <div class="line">
+            <div class="who">
+              <div class="team"><a href="team-{e(home['slug'])}.html">{e(home['team'])}</a></div>
+              <div class="mgr">{e(home['manager'])} &middot; {home['wins']}&ndash;{home['losses']} &middot; {e(places.get(home['roster_id'], ''))}</div>
+            </div>
+            <div class="score {'lead' if hp >= ap else 'trail'}">{hp:.2f}</div>
           </div>
-          <div class="score {'lead' if hp >= ap else 'trail'}">{hp:.2f}</div>
         </div>
         <div class="vs">vs{h2h}</div>
         <div class="side away">
-          {crest(away, cfg)}
-          <div class="who">
-            <div class="team"><a href="team-{e(away['slug'])}.html">{e(away['team'])}</a></div>
-            <div class="mgr">{e(away['manager'])} &middot; {away['wins']}&ndash;{away['losses']} &middot; {e(places.get(away['roster_id'], ''))}</div>
+          {shot(away, cfg)}
+          <div class="line">
+            <div class="who">
+              <div class="team"><a href="team-{e(away['slug'])}.html">{e(away['team'])}</a></div>
+              <div class="mgr">{e(away['manager'])} &middot; {away['wins']}&ndash;{away['losses']} &middot; {e(places.get(away['roster_id'], ''))}</div>
+            </div>
+            <div class="score {'lead' if ap >= hp else 'trail'}">{ap:.2f}</div>
           </div>
-          <div class="score {'lead' if ap >= hp else 'trail'}">{ap:.2f}</div>
         </div>
       </article>"""))
 
