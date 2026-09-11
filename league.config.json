@@ -130,6 +130,75 @@
       "consolation": "Toilet Bowl"
     }
   },
+  "manual_trades": {
+    "_comment": "Trades Sleeper never recorded: deals done by hand on draft day, with the picks moved in the draft room and any player moved by the commissioner. Every other trade comes straight from Sleeper, so only add one here if it never went through as a Sleeper trade. List them in the order they happened; the date is UTC, with a time if it has to sort against other trades that day. Each side is what that manager received. A pick is 'season round original-owner' - '2025 3 Dave' is Dave's 2025 third - and shows as the player taken once the draft is done. Players go by name, or by Sleeper id if the name is not unique. If the Trade Centre shows a loose end, a trade is missing from here.",
+    "trades": [
+      {
+        "date": "2022-07-29T21:15",
+        "note": "Done by hand in the 2022 rookie draft: Henderson moved by the commissioner, the picks in the draft room.",
+        "sides": {
+          "Neil": {"players": ["Darrell Henderson"]},
+          "Ross": {"picks": ["2022 3 Neil", "2022 4 Neil", "2022 4 Dave"]}
+        }
+      },
+      {
+        "date": "2024-05-03T19:00",
+        "note": "Done by hand in the draft room during the 2024 rookie draft.",
+        "sides": {
+          "Alex": {"picks": ["2024 1 Mike"]},
+          "Mike": {"picks": ["2025 1 Jebus", "2025 2 Jebus"]}
+        }
+      },
+      {
+        "date": "2024-05-03T19:00",
+        "note": "Done by hand in the 2024 rookie draft: Kittle moved by the commissioner, the picks in the draft room.",
+        "sides": {
+          "Chris": {"picks": ["2024 1 Jebus"]},
+          "Neil": {"players": ["George Kittle"], "picks": ["2025 2 Chris"]}
+        }
+      },
+      {
+        "date": "2024-05-03T19:00",
+        "note": "Done by hand in the draft room during the 2024 rookie draft.",
+        "sides": {
+          "Ross": {"picks": ["2024 3 Neil"]},
+          "Neil": {"picks": ["2025 3 Ross"]}
+        }
+      },
+      {
+        "date": "2024-05-03T19:00",
+        "note": "Done by hand in the draft room during the 2024 rookie draft.",
+        "sides": {
+          "Alex": {"picks": ["2024 3 Ross"]},
+          "Ross": {"picks": ["2025 3 Alex"]}
+        }
+      },
+      {
+        "date": "2024-05-03T19:00",
+        "note": "Done by hand in the draft room during the 2024 rookie draft.",
+        "sides": {
+          "Chris": {"picks": ["2024 3 Jebus"]},
+          "Neil": {"picks": ["2024 4 Chris", "2025 4 Mike"]}
+        }
+      },
+      {
+        "date": "2024-05-03T19:00",
+        "note": "Done by hand in the draft room during the 2024 rookie draft.",
+        "sides": {
+          "Lee": {"picks": ["2024 4 Neil", "2024 4 Lee"]},
+          "Neil": {"picks": ["2024 4 Ross", "2025 3 Lee"]}
+        }
+      },
+      {
+        "date": "2024-05-03T19:00",
+        "note": "Done by hand in the draft room during the 2024 rookie draft.",
+        "sides": {
+          "Dave": {"picks": ["2024 4 Alex"]},
+          "Jebus": {"picks": ["2025 3 Dave"]}
+        }
+      }
+    ]
+  },
   "power_rankings": {
     "_comment": "Reproduces the workbook formula: score = ((previous cumulative wins + own projected points) / 2) - opponent projected points.",
     "method": "matt",

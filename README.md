@@ -22,6 +22,8 @@ Edit **`league.config.json`** and nothing else. It holds:
 - conference names and colours
 - manager names and their image filenames
 - the name of each year's consolation trophy
+- any trade done by hand on draft day that Sleeper never recorded (`manual_trades`)
+  — the Trade Centre lists a loose end if one is missing
 
 Champions, the 1.01 winner and Loser of All Losers are read from the Sleeper
 brackets, so there is no list of them to keep.

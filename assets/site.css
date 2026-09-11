@@ -391,3 +391,48 @@
   .waiver .bid{font-size:28px;font-weight:600;color:var(--brass)}
   .waiver .what{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:18px}
   .waiver .when{font-size:13px;color:var(--muted)}
+
+  /* ---------- trade centre ---------- */
+  /* The league table first, then every trade in its window - a season, or the
+     off-season before one - each card split into what each side received. */
+  [hidden]{display:none!important}
+  .factgrid dd a{color:inherit;text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px}
+  .finish tr.total td{background:var(--surface-2);border-top:1px solid var(--line-strong);font-weight:600}
+  .finish tr.total.lc .nm{color:var(--lombardi)}
+  .finish tr.total.mc .nm{color:var(--madden)}
+  .tradelog{padding-bottom:0}
+  .tradefilter{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .tradefilter label{font-size:13px;color:var(--muted)}
+  .tradefilter select{
+    font:inherit;font-size:14px;color:var(--ink);background:var(--surface);
+    border:1px solid var(--line-strong);border-radius:8px;padding:6px 10px;
+  }
+  .tradefilter select:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+  .tradewindow{padding-block:24px 10px}
+  .trades{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr));gap:12px;align-items:start}
+  .trade{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .tradehead{display:flex;align-items:baseline;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+  .tradeno{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase}
+  .tradehead .tag{margin-left:0}
+  .tradehead .badge{margin-left:0}
+  .tradewhen{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
+  .tradesides{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;background:var(--line)}
+  .tside{background:var(--surface);padding:12px 14px 14px;min-width:0}
+  .tside h4{margin:0 0 9px;display:flex;align-items:center;gap:7px;font-size:14px;font-weight:600}
+  .tside h4 img{width:24px;height:24px;border-radius:6px;object-fit:cover;flex:none}
+  .tside h4 a{color:inherit;text-decoration:none}
+  .tside h4 a:hover{text-decoration:underline}
+  .tside h4 .rcv{font-size:11.5px;font-weight:400;color:var(--muted)}
+  .tside ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+  .tside li{font-size:13.5px;line-height:1.35;overflow-wrap:anywhere}
+  .tside li .nm{font-weight:500}
+  .tside li.pick .pk{font-weight:600;font-size:13px}
+  .tside li .sub{display:block;font-size:11.5px;color:var(--muted)}
+  .tside li.faab .num{font-weight:600}
+  .tside li.none{color:var(--muted)}
+  .tradenote{margin:0;padding:8px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+  .badge.hand{background:var(--surface);color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line-strong)}
+  .looseends{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--brass);border-radius:var(--radius);padding:12px 18px}
+  .looseends ul{margin:0;padding-left:18px;display:grid;gap:6px;font-size:13.5px}
+  .looseends p{margin:10px 0 0;font-size:12.5px;color:var(--muted)}
+  .looseends code{font-family:"IBM Plex Mono",monospace;font-size:12px}

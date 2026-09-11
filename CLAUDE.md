@@ -38,8 +38,8 @@ Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.ap
 
 | Path | What it is |
 |---|---|
-| `league.config.json` | **The only file Matt should ever need to edit.** Season, league ID, conferences, managers, consolation trophy names. Champions are *not* in it — they come from the brackets. |
-| `scripts/fetch_data.py` | Pulls league, users, rosters, matchups, brackets and trades for every season, walking `previous_league_id` back to 2020. |
+| `league.config.json` | **The only file Matt should ever need to edit.** Season, league ID, conferences, managers, consolation trophy names, and the draft-day trades Sleeper never recorded (`manual_trades`). Champions are *not* in it — they come from the brackets. |
+| `scripts/fetch_data.py` | Pulls league, users, rosters, matchups, brackets, trades, completed waiver claims, cross-team commissioner moves and the rookie drafts for every season, walking `previous_league_id` back to 2020. |
 | `scripts/stats.py` | All-time maths: career records, era splits, head-to-head, trades, season tables. |
 | `scripts/build_site.py` | Renders the HTML. |
 | `scripts/prepare_media.py` | Turns a champion GIF or loser photo into `assets/records/<season>-<champion\|loser>.*` — GIFs become silent looping WebPs under 2.5MB, photos are straightened and shrunk. |
@@ -138,6 +138,42 @@ screenshot (through 2024) matched every W–L;
 PF/PA differ by 1–3 points for five managers, most likely Sleeper stat
 corrections since. The waiver record needs completed waiver claims, which
 `fetch_data.py` now keeps (it used to keep trades only).
+
+### The Trade Centre (trades.html)
+
+Rebuilt from the old Trade Centre in September 2026: the **Trade League Table**
+(a Google Sheet — trades, players in, picks in, players out, picks out, with LFC
+and MFC totals) and every trade as a picture of Sleeper's trade card, grouped
+into windows and numbered within each window oldest first. The new page keeps
+all of that, computed, and resolves each traded pick to the player taken with
+it once the draft is done (`stats.draft_board`, from the rookie drafts).
+
+- **Windows**: each season, and the off-season before it ("2024/25 off-season").
+  Sleeper files everything from a league's creation to the end of week one under
+  leg 1, so a leg-1 trade is in-season only once kickoff day is over
+  (`stats.kickoff`: Sleeper's own date for the current season, otherwise the
+  Thursday after Labor Day). Two trades sit differently on the old page: the
+  5 Sep 2021 Henderson–Jones swap (before kickoff, so 2020/21 off-season here)
+  and one 2022 in-season trade the old page never posted.
+- **Defences count as players** in the table. It matches the old sheet better.
+- **Manual trades.** Some deals were done by hand on draft day — picks moved in
+  the draft room, players by commissioner move — so Sleeper has no trade for
+  them. There are eight, in `league.config.json` → `manual_trades`: Henderson for
+  three picks in the 2022 draft, and seven in the 2024 draft (the old page's
+  2023/24 section is one Sleeper trade and seven seesaw graphics of these). They
+  were found in the data — a draft pick made by someone the trades never gave it
+  to, and commissioner moves between two teams — then matched to Matt's graphics.
+  `stats.trade_loose_ends` repeats that check on every build and the page lists
+  anything unexplained, so a future draft-day deal shows up rather than going
+  missing.
+- **One loose end is known and deliberate**: 2024 pick 2.09 (Mike's original
+  2nd, MarShawn Lloyd). Neil held it going into the draft, Chris made it, and no
+  graphic covers it. Matt can't remember how, so it stays listed until he does.
+
+Checked against the old sheet: it runs to the end of 2025 and counts the
+draft-day trades. On that basis Dave, Jebus, Mike and Rich match on every
+column; everyone else is within one or two on a column, which the sheet being
+kept by hand explains.
 
 Champion GIFs and loser pictures in `Website\Winners and Losers\` were matched to
 seasons by file date and the brackets. As of September 2026 there is no 2025
@@ -262,10 +298,11 @@ state and the current season is indexed only up to the last finished week, so a
 week in progress is neither a result nor a record anywhere on the site.
 
 **When numbers disagree with the old site, check the live week first.** Records
-shift mid-week while games are in flight and settle when they finish. One real
-discrepancy remains: this computes 43 career trades for Dave where the old page
-says 41. The old page is most likely stale — Matt updates it when he has time —
-but it has not been confirmed.
+shift mid-week while games are in flight and settle when they finish. The one
+long-standing discrepancy, Dave's career trades (43 here, 41 on the old page),
+was settled in September 2026. The old sheet stops at the end of 2025 and counts
+his draft-day trade from 2024, which Sleeper never recorded. With that trade
+and his three 2026 trades he is on 44.
 
 ## Where Matt's material lives
 
@@ -297,8 +334,8 @@ Roughly in the order discussed with Matt, though he has not yet picked:
    scorer, player high score, plus the uniform images. Brings team pages level
    with the old site. Matt specifically wants the regular-season (conference)
    honours shown here.
-4. **The archive.** Trade Centre back to 2020, rules PDFs, commissioner updates,
-   official team statements, Lee's Stat Corner.
+4. **The archive.** Rules PDFs, commissioner updates, official team statements,
+   Lee's Stat Corner. (The Trade Centre, back to 2020, was done in September 2026.)
 5. **Conference landing pages** (LC/MC) and a **calendar**, both on the old site
    and not yet rebuilt.
 

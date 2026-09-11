@@ -134,6 +134,481 @@
    }
   ]
  },
+ "drafts": [
+  {
+   "draft_id": "1312061337781686272",
+   "picks": [
+    {
+     "draft_slot": 1,
+     "name": "Jeremiyah Love",
+     "pick_no": 1,
+     "player_id": "13287",
+     "position": "RB",
+     "roster_id": 9,
+     "round": 1
+    },
+    {
+     "draft_slot": 2,
+     "name": "Fernando Mendoza",
+     "pick_no": 2,
+     "player_id": "13269",
+     "position": "QB",
+     "roster_id": 8,
+     "round": 1
+    },
+    {
+     "draft_slot": 3,
+     "name": "Carnell Tate",
+     "pick_no": 3,
+     "player_id": "13279",
+     "position": "WR",
+     "roster_id": 9,
+     "round": 1
+    },
+    {
+     "draft_slot": 4,
+     "name": "Jadarian Price",
+     "pick_no": 4,
+     "player_id": "13286",
+     "position": "RB",
+     "roster_id": 10,
+     "round": 1
+    },
+    {
+     "draft_slot": 5,
+     "name": "Makai Lemon",
+     "pick_no": 5,
+     "player_id": "13294",
+     "position": "WR",
+     "roster_id": 7,
+     "round": 1
+    },
+    {
+     "draft_slot": 6,
+     "name": "Jordyn Tyson",
+     "pick_no": 6,
+     "player_id": "13281",
+     "position": "WR",
+     "roster_id": 7,
+     "round": 1
+    },
+    {
+     "draft_slot": 7,
+     "name": "Kenyon Sadiq",
+     "pick_no": 7,
+     "player_id": "13330",
+     "position": "TE",
+     "roster_id": 7,
+     "round": 1
+    },
+    {
+     "draft_slot": 8,
+     "name": "KC Concepcion",
+     "pick_no": 8,
+     "player_id": "13298",
+     "position": "WR",
+     "roster_id": 4,
+     "round": 1
+    },
+    {
+     "draft_slot": 9,
+     "name": "Eli Stowers",
+     "pick_no": 9,
+     "player_id": "13349",
+     "position": "TE",
+     "roster_id": 4,
+     "round": 1
+    },
+    {
+     "draft_slot": 10,
+     "name": "Denzel Boston",
+     "pick_no": 10,
+     "player_id": "13346",
+     "position": "WR",
+     "roster_id": 1,
+     "round": 1
+    },
+    {
+     "draft_slot": 1,
+     "name": "Ty Simpson",
+     "pick_no": 11,
+     "player_id": "13275",
+     "position": "QB",
+     "roster_id": 10,
+     "round": 2
+    },
+    {
+     "draft_slot": 2,
+     "name": "Chris Bell",
+     "pick_no": 12,
+     "player_id": "13311",
+     "position": "WR",
+     "roster_id": 8,
+     "round": 2
+    },
+    {
+     "draft_slot": 3,
+     "name": "Omar Cooper",
+     "pick_no": 13,
+     "player_id": "13276",
+     "position": "WR",
+     "roster_id": 1,
+     "round": 2
+    },
+    {
+     "draft_slot": 4,
+     "name": "Antonio Williams",
+     "pick_no": 14,
+     "player_id": "13301",
+     "position": "WR",
+     "roster_id": 10,
+     "round": 2
+    },
+    {
+     "draft_slot": 5,
+     "name": "Malachi Fields",
+     "pick_no": 15,
+     "player_id": "13285",
+     "position": "WR",
+     "roster_id": 7,
+     "round": 2
+    },
+    {
+     "draft_slot": 6,
+     "name": "Nicholas Singleton",
+     "pick_no": 16,
+     "player_id": "13288",
+     "position": "RB",
+     "roster_id": 3,
+     "round": 2
+    },
+    {
+     "draft_slot": 7,
+     "name": "Ted Hurst",
+     "pick_no": 17,
+     "player_id": "13317",
+     "position": "WR",
+     "roster_id": 7,
+     "round": 2
+    },
+    {
+     "draft_slot": 8,
+     "name": "Emmett Johnson",
+     "pick_no": 18,
+     "player_id": "13337",
+     "position": "RB",
+     "roster_id": 7,
+     "round": 2
+    },
+    {
+     "draft_slot": 9,
+     "name": "Kaelon Black",
+     "pick_no": 19,
+     "player_id": "13414",
+     "position": "RB",
+     "roster_id": 7,
+     "round": 2
+    },
+    {
+     "draft_slot": 10,
+     "name": "Jonah Coleman",
+     "pick_no": 20,
+     "player_id": "13345",
+     "position": "RB",
+     "roster_id": 6,
+     "round": 2
+    },
+    {
+     "draft_slot": 1,
+     "name": "Carson Beck",
+     "pick_no": 21,
+     "player_id": "13272",
+     "position": "QB",
+     "roster_id": 7,
+     "round": 3
+    },
+    {
+     "draft_slot": 2,
+     "name": "Germie Bernard",
+     "pick_no": 22,
+     "player_id": "13274",
+     "position": "WR",
+     "roster_id": 4,
+     "round": 3
+    },
+    {
+     "draft_slot": 3,
+     "name": "Elijah Sarratt",
+     "pick_no": 23,
+     "player_id": "13268",
+     "position": "WR",
+     "roster_id": 9,
+     "round": 3
+    },
+    {
+     "draft_slot": 4,
+     "name": "Kaytron Allen",
+     "pick_no": 24,
+     "player_id": "13405",
+     "position": "RB",
+     "roster_id": 10,
+     "round": 3
+    },
+    {
+     "draft_slot": 5,
+     "name": "Demond Claiborne",
+     "pick_no": 25,
+     "player_id": "13347",
+     "position": "RB",
+     "roster_id": 3,
+     "round": 3
+    },
+    {
+     "draft_slot": 6,
+     "name": "Oscar Delp",
+     "pick_no": 26,
+     "player_id": "13319",
+     "position": "TE",
+     "roster_id": 3,
+     "round": 3
+    },
+    {
+     "draft_slot": 7,
+     "name": "Max Klare",
+     "pick_no": 27,
+     "player_id": "13278",
+     "position": "TE",
+     "roster_id": 9,
+     "round": 3
+    },
+    {
+     "draft_slot": 8,
+     "name": "Mike Washington",
+     "pick_no": 28,
+     "player_id": "13305",
+     "position": "RB",
+     "roster_id": 4,
+     "round": 3
+    },
+    {
+     "draft_slot": 9,
+     "name": "Eli Raridon",
+     "pick_no": 29,
+     "player_id": "13421",
+     "position": "TE",
+     "roster_id": 5,
+     "round": 3
+    },
+    {
+     "draft_slot": 10,
+     "name": "Chris Brazzell",
+     "pick_no": 30,
+     "player_id": "13353",
+     "position": "WR",
+     "roster_id": 9,
+     "round": 3
+    },
+    {
+     "draft_slot": 1,
+     "name": "Skyler Bell",
+     "pick_no": 31,
+     "player_id": "13402",
+     "position": "WR",
+     "roster_id": 6,
+     "round": 4
+    },
+    {
+     "draft_slot": 2,
+     "name": "De'Zhaun Stribling",
+     "pick_no": 32,
+     "player_id": "13417",
+     "position": "WR",
+     "roster_id": 8,
+     "round": 4
+    },
+    {
+     "draft_slot": 3,
+     "name": "Zachariah Branch",
+     "pick_no": 33,
+     "player_id": "13320",
+     "position": "WR",
+     "roster_id": 9,
+     "round": 4
+    },
+    {
+     "draft_slot": 4,
+     "name": "Bauer Sharp",
+     "pick_no": 34,
+     "player_id": "13308",
+     "position": "TE",
+     "roster_id": 10,
+     "round": 4
+    },
+    {
+     "draft_slot": 5,
+     "name": "Drew Allar",
+     "pick_no": 35,
+     "player_id": "13289",
+     "position": "QB",
+     "roster_id": 1,
+     "round": 4
+    },
+    {
+     "draft_slot": 6,
+     "name": "Kevin Coleman",
+     "pick_no": 36,
+     "player_id": "13338",
+     "position": "WR",
+     "roster_id": 3,
+     "round": 4
+    },
+    {
+     "draft_slot": 7,
+     "name": "Brenen Thompson",
+     "pick_no": 37,
+     "player_id": "13380",
+     "position": "WR",
+     "roster_id": 7,
+     "round": 4
+    },
+    {
+     "draft_slot": 8,
+     "name": "Cole Payton",
+     "pick_no": 38,
+     "player_id": "13335",
+     "position": "QB",
+     "roster_id": 4,
+     "round": 4
+    },
+    {
+     "draft_slot": 9,
+     "name": "Adam Randall",
+     "pick_no": 39,
+     "player_id": "13302",
+     "position": "RB",
+     "roster_id": 2,
+     "round": 4
+    },
+    {
+     "draft_slot": 10,
+     "name": "J'Mari Taylor",
+     "pick_no": 40,
+     "player_id": "13348",
+     "position": "RB",
+     "roster_id": 10,
+     "round": 4
+    },
+    {
+     "draft_slot": 1,
+     "name": "Jeff Caldwell",
+     "pick_no": 41,
+     "player_id": "13392",
+     "position": "WR",
+     "roster_id": 7,
+     "round": 5
+    },
+    {
+     "draft_slot": 2,
+     "name": "Cade Klubnik",
+     "pick_no": 42,
+     "player_id": "13303",
+     "position": "QB",
+     "roster_id": 8,
+     "round": 5
+    },
+    {
+     "draft_slot": 3,
+     "name": "Bryce Lance",
+     "pick_no": 43,
+     "player_id": "13420",
+     "position": "WR",
+     "roster_id": 5,
+     "round": 5
+    },
+    {
+     "draft_slot": 4,
+     "name": "Justin Joly",
+     "pick_no": 44,
+     "player_id": "13400",
+     "position": "TE",
+     "roster_id": 4,
+     "round": 5
+    },
+    {
+     "draft_slot": 5,
+     "name": "Eli Heidenreich",
+     "pick_no": 45,
+     "player_id": "13423",
+     "position": "RB",
+     "roster_id": 1,
+     "round": 5
+    },
+    {
+     "draft_slot": 6,
+     "name": "Roman Hemby",
+     "pick_no": 46,
+     "player_id": "13416",
+     "position": "RB",
+     "roster_id": 3,
+     "round": 5
+    },
+    {
+     "draft_slot": 7,
+     "name": "Haynes King",
+     "pick_no": 47,
+     "player_id": "13415",
+     "position": "QB",
+     "roster_id": 7,
+     "round": 5
+    },
+    {
+     "draft_slot": 8,
+     "name": "Taylen Green",
+     "pick_no": 48,
+     "player_id": "13306",
+     "position": "QB",
+     "roster_id": 4,
+     "round": 5
+    },
+    {
+     "draft_slot": 9,
+     "name": "Zavion Thomas",
+     "pick_no": 49,
+     "player_id": "13411",
+     "position": "WR",
+     "roster_id": 2,
+     "round": 5
+    },
+    {
+     "draft_slot": 10,
+     "name": "Ja'Kobi Lane",
+     "pick_no": 50,
+     "player_id": "13293",
+     "position": "WR",
+     "roster_id": 5,
+     "round": 5
+    }
+   ],
+   "rounds": 5,
+   "season": "2026",
+   "slot_to_roster_id": {
+    "1": 6,
+    "10": 5,
+    "2": 8,
+    "3": 9,
+    "4": 10,
+    "5": 1,
+    "6": 3,
+    "7": 7,
+    "8": 4,
+    "9": 2
+   },
+   "start_time": 1778870514677,
+   "status": "complete",
+   "teams": 10,
+   "type": "linear"
+  }
+ ],
  "league_id": "1312061337769091072",
  "matchups": {
   "1": [

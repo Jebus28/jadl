@@ -125,7 +125,7 @@ def fetch_season(league_id: str, weeks: int, want_matchups: bool = True) -> dict
     for wk in range(1, weeks + 1):
         got = get(f"{API}/league/{league_id}/transactions/{wk}")
         if got:
-            # Trades whole, for the trade counts. Of the rest, only completed
+            # Trades whole, for the Trade Centre. Of the rest, only completed
             # waiver claims, trimmed to what the waiver record needs: who, whom
             # and the FAAB bid. Free-agent pickups and failed bids are noise.
             keep = [t for t in got if t.get("type") == "trade"]
@@ -135,8 +135,49 @@ def fetch_season(league_id: str, weeks: int, want_matchups: bool = True) -> dict
                 for t in got
                 if t.get("type") == "waiver" and t.get("status") == "complete"
             ]
+            # A commissioner move that takes a player off one team and gives him
+            # to another is the player half of a trade made by hand - the draft-day
+            # deals Sleeper never recorded. Kept so the build can check each one
+            # is accounted for in league.config.json.
+            keep += [
+                {k: t.get(k) for k in ("type", "status", "roster_ids", "adds", "drops",
+                                       "leg", "status_updated", "transaction_id")}
+                for t in got
+                if t.get("type") == "commissioner" and t.get("status") == "complete"
+                and len(t.get("roster_ids") or []) > 1
+            ]
             if keep:
                 season["transactions"][str(wk)] = keep
+
+    # The rookie drafts, so a traded pick can be shown as the player it became,
+    # and so the build can spot a pick that changed hands in the draft room,
+    # where Sleeper records no trade. Auctions are free-agent bidding, not drafts.
+    season["drafts"] = []
+    for draft in get(f"{API}/league/{league_id}/drafts") or []:
+        if draft.get("type") == "auction":
+            continue
+        full = get(f"{API}/draft/{draft['draft_id']}") or draft
+        picks = get(f"{API}/draft/{draft['draft_id']}/picks") or []
+        season["drafts"].append({
+            "draft_id": draft["draft_id"],
+            "season": draft.get("season"),
+            "type": draft.get("type"),
+            "status": full.get("status"),
+            "start_time": full.get("start_time"),
+            "rounds": (full.get("settings") or {}).get("rounds"),
+            "teams": (full.get("settings") or {}).get("teams"),
+            "slot_to_roster_id": full.get("slot_to_roster_id") or {},
+            "picks": [{
+                "round": p.get("round"),
+                "draft_slot": p.get("draft_slot"),
+                "pick_no": p.get("pick_no"),
+                "roster_id": p.get("roster_id"),
+                "player_id": p.get("player_id"),
+                "name": " ".join(filter(None, ((p.get("metadata") or {}).get("first_name"),
+                                               (p.get("metadata") or {}).get("last_name")))),
+                "position": (p.get("metadata") or {}).get("position"),
+            } for p in picks],
+        })
 
     return season
 

@@ -147,8 +147,8 @@ def power_rankings(teams, results, upto):
     return rows
 
 
-NAV = [("index.html", "Scoreboard"), ("standings.html", "Standings"),
-       ("teams.html", "Teams"), ("history.html", "History"), ("records.html", "Records")]
+NAV = [("index.html", "Scoreboard"), ("standings.html", "Standings"), ("teams.html", "Teams"),
+       ("trades.html", "Trade Centre"), ("history.html", "History"), ("records.html", "Records")]
 
 
 def page(cfg, title, active, body):
@@ -461,7 +461,7 @@ def team_page(cfg, team, career, names):
         ("Record week", format(best[0], ".2f") if best else "&mdash;"),
         ("Lowest week", format(worst[0], ".2f") if worst else "&mdash;"),
         ("Playoffs", str(s["playoff_appearances"]) + " apps, " + rec(s["playoffs"])),
-        ("Trades", str(s["trades"])),
+        ("Trades", '<a href="trades.html#' + e(slugify(team["manager"])) + '">' + str(s["trades"]) + "</a>"),
     ]
     fact_html = "".join("<div><dt>" + e(label) + '</dt><dd class="num">' + value + "</dd></div>"
                         for label, value in facts)
@@ -867,6 +867,195 @@ def records_page(cfg, indexed, career, names, waiver, players):
     return body
 
 
+MOVE_ORDER = {"player": 0, "pick": 1, "faab": 2}
+
+
+def trade_asset(move, board, names, players):
+    """One thing a manager received: a player, a pick or some FAAB."""
+    if move["kind"] == "faab":
+        return '<li class="faab"><span class="num">$' + str(move["amount"]) + "</span> FAAB</li>"
+    if move["kind"] == "player":
+        p = players.get(move["player_id"]) or {}
+        pos = '<span class="tag">' + e(p["position"]) + "</span>" if p.get("position") else ""
+        return '<li><span class="nm">' + e(p.get("full_name") or move["player_id"]) + "</span>" + pos + "</li>"
+    # A pick shows as the pick it became once the draft is done, and who it took.
+    made = board.get((move["season"], move["round"], move["original"]))
+    whose = e(names.get(move["original"]) or "Unknown") + "&rsquo;s pick"
+    if made:
+        label = move["season"] + " " + made["number"]
+        took = made.get("name") or (players.get(made.get("player_id")) or {}).get("full_name")
+        if took:
+            whose += " &rarr; " + e(took)
+    else:
+        label = move["season"] + " " + ordinal(move["round"])
+    return '<li class="pick"><span class="pk num">' + e(label) + '</span><span class="sub">' + whose + "</span></li>"
+
+
+def trade_card(trade, board, names, players, slugs, images):
+    sides = []
+    for uid in trade["owners"]:
+        got = sorted((m for m in trade["moves"] if m["to"] == uid),
+                     key=lambda m: (MOVE_ORDER[m["kind"]], m.get("season", ""), m.get("round", 0)))
+        name = e(names.get(uid) or "Unknown")
+        if uid in slugs:
+            name = '<a href="team-' + e(slugs[uid]) + '.html">' + name + "</a>"
+        pic = ('<img src="assets/teams/' + e(images[uid]) + '" alt="" loading="lazy">') if images.get(uid) else ""
+        items = "".join(trade_asset(m, board, names, players) for m in got) or '<li class="none">Nothing</li>'
+        sides.append(f'<div class="tside"><h4>{pic}<span class="nm">{name}</span>'
+                     f'<span class="rcv">receives</span></h4><ul>{items}</ul></div>')
+    day = datetime.fromtimestamp(trade["when"] / 1000, timezone.utc)
+    extra = ""
+    if trade["window"][0] == "in" and trade.get("leg"):
+        extra += '<span class="tag">Week ' + str(trade["leg"]) + "</span>"
+    if trade["manual"]:
+        extra += '<span class="badge hand" title="Sleeper has no record of this trade">By hand</span>'
+    note = '<p class="tradenote">' + e(trade["note"]) + "</p>" if trade["note"] else ""
+    who = " ".join(slugify(names.get(uid) or "") for uid in trade["owners"])
+    return f"""
+      <article class="trade" data-who="{e(who)}">
+        <header class="tradehead"><span class="tradeno">Trade {trade['number']}</span>{extra}<span class="tradewhen">{day.day} {day:%b %Y}</span></header>
+        <div class="tradesides">{''.join(sides)}</div>{note}
+      </article>"""
+
+
+def window_name(window):
+    kind, season = window
+    return f"{season} in-season" if kind == "in" else f"{season - 1}/{str(season)[2:]} off-season"
+
+
+def trade_league_table(cfg, table, names, teams):
+    """Matt's Trade League Table: trades made, and what came in and went out."""
+    division = {t["user_id"]: t["division"] for t in teams.values()}
+    cols = ("trades", "players_in", "picks_in", "players_out", "picks_out")
+
+    def partner(row):
+        if not row["partners"]:
+            return "&mdash;"
+        top = max(row["partners"].values())
+        who = sorted(names.get(u) or "Unknown" for u, n in row["partners"].items() if n == top)
+        return e(" & ".join(who)) + ' <span class="hd">' + str(top) + "</span>"
+
+    rows = []
+    order = sorted(table.items(), key=lambda kv: (-kv[1]["trades"], names.get(kv[0]) or ""))
+    for i, (uid, row) in enumerate(order, 1):
+        name = names.get(uid) or "Unknown"
+        rows.append(f'<tr><td class="num">{i}</td><td><div class="tm"><span class="nm">'
+                    f'<a href="#{e(slugify(name))}" title="Show {e(name)}&rsquo;s trades">{e(name)}</a></span></div></td>'
+                    + "".join(f'<td class="num">{row[c]}</td>' for c in cols)
+                    + f'<td class="l"><div class="tm">{partner(row)}</div></td></tr>')
+    # The conferences as they stand, as the old sheet had them: a trade between two
+    # managers in the same conference counts for both of them.
+    for div in sorted(cfg["conferences"]):
+        members = [row for uid, row in table.items() if division.get(uid) == div]
+        if members:
+            cls = "lc" if div == "1" else "mc"
+            rows.append(f'<tr class="total {cls}"><td></td><td><span class="nm">'
+                        f'{e(cfg["conferences"][div].get("short", ""))}</span></td>'
+                        + "".join(f'<td class="num">{sum(r[c] for r in members)}</td>' for c in cols)
+                        + '<td class="l"></td></tr>')
+    return finish_card("Since " + str(cfg["league"]["established"]),
+                       "Busiest first. Conference totals are the managers in each conference now.",
+                       "<th>#</th><th>Manager</th><th>Trades</th><th>Players in</th><th>Picks in</th>"
+                       '<th>Players out</th><th>Picks out</th><th class="l">Most trades with</th>', rows)
+
+
+def loose_ends_section(ends, names, players):
+    """Changes of hands Sleeper shows that no trade explains. Empty when all is well."""
+    if not ends:
+        return ""
+
+    def who(uid):
+        return e(names.get(uid) or "Unknown")
+
+    def when(ms):
+        day = datetime.fromtimestamp((ms or 0) / 1000, timezone.utc)
+        return f"{day.day} {day:%b %Y}"
+
+    items = []
+    for end in ends:
+        if end["kind"] == "made":
+            season, _rnd, original = end["pick"]
+            made = end["made"]
+            took = " (" + e(made["name"]) + ")" if made.get("name") else ""
+            items.append(f"<li>{season} {made['number']}, {who(original)}&rsquo;s pick{took}, was made by "
+                         f"{who(made['made_by'])}, but no trade gave it to them &mdash; the trades leave it "
+                         f"with {who(end['holder'])}.</li>")
+        elif end["kind"] == "sent":
+            season, rnd, original = end["pick"]
+            items.append(f"<li>{when(end['trade']['when'])}: {who(end['sender'])} traded {who(original)}&rsquo;s "
+                         f"{season} {ordinal(rnd)}, but the trades before it leave that pick with "
+                         f"{who(end['holder'])}.</li>")
+        else:
+            p = players.get(end["player_id"]) or {}
+            items.append(f"<li>{when(end['when'])}: the commissioner moved {e(p.get('full_name') or end['player_id'])} "
+                         f"from {who(end['from'])} to {who(end['to'])}.</li>")
+    return ("<section>" + sechead("Loose ends", "Sleeper shows these changing hands, but no trade explains them.")
+            + '<div class="looseends"><ul>' + "".join(items) + "</ul><p>A deal done by hand goes in "
+            "<code>league.config.json</code> under <code>manual_trades</code>.</p></div></section>")
+
+
+TRADE_FILTER_JS = """
+<script>
+(function () {
+  var pick = document.getElementById("tradewho");
+  if (!pick) return;
+  function show(who, jump) {
+    pick.value = who;
+    if (pick.value !== who) { pick.value = ""; who = ""; }
+    document.querySelectorAll(".trade").forEach(function (card) {
+      card.hidden = !!who && (" " + card.dataset.who + " ").indexOf(" " + who + " ") < 0;
+    });
+    document.querySelectorAll(".tradewindow").forEach(function (block) {
+      block.hidden = !!who && !block.querySelector(".trade:not([hidden])");
+    });
+    if (who && jump) document.getElementById("tradelog").scrollIntoView();
+  }
+  pick.addEventListener("change", function () {
+    history.replaceState(null, "", pick.value ? "#" + pick.value : location.pathname + location.search);
+    show(pick.value, false);
+  });
+  window.addEventListener("hashchange", function () { show(location.hash.slice(1), true); });
+  show(location.hash.slice(1), true);
+})();
+</script>"""
+
+
+def trade_centre(cfg, log, table, board, ends, names, players, teams, state):
+    """
+    Every trade since 2020, rebuilt from the old Trade Centre: Matt's Trade League
+    Table, then the trades themselves in windows - each season, and the off-season
+    before it - newest first, numbered within each window oldest first as he
+    numbered them. Picks show as the player they became once the draft is done.
+    """
+    slugs = {t["user_id"]: t["slug"] for t in teams.values()}
+    images = {uid: conf.get("image") for uid, conf in (cfg.get("managers") or {}).items()}
+    windows = defaultdict(list)
+    for trade in log:
+        windows[trade["window"]].append(trade)
+    year = int(cfg["season"]["year"])
+    if str(state.get("season")) == str(year) and state.get("season_type") in ("regular", "post"):
+        windows.setdefault(("in", year), [])
+
+    blocks = []
+    for window in sorted(windows, key=lambda w: (w[1], w[0] == "in"), reverse=True):
+        items = windows[window]
+        count = f"{len(items)} trade{'' if len(items) == 1 else 's'}" if items else ""
+        inner = ('<div class="trades">' + "".join(trade_card(t, board, names, players, slugs, images)
+                                                  for t in reversed(items)) + "</div>"
+                 if items else '<p class="empty">No trades yet this season.</p>')
+        blocks.append('<section class="tradewindow">' + sechead(window_name(window), count) + inner + "</section>")
+
+    by_hand = sum(1 for t in log if t["manual"])
+    options = "".join(f'<option value="{e(slugify(n))}">{e(n)}</option>' for n in sorted(filter(None, names.values())))
+    note = (f"{len(log)} trades since {cfg['league']['established']}"
+            + (f", {by_hand} of them done by hand on draft day and never recorded by Sleeper." if by_hand else "."))
+    return ("<section>" + sechead("Trade league table", note) + trade_league_table(cfg, table, names, teams) + "</section>"
+            + '<section id="tradelog" class="tradelog">' + sechead("The trades", "Newest first. Picks show the player taken once the draft is done.")
+            + '<div class="tradefilter"><label for="tradewho">Show trades for</label>'
+            + '<select id="tradewho"><option value="">Everyone</option>' + options + "</select></div></section>"
+            + "".join(blocks) + loose_ends_section(ends, names, players) + TRADE_FILTER_JS)
+
+
 def last_complete_week(state, season):
     """
     The last week of `season` whose games are all over, by Sleeper's clock, or
@@ -899,11 +1088,18 @@ def main():
     indexed = [S.index_season(s, conference_from, through if s is current else None)
                for s in all_seasons]
     transactions = [s.get("transactions") for s in all_seasons]
-    trades = S.count_trades(transactions, indexed)
-    career = S.all_time(indexed, trades)
+    names = {uid: conf.get("name") for uid, conf in (cfg.get("managers") or {}).items()}
+
+    # Every trade: Sleeper's, and the draft-day ones done by hand that it never recorded.
+    manual = S.manual_trades((cfg.get("manual_trades") or {}).get("trades") or [],
+                             {name: uid for uid, name in names.items() if name}, players)
+    trade_log = S.trade_log(all_seasons, manual, state)
+    trade_table = S.trade_table(trade_log)
+    board = S.draft_board(all_seasons)
+    ends = S.trade_loose_ends(all_seasons, trade_log, board)
+    career = S.all_time(indexed, {uid: row["trades"] for uid, row in trade_table.items()})
 
     teams = manager_lookup(cfg, current.get("users", []), current.get("rosters", []))
-    names = {uid: conf.get("name") for uid, conf in (cfg.get("managers") or {}).items()}
     results = weekly_results(current, players)
 
     week = int(state.get("week") or 1)
@@ -948,9 +1144,15 @@ def main():
     (DOCS / "records.html").write_text(
         page(cfg, "Records", "Records", records_page(cfg, indexed, career, names, waiver, players)), encoding="utf-8")
 
+    (DOCS / "trades.html").write_text(
+        page(cfg, "Trade Centre", "Trade Centre",
+             trade_centre(cfg, trade_log, trade_table, board, ends, names, players, teams, state)), encoding="utf-8")
+
     print("Built docs/ for " + str(current.get("season")) + " week " + str(week) + ": "
           + str(len(teams)) + " teams, " + str(len(indexed)) + " seasons, "
-          + str(len(career)) + " managers with career records.")
+          + str(len(career)) + " managers with career records, " + str(len(trade_log)) + " trades.")
+    for end in ends:
+        print("  Trade Centre loose end: " + end["kind"] + " " + str(end.get("pick") or end.get("player_id")))
     return 0
 
 

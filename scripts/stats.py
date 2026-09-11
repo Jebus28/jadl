@@ -13,7 +13,8 @@ conference, against the other one, and everything from BCE.
 """
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import Counter, defaultdict
+from datetime import date, datetime, time, timedelta, timezone
 
 
 def _pts(settings: dict, key: str) -> float:
@@ -240,23 +241,227 @@ def all_time(seasons: list[dict], transactions: dict | None = None) -> dict:
     return stats
 
 
-def count_trades(seasons_transactions: list[dict], seasons: list[dict]) -> dict:
+def _owners(season: dict) -> dict:
+    return {r["roster_id"]: r.get("owner_id") for r in season.get("rosters") or []}
+
+
+# --------------------------------------------------------------------------- #
+# trades - the Trade Centre
+# --------------------------------------------------------------------------- #
+# A trade is held as a list of moves, each one asset going from one manager to
+# another: a player, a draft pick (season, round and whose pick it was to begin
+# with) or FAAB. Sleeper's trades and the ones made by hand take the same shape.
+def kickoff(year: int, state: dict | None = None) -> date:
     """
-    owner_id -> number of completed trades they were party to, across all seasons.
-    `seasons_transactions` is a list of {week: [transaction, ...]} aligned with `seasons`.
+    The day an NFL season starts. Sleeper gives it for the season it is on;
+    otherwise it is the Thursday after Labor Day, the first Monday in September.
     """
-    counts = defaultdict(int)
-    for season, txns in zip(seasons, seasons_transactions):
-        owner = season["roster_owner"]
-        for _wk, items in (txns or {}).items():
+    if state and str(state.get("season")) == str(year) and state.get("season_start_date"):
+        return date.fromisoformat(state["season_start_date"])
+    first = date(year, 9, 1)
+    return first + timedelta(days=(7 - first.weekday()) % 7 + 3)
+
+
+def trade_window(trade: dict, state: dict | None = None) -> tuple:
+    """
+    ("in", 2025) for a trade made during the 2025 season; ("off", 2025) for one
+    in the off-season before it, the old site's "2024/25 off-season". Sleeper
+    files everything from a league's creation to the end of week one under leg
+    1, so a leg-1 trade is in-season only once kickoff day is over.
+    """
+    season, leg = trade["season"], trade.get("leg")
+    if leg and leg > trade.get("last_week", 17):
+        return ("off", season + 1)
+    if leg and leg > 1:
+        return ("in", season)
+    over = datetime.combine(kickoff(season, state) + timedelta(days=1), time(), timezone.utc)
+    return ("off", season) if trade["when"] < over.timestamp() * 1000 else ("in", season)
+
+
+def _sleeper_trade(txn: dict, owner: dict) -> dict:
+    rosters = txn.get("roster_ids") or []
+    drops = txn.get("drops") or {}
+    moves = []
+    for pid, rid in (txn.get("adds") or {}).items():
+        giver = drops.get(pid)
+        if giver is None and len(rosters) == 2:
+            giver = next(r for r in rosters if r != rid)
+        moves.append({"kind": "player", "player_id": pid, "to": owner.get(rid), "from": owner.get(giver)})
+    for pick in txn.get("draft_picks") or []:
+        moves.append({"kind": "pick", "season": str(pick["season"]), "round": pick["round"],
+                      "original": owner.get(pick["roster_id"]),
+                      "to": owner.get(pick["owner_id"]), "from": owner.get(pick["previous_owner_id"])})
+    for faab in txn.get("waiver_budget") or []:
+        moves.append({"kind": "faab", "amount": faab["amount"],
+                      "to": owner.get(faab["receiver"]), "from": owner.get(faab["sender"])})
+    return {"id": txn["transaction_id"], "when": txn.get("status_updated") or txn.get("created") or 0,
+            "leg": txn.get("leg"), "manual": False, "note": "",
+            "owners": [owner.get(r) for r in rosters], "moves": moves}
+
+
+def manual_trades(entries: list[dict], managers: dict, players: dict) -> list[dict]:
+    """
+    The trades Sleeper never recorded, from league.config.json: deals done by
+    hand on draft day, the picks moved in the draft room and any player by a
+    commissioner move. `managers` maps name -> user_id. A pick is written
+    "season round original-owner" - "2025 3 Dave" is Dave's 2025 third - and a
+    player by name, or by Sleeper id where the name is not unique.
+    """
+    lookup = defaultdict(list)
+    for pid, p in players.items():
+        if p.get("full_name"):
+            lookup[p["full_name"].lower()].append(pid)
+
+    def uid(name):
+        if name not in managers:
+            raise SystemExit(f"manual_trades: there is no manager called {name!r}")
+        return managers[name]
+
+    def player_id(name):
+        if str(name).isdigit():
+            return str(name)
+        found = lookup.get(str(name).lower(), [])
+        if len(found) != 1:
+            raise SystemExit(f"manual_trades: {name!r} matches {len(found)} players - give the Sleeper id")
+        return found[0]
+
+    out = []
+    for i, entry in enumerate(entries):
+        # A day, or a day and a UTC time where it has to sort against other trades.
+        stamp = datetime.fromisoformat(str(entry["date"]))
+        if len(str(entry["date"])) == 10:
+            stamp = stamp.replace(hour=12)
+        stamp = stamp.replace(tzinfo=stamp.tzinfo or timezone.utc)
+        day = stamp.date()
+        sides = list((entry.get("sides") or {}).items())
+        if len(sides) != 2:
+            raise SystemExit(f"manual_trades: the {day} trade needs exactly two sides")
+        (a, got_a), (b, got_b) = sides
+        moves = []
+        for to, frm, got in ((uid(a), uid(b), got_a), (uid(b), uid(a), got_b)):
+            for name in got.get("players") or []:
+                moves.append({"kind": "player", "player_id": player_id(name), "to": to, "from": frm})
+            for text in got.get("picks") or []:
+                season, rnd, original = str(text).split()
+                moves.append({"kind": "pick", "season": season, "round": int(rnd),
+                              "original": uid(original), "to": to, "from": frm})
+            if got.get("faab"):
+                moves.append({"kind": "faab", "amount": int(got["faab"]), "to": to, "from": frm})
+        # Trades at the same moment keep the order they are listed in.
+        out.append({"id": f"manual-{day}-{i}", "when": int(stamp.timestamp() * 1000) + i,
+                    "season": day.year, "leg": None, "manual": True, "note": entry.get("note") or "",
+                    "owners": [uid(a), uid(b)], "moves": moves})
+    return out
+
+
+def trade_log(seasons: list[dict], manual: list[dict] = (), state: dict | None = None) -> list[dict]:
+    """
+    Every completed trade, oldest first: Sleeper's, and the ones it never
+    recorded. Each carries its window - the season it was made in, or the
+    off-season before one - and its number within that window, oldest first,
+    as the old Trade Centre numbered them.
+    """
+    log = [dict(t) for t in manual]
+    for season in seasons:
+        owner = _owners(season)
+        last_week = ((season.get("settings") or {}).get("playoff_week_start") or 15) + 2
+        for items in (season.get("transactions") or {}).values():
             for txn in items:
-                if txn.get("type") != "trade" or txn.get("status") != "complete":
+                if txn.get("type") == "trade" and txn.get("status") == "complete":
+                    log.append(dict(_sleeper_trade(txn, owner), season=int(season["season"]),
+                                    last_week=last_week))
+    log.sort(key=lambda t: t["when"])
+    count = defaultdict(int)
+    for trade in log:
+        trade["window"] = trade_window(trade, state)
+        count[trade["window"]] += 1
+        trade["number"] = count[trade["window"]]
+    return log
+
+
+def draft_board(seasons: list[dict]) -> dict:
+    """
+    (season, round, original owner) -> what became of that pick: its number in
+    the round and the player taken with it. Read from the rookie drafts, whose
+    slot map says whose pick each slot was to begin with. The first season's
+    draft was the startup, not a rookie draft, so it is left out.
+    """
+    board = {}
+    for season in seasons:
+        if season.get("previous_league_id") in (None, "", "0"):
+            continue
+        owner = _owners(season)
+        for draft in season.get("drafts") or []:
+            slots = {int(k): owner.get(v) for k, v in (draft.get("slot_to_roster_id") or {}).items()}
+            teams = draft.get("teams") or len(slots) or 1
+            for p in draft.get("picks") or []:
+                original = slots.get(p.get("draft_slot"))
+                if not original or not p.get("round") or not p.get("pick_no"):
                     continue
-                for rid in txn.get("roster_ids") or []:
-                    uid = owner.get(rid)
-                    if uid:
-                        counts[uid] += 1
-    return dict(counts)
+                board[(str(draft.get("season")), p["round"], original)] = {
+                    "number": f"{p['round']}.{p['pick_no'] - (p['round'] - 1) * teams:02d}",
+                    "player_id": p.get("player_id"), "name": p.get("name"),
+                    "position": p.get("position"), "made_by": owner.get(p.get("roster_id")),
+                }
+    return board
+
+
+def trade_table(log: list[dict]) -> dict:
+    """owner_id -> trades made, what came in and went out, and who with."""
+    out = defaultdict(lambda: {"trades": 0, "players_in": 0, "players_out": 0, "picks_in": 0,
+                               "picks_out": 0, "faab_in": 0, "faab_out": 0, "partners": Counter()})
+    for trade in log:
+        for uid in trade["owners"]:
+            out[uid]["trades"] += 1
+            out[uid]["partners"].update(o for o in trade["owners"] if o != uid)
+        for move in trade["moves"]:
+            kind = {"player": "players", "pick": "picks", "faab": "faab"}[move["kind"]]
+            n = move["amount"] if move["kind"] == "faab" else 1
+            if move["to"]:
+                out[move["to"]][kind + "_in"] += n
+            if move["from"]:
+                out[move["from"]][kind + "_out"] += n
+    return out
+
+
+def trade_loose_ends(seasons: list[dict], log: list[dict], board: dict) -> list[dict]:
+    """
+    Anything Sleeper shows changing hands that no trade explains - a pick sent
+    by someone who did not hold it, a pick made in the draft by someone the
+    trades never gave it to, or a player moved between teams by the
+    commissioner. Each is the sign of a deal done by hand that belongs in
+    league.config.json's manual_trades.
+    """
+    ends, holder = [], {}
+    for trade in log:
+        for move in trade["moves"]:
+            if move["kind"] != "pick":
+                continue
+            key = (move["season"], move["round"], move["original"])
+            if move["from"] != holder.get(key, move["original"]):
+                ends.append({"kind": "sent", "pick": key, "trade": trade,
+                             "sender": move["from"], "holder": holder.get(key, move["original"])})
+            holder[key] = move["to"]
+    for key, made in sorted(board.items()):
+        if made["made_by"] and made["made_by"] != holder.get(key, key[2]):
+            ends.append({"kind": "made", "pick": key, "made": made, "holder": holder.get(key, key[2])})
+
+    by_hand = {(m["player_id"], m["from"], m["to"])
+               for t in log if t["manual"] for m in t["moves"] if m["kind"] == "player"}
+    for season in seasons:
+        owner = _owners(season)
+        for items in (season.get("transactions") or {}).values():
+            for txn in items:
+                if txn.get("type") != "commissioner":
+                    continue
+                for pid, rid in (txn.get("adds") or {}).items():
+                    giver = (txn.get("drops") or {}).get(pid)
+                    if giver is None or giver == rid:
+                        continue
+                    if (pid, owner.get(giver), owner.get(rid)) not in by_hand:
+                        ends.append({"kind": "moved", "player_id": pid, "from": owner.get(giver),
+                                     "to": owner.get(rid), "when": txn.get("status_updated")})
+    return ends
 
 
 def conference_finish(season: dict) -> dict:
