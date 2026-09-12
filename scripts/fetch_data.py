@@ -161,23 +161,48 @@ def fetch_pro_bowl(cfg, current) -> None:
         print(f"  sheet unavailable ({exc}), keeping what we had")
         return
     rows = [row for row in csv.reader(io.StringIO(text)) if any(cell.strip() for cell in row)]
-    # The header is the first row whose opening cell says "slot"; everything
-    # above it is whatever Matt has put at the top of the sheet.
-    head = next((i for i, row in enumerate(rows) if row and row[0].strip().lower() == "slot"), None)
-    if head is None:
-        print("  the sheet has no 'Slot' header row, keeping what we had")
-        return
-    sides = [cell.strip() for cell in rows[head][1:3]]
-    picks = [{"slot": row[0].strip(),
-              "players": [(row[i].strip() if i < len(row) else "") for i in (1, 2)]}
-             for row in rows[head + 1:] if row and row[0].strip()]
+    picks, sides = read_pro_bowl(rows)
     if not picks:
-        print("  the sheet has no slots, keeping what we had")
+        print("  no slots found in the sheet, keeping what we had")
         return
     named = sum(1 for p in picks for who in p["players"] if who)
     write("probowl.json", {"season": str(current.get("season")), "fetched": int(time.time()),
                            "sides": sides, "picks": picks})
     print(f"  {len(picks)} slots, {named} named")
+
+
+def cell(row, i):
+    return row[i].strip() if 0 <= i < len(row) else ""
+
+
+def read_pro_bowl(rows: list) -> tuple:
+    """
+    The slots and who is in them, from either layout the sheet might be in.
+
+    Matt's own is the one he has always used: the slot down the middle under a
+    "Vs" heading, with each side's player, projection and points either side of
+    it - so the columns are found by counting out from "Vs" rather than by name.
+    The simpler layout, which assets/probowl/TEMPLATE.json matches, is a column
+    headed "Slot" and a column for each conference.
+    """
+    head = next((i for i, row in enumerate(rows)
+                 if any(c.strip().lower() == "vs" for c in row)), None)
+    if head is not None:
+        v = next(i for i, c in enumerate(rows[head]) if c.strip().lower() == "vs")
+        picks = []
+        for row in rows[head + 1:]:
+            slot = cell(row, v)
+            if not slot or slot.lower() == "vs":
+                continue  # a totals line, or the start of another table
+            picks.append({"slot": slot, "players": [cell(row, v - 3), cell(row, v + 3)]})
+        return picks, ["LFC", "MFC"]
+
+    head = next((i for i, row in enumerate(rows) if cell(row, 0).lower() == "slot"), None)
+    if head is None:
+        return [], []
+    picks = [{"slot": cell(row, 0), "players": [cell(row, 1), cell(row, 2)]}
+             for row in rows[head + 1:] if cell(row, 0)]
+    return picks, [cell(rows[head], 1), cell(rows[head], 2)]
 
 
 # --------------------------------------------------------------------------- #

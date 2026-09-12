@@ -210,7 +210,7 @@
   },
   "pro_bowl": {
     "_comment": "The all-star game, played in Thanksgiving week. The week, the captains (last season's conference winners), the projections and the scores are all worked out; the only thing the site cannot know is who the captains picked. Put the picks in a Google Sheet, publish it (File > Share > Publish to web, comma separated values) and paste the link into sheet_url. The sheet wants one row a slot: a first column headed Slot, then a column for each conference. Blanks are slots not named yet. A file at assets/probowl/<season>.json overrides the sheet. Any name the site cannot place is called out at the end of the build - add it here under aliases, spelled as Sleeper has it.",
-    "sheet_url": "",
+    "sheet_url": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYuBGgF2rlEZcFMXnzfMpYgVT-V38d6lsN7yGd8AU79Wz-B2SFLqGt8IyKHH5GzNThLzD4AscvuXT-/pub?output=csv",
     "titles": {
       "2026": "JADL Pro Bowl V"
     },

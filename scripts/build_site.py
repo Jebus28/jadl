@@ -762,7 +762,7 @@ def load_squads(season):
     return got if got and str(got.get("season")) == str(season) else None
 
 
-def pro_bowl(cfg, current, teams, players, projections, prev_finish, state):
+def pro_bowl(cfg, current, teams, players, projections, prev_finish, state, today=None):
     """
     The Pro Bowl as it stands: each named slot with its man, what he is
     projected to score and what he has scored. Points come from the week's own
@@ -773,6 +773,13 @@ def pro_bowl(cfg, current, teams, players, projections, prev_finish, state):
     week = pro_bowl_week(cfg, year, state)
     squads = load_squads(year)
     if not week or not squads or not squads.get("picks"):
+        return None
+    # The sheet holds whatever was last played until Matt starts this year's, so
+    # nothing shows until the week before Thanksgiving week. That is lead-in
+    # enough for early picks without last year's game sitting on the front page
+    # all season.
+    today = today or datetime.now(timezone.utc).date()
+    if today < S.week_wednesday(year, max(1, week - 1), state):
         return None
 
     divisions = sorted(cfg["conferences"])

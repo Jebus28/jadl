@@ -1,0 +1,136 @@
+{
+ "fetched": 1789224515,
+ "picks": [
+  {
+   "players": [
+    "Mayfield",
+    "Lamar"
+   ],
+   "slot": "QB"
+  },
+  {
+   "players": [
+    "Purdy",
+    "Burrow"
+   ],
+   "slot": "QB"
+  },
+  {
+   "players": [
+    "Irving",
+    "McCaffrey"
+   ],
+   "slot": "RB"
+  },
+  {
+   "players": [
+    "Bijan",
+    "ETN"
+   ],
+   "slot": "RB"
+  },
+  {
+   "players": [
+    "Taylor",
+    "Henry"
+   ],
+   "slot": "RB"
+  },
+  {
+   "players": [
+    "Evans",
+    "Chase"
+   ],
+   "slot": "WR"
+  },
+  {
+   "players": [
+    "Smith-Njigba",
+    "Pickens"
+   ],
+   "slot": "WR"
+  },
+  {
+   "players": [
+    "Nacua",
+    "Sutton"
+   ],
+   "slot": "WR"
+  },
+  {
+   "players": [
+    "Lamb",
+    "ARSB"
+   ],
+   "slot": "WR"
+  },
+  {
+   "players": [
+    "Pitts",
+    "Kittle"
+   ],
+   "slot": "TE"
+  },
+  {
+   "players": [
+    "Loveland",
+    "McBride"
+   ],
+   "slot": "TE"
+  },
+  {
+   "players": [
+    "Kyren Williams",
+    "Henderson"
+   ],
+   "slot": "Flex"
+  },
+  {
+   "players": [
+    "Chase Brown",
+    "Jeanty"
+   ],
+   "slot": "Flex"
+  },
+  {
+   "players": [
+    "Gibbs",
+    "Mason"
+   ],
+   "slot": "Flex"
+  },
+  {
+   "players": [
+    "Lawrence",
+    "Caleb"
+   ],
+   "slot": "Superflex"
+  },
+  {
+   "players": [
+    "Maye",
+    "Dart"
+   ],
+   "slot": "Superflex"
+  },
+  {
+   "players": [
+    "Fairbairn",
+    "Aubrey"
+   ],
+   "slot": "K"
+  },
+  {
+   "players": [
+    "Rams",
+    "Texans"
+   ],
+   "slot": "DST"
+  }
+ ],
+ "season": "2026",
+ "sides": [
+  "LFC",
+  "MFC"
+ ]
+}
