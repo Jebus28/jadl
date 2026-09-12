@@ -999,16 +999,30 @@ def uk_noon(day: date) -> datetime:
     return datetime.combine(day, time(11 if summer else 12), tzinfo=timezone.utc)
 
 
-def power_freeze(year: int, week: int, state: dict | None = None) -> datetime:
+def week_wednesday(year: int, week: int, state: dict | None = None) -> date:
     """
-    When a week's power ranking is fixed: noon UK on the Wednesday before its
-    games. Sleeper gives the day the season opens - a Thursday most years, but
-    a Wednesday in 2026 - so the anchor is the Wednesday on or before it, and
-    every week after that is seven days on.
+    The Wednesday a given week of the season belongs to: the day the football
+    week turns over, waivers run and the power ranking is fixed. Sleeper gives
+    the day the season opens - a Thursday most years, but a Wednesday in 2026 -
+    so the anchor is the Wednesday on or before it, seven days a week after.
     """
     start = kickoff(year, state)
-    wednesday = start - timedelta(days=(start.weekday() - 2) % 7)
-    return uk_noon(wednesday + timedelta(days=7 * (week - 1)))
+    return start - timedelta(days=(start.weekday() - 2) % 7) + timedelta(days=7 * (week - 1))
+
+
+def week_window(year: int, week: int, state: dict | None = None) -> tuple:
+    """
+    A week's games as they fall in **British** dates, first to last. The NFL
+    plays Thursday to Monday US, which is Friday to Tuesday here, and that is
+    how Matt's calendar has always listed them.
+    """
+    thursday = week_wednesday(year, week, state) + timedelta(days=1)
+    return (thursday + timedelta(days=1), thursday + timedelta(days=5))
+
+
+def power_freeze(year: int, week: int, state: dict | None = None) -> datetime:
+    """When a week's power ranking is fixed: noon UK on that week's Wednesday."""
+    return uk_noon(week_wednesday(year, week, state))
 
 
 def week_fixtures(raw: dict, week: int) -> dict:

@@ -44,6 +44,7 @@ Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.ap
 | `scripts/build_site.py` | Renders the HTML. |
 | `scripts/prepare_media.py` | Turns a champion GIF or loser photo into `assets/records/<season>-<champion\|loser>.*` — GIFs become silent looping WebPs under 2.5MB, photos are straightened and shrunk. |
 | `assets/records/` | One champion loop and one Loser of All Losers picture per season, found by filename. No config entry. |
+| `assets/rankings/` | `<season>.json`, Matt's two personalised rankings. Read, never computed; a separate project writes them. See "The rankings (off-season)". |
 | `scripts/documents.py` | Reads the two document tabs' files: PDF dates, covers and text, `.url` shortcuts, the rulebook's Word file, and the changes between editions. |
 | `assets/updates/<season>/` | The Commissioner Updates: PDFs, and `.url` shortcuts to the videos on Drive. Found by folder. No config entry. |
 | `assets/rules/` | Every edition of the rulebook as a PDF, the Word file of the current one, and the auction procedure. |
@@ -428,25 +429,84 @@ rounds. The config values are the fallback and nothing more. Nothing in
 off the games, not Sleeper's clock:
 
 - `"over"` — every placement game is played, so the season is settled;
-- `"season"` — games have been played, or kickoff has passed;
+- `"season"` — games have been played, **or it is 1 September or later**;
 - `"preseason"` — the new league is up but nobody has played yet.
+
+**1 September is the switch back to season mode**, not kickoff. Matt asked for
+that in September 2026, and it is the roster deadline on his own calendar, so
+the site goes in-season a week or so before a ball is kicked.
 
 In `"season"` the front page is as it always was. In the other two it is
 `offseason_home` instead: what is coming next (the rookie draft and kickoff,
 with the days to each, or a line saying the next season is not on Sleeper yet),
-the last settled season in review (the podium and the final standings), that
-season's rookie draft pick by pick, and every trade in the off-season window.
-Playoff odds and power rankings are not computed at all out of season. The
-Honours cabinet stays on the bottom in every phase.
+then **the rankings**, then the last settled season in review (the podium and
+the final standings), that season's rookie draft pick by pick, and every trade
+in the off-season window. Playoff odds and power rankings are not computed at
+all out of season. The Honours cabinet stays on the bottom in every phase.
 
 **The jobs a settled season leaves** are in `build_site.season_todo`, printed at
-the end of every build and written to `$GITHUB_STEP_SUMMARY`, so they show on
-the Actions run page. They are the ones that only come round once a year: the
-champion's loop and the Loser of All Losers picture for
-`scripts/prepare_media.py`, next year's consolation trophy name, and the
-championships-by-conference count against the stars on the crests and the
-league logo (see "The stars on the conference crests" — those are still
+the end of every build and written to the file named by `$JADL_TODO_FILE`.
+`refresh.yml` turns that into a **GitHub issue** labelled `end-of-season`:
+opened when something is outstanding, edited as the list changes, and closed by
+itself once it is empty. Matt asked for an issue rather than a build log in
+September 2026, because a log is not something anyone reads. The jobs are the
+ones that only come round once a year: the champion's loop and the Loser of All
+Losers picture for `scripts/prepare_media.py`, next year's consolation trophy
+name, and the championships-by-conference count against the stars on the crests
+and the league logo (see "The stars on the conference crests" — those are still
 pictures, and still go stale). The list is empty while the season is on.
+
+### The rankings (off-season)
+
+Matt keeps two personalised rankings between seasons, in the **2026 Rankings**
+and **Dynasty Rankings** Google Sheets. They lead the off-season Scoreboard,
+right under the countdown, because they are the thing worth reading when there
+are no games.
+
+**Nothing in this repo computes them.** `build_site.load_rankings` reads
+`assets/rankings/<season>.json`, newest file wins, found by filename with no
+config entry. **Generating that file is a separate project** (Matt, September
+2026); the site only renders whatever it finds, so the columns can change
+without the site changing with them. The 2026 file was converted once from the
+two sheets as they stood on 27 August 2026.
+
+The shape is a list of `tables`, each with `title`, `subtitle`, `updated`,
+`rank_by` (the column to sort on), `notes`, `columns` and `rows`:
+
+- a column is `{key, group, label, kind}`, `kind` being `rank`, `score` or
+  `change`. Consecutive columns sharing a `group` become one spanning header,
+  the way the sheets are laid out.
+- a row is `{manager, cells: {key: value}}`. Managers are matched to team pages
+  by name; the sheets call Rich "Dudders", so the converted file says Rich.
+- a blank `change` is no movement, not a missing value.
+
+### The Calendar
+
+Rebuilt in September 2026 from the old site's Calendar page, which was a
+hand-typed list of dates. **Every date is computed**; `league.config.json` holds
+only the two Sleeper cannot know and the prose under each entry.
+
+- **Dates are British.** The NFL's Thursday night is our Friday morning, which
+  is why a playing week reads Friday to Tuesday, exactly as Matt has always
+  listed them. `stats.week_window` does that; `stats.week_wednesday` is the
+  shared anchor it and the power rankings both use.
+- **The rules**, in `build_site.season_calendar`: the free agency auction is the
+  **third Monday in August**; the roster deadline is **1 September**; the first
+  primary waiver is that week's Wednesday, the secondary two days later and the
+  tertiary four; the first game is Sleeper's season start **plus a day**; the
+  playoff weeks, the trade deadline week and the championship week come from the
+  season's shape; the first day of the post-season is the day after the
+  championship window; the rookie draft and the roster-space deadline before it
+  come from Sleeper's draft, so they appear once the league exists. The roster
+  deadline's numbers (26, 8 IR, 7 taxi) are read off Sleeper too.
+- **Checked against the old page in September 2026: every 2026 date matches,**
+  all eleven of them. The old page's 2027 rows were wrong (first game 2
+  September, before Labor Day; the Pro Bowl dated "4th January 2026"), which is
+  the argument for computing them.
+- The page shows this season and next, past dates dimmed and the next one up
+  ringed in red.
+- `calendar.pro_bowl` and `calendar.meeting` in the config are keyed by season:
+  add a year and it appears, leave it out and it does not.
 
 ### Playoff odds (Scoreboard)
 
@@ -603,8 +663,11 @@ Roughly in the order discussed with Matt, though he has not yet picked:
    they have that the new ones do not. (The honours were done in September 2026.)
 4. **The archive.** Official team statements, Lee's Stat Corner. (The Trade
    Centre, Commissioner Updates and Rules were done in September 2026.)
-5. **Conference landing pages** (LC/MC) and a **calendar**, both on the old site
-   and not yet rebuilt.
+5. **Conference landing pages** (LC/MC), on the old site and not yet rebuilt.
+   (The **calendar** was done in September 2026 — see "The Calendar".)
+6. **Generating the rankings.** Matt's own project: whatever works them out
+   needs to write `assets/rankings/<season>.json`. The site already reads and
+   shows it.
 
 ## Gotchas
 

@@ -13,7 +13,7 @@ import os
 import re
 import shutil
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import documents as D
@@ -24,6 +24,7 @@ DATA = ROOT / "data"
 DOCS = ROOT / "docs"
 ASSETS = ROOT / "assets"
 RECORDS = ASSETS / "records"
+RANKINGS = ASSETS / "rankings"
 
 
 def load(name, default=None):
@@ -183,8 +184,9 @@ def power_table(store, teams):
 
 
 NAV = [("index.html", "Scoreboard"), ("standings.html", "Standings"), ("teams.html", "Teams"),
-       ("updates.html", "Commissioner Updates"), ("trades.html", "Trade Centre"),
-       ("history.html", "History"), ("records.html", "Records"), ("rules.html", "Rules")]
+       ("calendar.html", "Calendar"), ("updates.html", "Commissioner Updates"),
+       ("trades.html", "Trade Centre"), ("history.html", "History"),
+       ("records.html", "Records"), ("rules.html", "Rules")]
 
 
 def page(cfg, title, active, body):
@@ -619,6 +621,221 @@ def draft_class_section(cfg, current, names):
             + "</div></section>")
 
 
+# --------------------------------------------------------------------------- #
+# the Calendar
+# --------------------------------------------------------------------------- #
+# The old site's Calendar page, computed. Every date the league keeps follows
+# from Sleeper's season start, its playoff weeks and its rookie draft, so the
+# only dates in league.config.json are the two Sleeper cannot know: the Pro Bowl
+# and the AGM. Dates are British, as Matt has always listed them - the NFL's
+# Thursday night is our Friday morning.
+def nth_weekday(year, month, weekday, n):
+    """The nth given weekday of a month. Monday is 0."""
+    first = date(year, month, 1)
+    return first + timedelta(days=(weekday - first.weekday()) % 7 + 7 * (n - 1))
+
+
+def span_words(start, end=None):
+    """'17 August 2026', or '18 – 22 December 2026' with the month said once."""
+    if not end or end == start:
+        return day_words(start)
+    if (start.month, start.year) == (end.month, end.year):
+        return str(start.day) + "&ndash;" + day_words(end)
+    if start.year == end.year:
+        return str(start.day) + start.strftime(" %B") + " &ndash; " + day_words(end)
+    return day_words(start) + " &ndash; " + day_words(end)
+
+
+def season_calendar(cfg, year, current, state):
+    """
+    One season's calendar, in date order: (date, end date or None, prefix,
+    title, [notes]). The season is the year it is played in, so the playoffs
+    and the post-season that spill into January belong to the year before them,
+    exactly as the old page had it.
+    """
+    cal = cfg.get("calendar") or {}
+    notes = cal.get("notes") or {}
+    shape = cfg["season"]
+    settings = current.get("settings") or {}
+    events = []
+
+    def add(when, title, key=None, end=None, prefix="", extra=()):
+        if when:
+            events.append((when, end, prefix, title, list(extra) + list(notes.get(key) or [])))
+
+    # The two Sleeper cannot know.
+    bowl = (cal.get("pro_bowl") or {}).get(str(year)) or {}
+    if bowl.get("from"):
+        add(date.fromisoformat(bowl["from"]), bowl.get("title") or "JADL Pro Bowl", "pro_bowl",
+            end=date.fromisoformat(bowl["to"]) if bowl.get("to") else None)
+    agm = (cal.get("meeting") or {}).get(str(year)) or {}
+    if agm.get("on"):
+        title = "JADL " + str(year) + " Meeting"
+        if agm.get("qualifier"):
+            title += " (" + agm["qualifier"] + ")"
+        add(date.fromisoformat(agm["on"]), title, "meeting")
+
+    # The rookie draft, from Sleeper once the league for that season exists.
+    draft = next((d for d in current.get("drafts") or [] if str(d.get("season")) == str(year)
+                  and d.get("start_time")), None)
+    if draft:
+        day = datetime.fromtimestamp(draft["start_time"] / 1000, timezone.utc).date()
+        add(day - timedelta(days=1), "Roster space for the rookie draft", "draft_prep", prefix="By")
+        rounds = draft.get("rounds") or (settings.get("draft_rounds") or 0)
+        add(day, "Rookie Draft", extra=[str(rounds) + " rounds."] if rounds else ())
+
+    # The pre-season: the auction, the roster deadline and the first waivers.
+    add(nth_weekday(year, 8, 0, 3), "Free Agency Auction", prefix="w/c")
+    squad = len([p for p in current.get("roster_positions") or [] if p not in ("IR", "TAXI")])
+    shapes = []
+    if squad:
+        shapes.append("Rosters are set for the season at " + str(squad)
+                      + ", with " + str(settings.get("reserve_slots") or 0) + " IR spots and "
+                      + str(settings.get("taxi_slots") or 0) + " taxi spots.")
+    add(date(year, 9, 1), str(year) + " Season Roster Deadline", "roster_deadline", extra=shapes)
+
+    first = S.kickoff(year, state) + timedelta(days=1)
+    wednesday = S.week_wednesday(year, 1, state)
+    add(wednesday, "First Primary Waiver",
+        extra=["Last day to place players on the taxi squad."])
+    add(first, "First Game")
+    add(wednesday + timedelta(days=2), "First Secondary Waiver")
+    add(wednesday + timedelta(days=4), "First Tertiary Waiver")
+
+    # The playoffs, the toilet bowl and the deadline that sits among them.
+    for i in range(shape["championship_week"] - shape["playoff_start_week"]):
+        opens, closes = S.week_window(year, shape["playoff_start_week"] + i, state)
+        add(opens, "Playoff Week " + str(i + 1), end=closes)
+    deadline = shape.get("trade_deadline_week")
+    if deadline:
+        add(S.week_window(year, deadline, state)[0], "Trade Deadline Day")
+    final_from, final_to = S.week_window(year, shape["championship_week"], state)
+    add(final_from, "Championship Week", end=final_to)
+    add(final_to + timedelta(days=1), "First Day of the Post-Season", "post_season")
+
+    # Date order, and where two fall on the same day the longer one leads: the
+    # trade deadline sits inside playoff week two, as the old page had it.
+    events.sort(key=lambda ev: (ev[0], -((ev[1] or ev[0]) - ev[0]).days))
+    return events
+
+
+def calendar_page(cfg, current, state, today=None):
+    """
+    The league year, this season and next. Past dates are dimmed and the next
+    one up is marked, so the page says where the league is as well as what is
+    coming.
+    """
+    today = today or datetime.now(timezone.utc).date()
+    year = cfg["season"]["year"]
+    blocks, flagged = [], False
+    for season in (year, year + 1):
+        rows = []
+        for when, end, prefix, title, notes in season_calendar(cfg, season, current, state):
+            past = (end or when) < today
+            mark = ""
+            if not past and not flagged:
+                mark, flagged = " next", True
+            items = "".join("<li>" + e(n) + "</li>" for n in notes)
+            rows.append(f"""
+      <li class="calrow{' past' if past else ''}{mark}">
+        <div class="caldate"><span class="calwhen">{('<span class="calpre">' + e(prefix) + '</span> ') if prefix else ''}{span_words(when, end)}</span></div>
+        <div class="calwhat"><h3>{e(title)}</h3>{('<ul>' + items + '</ul>') if items else ''}</div>
+      </li>""")
+        if rows:
+            note = "Worked out from Sleeper and the rulebook." if season == year else ""
+            blocks.append("<section>" + sechead(str(season) + " Season", note)
+                          + '<ol class="cal">' + "".join(rows) + "</ol></section>")
+    return "".join(blocks)
+
+
+def load_rankings():
+    """
+    Matt's own rankings, from `assets/rankings/<season>.json`: how he rates each
+    roster for the season ahead and for the long haul. Found by filename, no
+    config entry, and **nothing in the build computes them** - they are worked
+    out elsewhere and read in. The newest file wins.
+    """
+    files = sorted(RANKINGS.glob("*.json"), key=lambda p: p.stem) if RANKINGS.exists() else []
+    for path in reversed(files):
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except ValueError:
+            continue
+    return None
+
+
+def rank_cell(col, value):
+    kind = col.get("kind")
+    if kind == "change":
+        # A blank in the sheet means the manager has not moved.
+        return '<td class="num">' + move_chip(int(value or 0)) + "</td>"
+    if value is None:
+        return '<td class="num"><span class="hd">&mdash;</span></td>'
+    if kind == "score":
+        return '<td class="num">' + f"{float(value):.2f}" + "</td>"
+    return '<td class="num">' + e(value) + "</td>"
+
+
+def rankings_sections(cfg, rankings, teams):
+    """
+    The two personalised rankings, each as its own section: the season's, and
+    the dynasty one. Columns come from the file, grouped under a spanning header
+    the way Matt's sheets have them, so the shape can change without the site
+    changing with it.
+    """
+    if not rankings:
+        return ""
+    slugs = {t["manager"]: t["slug"] for t in teams.values()}
+    out = []
+    for table in rankings.get("tables") or []:
+        cols = [c for c in table.get("columns") or [] if c.get("key")]
+        rows = list(table.get("rows") or [])
+        if not cols or not rows:
+            continue
+        # Two header rows: the groups spanning across the top, labels beneath.
+        spans, i = [], 0
+        while i < len(cols):
+            group, n = cols[i].get("group") or "", 1
+            while i + n < len(cols) and (cols[i + n].get("group") or "") == group:
+                n += 1
+            spans.append((group, n))
+            i += n
+        top = ('<th rowspan="2" class="l">Manager</th>'
+               + "".join('<th colspan="' + str(n) + '" class="grp">' + e(g) + "</th>"
+                         for g, n in spans))
+        second = "".join("<th>" + e(c.get("label") or "") + "</th>" for c in cols)
+
+        key = table.get("rank_by")
+        if key:
+            rows.sort(key=lambda r: (r.get("cells") or {}).get(key) or 99)
+        body = []
+        for row in rows:
+            name = row.get("manager") or ""
+            label = e(name)
+            if name in slugs:
+                label = '<a href="team-' + e(slugs[name]) + '.html">' + label + "</a>"
+            cells = row.get("cells") or {}
+            body.append('<tr><td class="l"><div class="tm"><span class="nm">' + label
+                        + "</span></div></td>"
+                        + "".join(rank_cell(c, cells.get(c["key"])) for c in cols) + "</tr>")
+
+        sub = (table.get("subtitle") or "").strip()
+        when = table.get("updated")
+        if when:
+            try:
+                sub = (sub + " Updated " + day_words(date.fromisoformat(when)) + ".").strip()
+            except ValueError:
+                pass
+        notes = "".join("<li>" + e(n) + "</li>" for n in table.get("notes") or [])
+        out.append("<section>" + sechead(table.get("title") or "Rankings", sub)
+                   + '<div class="rank"><div class="tablewrap"><table>'
+                   + "<thead><tr>" + top + "</tr><tr>" + second + "</tr></thead>"
+                   + "<tbody>" + "".join(body) + "</tbody></table></div>"
+                   + ('<ul class="ranknote">' + notes + "</ul>" if notes else "")
+                   + "</div></section>")
+    return "".join(out)
+
+
 def offseason_home(cfg, phase, current, indexed, names, log, board, players, teams, state):
     """
     The Scoreboard between seasons. Looks forward to the draft and kickoff, back
@@ -629,7 +846,9 @@ def offseason_home(cfg, phase, current, indexed, names, log, board, players, tea
     # The season being looked back on: this one if it is settled, otherwise the
     # most recent one that was.
     review = max((s for s in indexed if s["final"]), key=lambda s: s["season"], default=None)
-    parts = [up_next(cfg, current, state, None)]
+    # The rankings lead: they are the thing worth reading between seasons.
+    parts = [up_next(cfg, current, state, None),
+             rankings_sections(cfg, load_rankings(), teams)]
 
     if review:
         era = cfg["eras"].get(review["era"], {})
@@ -1796,9 +2015,13 @@ def season_phase(current, season, state, today=None):
 
       "over"       every placement game is done, so the season is settled and
                    there is nothing left to play;
-      "season"     games are being played, or kickoff has been and gone;
+      "season"     games are being played, or the season is as good as here;
       "preseason"  the new season is up on Sleeper but has not started - the
                    back half of the off-season.
+
+    The season starts on **1 September**, not at kickoff: that is the roster
+    deadline on Matt's calendar, and the day he wants the site back in season
+    mode, a week or so before a ball is kicked.
 
     `current` is the season as fetched, `season` is it indexed.
     """
@@ -1809,7 +2032,7 @@ def season_phase(current, season, state, today=None):
         return "season"
     today = today or datetime.now(timezone.utc).date()
     year = int(current.get("season") or 0)
-    return "season" if year and today >= S.kickoff(year, state) else "preseason"
+    return "season" if year and today >= date(year, 9, 1) else "preseason"
 
 
 def conference_titles(cfg, indexed, teams):
@@ -1963,6 +2186,9 @@ def main():
     (DOCS / "teams.html").write_text(
         page(cfg, "Teams", "Teams", teams_index(cfg, teams, power, career)), encoding="utf-8")
 
+    (DOCS / "calendar.html").write_text(
+        page(cfg, "Calendar", "Calendar", calendar_page(cfg, current, state)), encoding="utf-8")
+
     won, best_weeks = S.honours(indexed), S.best_managers(indexed, players)
     for team in teams.values():
         (DOCS / ("team-" + team["slug"] + ".html")).write_text(
@@ -2007,15 +2233,14 @@ def main():
     # The jobs a settled season leaves, written where the workflow can pick them
     # up: they only come round once a year, which is what makes them easy to miss.
     jobs = season_todo(cfg, current, indexed, teams, phase)
-    if jobs:
-        print("\nEnd-of-season jobs:")
-        for job in jobs:
-            print("  - " + job)
-        summary = os.environ.get("GITHUB_STEP_SUMMARY")
-        if summary:
-            with open(summary, "a", encoding="utf-8") as fh:
-                fh.write("## End-of-season jobs\n\n"
-                         + "".join("- " + job + "\n" for job in jobs) + "\n")
+    for job in (["\nEnd-of-season jobs:"] + ["  - " + j for j in jobs]) if jobs else []:
+        print(job)
+    # The workflow turns this into a GitHub issue, so the reminders reach Matt
+    # rather than sitting in a build log. An empty file closes the issue.
+    todo_file = os.environ.get("JADL_TODO_FILE")
+    if todo_file:
+        Path(todo_file).write_text("".join("- [ ] " + job + "\n" for job in jobs),
+                                   encoding="utf-8")
     return 0
 
 

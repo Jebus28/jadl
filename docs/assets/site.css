@@ -311,6 +311,41 @@
   .upaway{font-size:13px;font-weight:700;color:var(--accent)}
   .upnote{font-size:12.5px;color:var(--muted)}
 
+  /* ---------- calendar ---------- */
+  .cal{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+  .calrow{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:14px 18px;
+    display:grid;grid-template-columns:200px 1fr;gap:6px 20px;align-items:start;
+  }
+  .calrow.past{opacity:.5;box-shadow:none}
+  .calrow.next{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset,var(--shadow)}
+  .calwhen{
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px;font-variant-numeric:tabular-nums;
+    color:var(--ink-2);font-weight:600;
+  }
+  .calpre{color:var(--muted);font-weight:400}
+  .calwhat h3{margin:0;font-size:15px;font-family:"Roboto Slab",Georgia,serif;font-weight:600;color:var(--ink)}
+  .calwhat ul{margin:6px 0 0;padding-left:18px;display:grid;gap:3px;font-size:13px;color:var(--ink-2)}
+  @media (max-width:640px){
+    .calrow{grid-template-columns:1fr;gap:2px}
+  }
+
+  /* ---------- the personalised rankings, shown between seasons ---------- */
+  .rank{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .rank th.grp{
+    text-align:center;border-left:1px solid var(--line);
+    font-size:10px;letter-spacing:.08em;
+  }
+  .rank thead tr:first-child th{border-bottom:0}
+  .rank th.l,.rank td.l{text-align:left}
+  .rank td,.rank th{padding:8px 10px}
+  .rank tbody tr:first-child td{font-weight:600}
+  .ranknote{
+    margin:0;padding:12px 16px;border-top:1px solid var(--line);background:var(--surface-2);
+    display:grid;gap:4px;font-size:12.5px;color:var(--muted);list-style:none;
+  }
+
   /* ---------- honours ---------- */
   .honours{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px}
   .yr{

@@ -208,6 +208,39 @@
     "method": "workbook",
     "projection_source": "sleeper"
   },
+  "calendar": {
+    "_comment": "The league year, as the old site's Calendar page had it. Every date is worked out - the free agency auction (third Monday in August), the roster deadline, the first waivers, kickoff, the playoff weeks, the trade deadline, the championship and the rookie draft all follow from Sleeper and the rules - so the only dates here are the two Sleeper cannot know. Add a year to pro_bowl or meeting and it appears on the page; leave it out and it does not. Dates are British: the NFL's Thursday night is our Friday morning, which is why a playing week reads Friday to Tuesday. The notes are yours to edit and show under the date they belong to.",
+    "pro_bowl": {
+      "2027": {"from": "2026-12-31", "to": "2027-01-04", "title": "JADL Pro Bowl V"}
+    },
+    "meeting": {
+      "2027": {"on": "2027-02-08", "qualifier": "or shortly thereafter"}
+    },
+    "notes": {
+      "pro_bowl": [
+        "Standard JADL half PPR TEP scoring.",
+        "Lineup: 2 QB, 3 RB, 4 WR, 2 TE, 3 flex (RB/WR/TE), 2 superflex (QB/RB/WR/TE), 1 DST and 1 kicker."
+      ],
+      "meeting": [
+        "Items for discussion: the prize structure, and anything else.",
+        "Put a suggestion to the commissioner or on the WhatsApp group."
+      ],
+      "draft_prep": [
+        "Make sure there is room in your roster and taxi squad for your picks.",
+        "The taxi squad must be emptied of second-year players."
+      ],
+      "roster_deadline": [
+        "Any roster over the limit will have players cut. Which players is the commissioner's to decide."
+      ],
+      "post_season": [
+        "The league is renewed on Sleeper. Its history and records are kept forever.",
+        "The bench goes up to 23. The taxi squad stays as it is.",
+        "No free agency and no waivers in the post-season.",
+        "A player dropped now is not recoverable: he goes into the pool for August's free agency auction, and to waivers after that.",
+        "Trading reopens, and the rookie draft order is set."
+      ]
+    }
+  },
   "site": {
     "tagline": "Ten teams. Two conferences. One Jessica Alba.",
     "show_playoff_odds": true,

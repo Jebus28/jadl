@@ -1,0 +1,841 @@
+{
+ "season": 2026,
+ "tables": [
+  {
+   "id": "season",
+   "title": "2026 Rankings",
+   "subtitle": "Every roster ranked for the season ahead.",
+   "updated": "2026-08-27",
+   "rank_by": "jr",
+   "notes": [
+    "Jebus Rankings (JR) - top players (3QB, 4RB, 4WR, 2TE, 5SF).",
+    "Jebus Rankings+ (JR+) - top players (3QB, 4RB, 4WR, 2TE, 5SF, 1K, 1DST).",
+    "ECR is the consensus ranking for the same players."
+   ],
+   "columns": [
+    {
+     "key": "overall_change",
+     "group": "Overall",
+     "label": "Change",
+     "kind": "change"
+    },
+    {
+     "key": "jr_score",
+     "group": "Overall",
+     "label": "JR Score",
+     "kind": "score"
+    },
+    {
+     "key": "jr",
+     "group": "Overall",
+     "label": "JR",
+     "kind": "rank"
+    },
+    {
+     "key": "overall_ecr",
+     "group": "Overall",
+     "label": "ECR",
+     "kind": "rank"
+    },
+    {
+     "key": "total_change",
+     "group": "Total",
+     "label": "Change",
+     "kind": "change"
+    },
+    {
+     "key": "jrplus_score",
+     "group": "Total",
+     "label": "JR+ Score",
+     "kind": "score"
+    },
+    {
+     "key": "jrplus",
+     "group": "Total",
+     "label": "JR+",
+     "kind": "rank"
+    },
+    {
+     "key": "qb_jr",
+     "group": "QB",
+     "label": "JR",
+     "kind": "rank"
+    },
+    {
+     "key": "qb_ecr",
+     "group": "QB",
+     "label": "ECR",
+     "kind": "rank"
+    },
+    {
+     "key": "rb_jr",
+     "group": "RB",
+     "label": "JR",
+     "kind": "rank"
+    },
+    {
+     "key": "rb_ecr",
+     "group": "RB",
+     "label": "ECR",
+     "kind": "rank"
+    },
+    {
+     "key": "wr_jr",
+     "group": "WR",
+     "label": "JR",
+     "kind": "rank"
+    },
+    {
+     "key": "wr_ecr",
+     "group": "WR",
+     "label": "ECR",
+     "kind": "rank"
+    },
+    {
+     "key": "te_jr",
+     "group": "TE",
+     "label": "JR",
+     "kind": "rank"
+    },
+    {
+     "key": "te_ecr",
+     "group": "TE",
+     "label": "ECR",
+     "kind": "rank"
+    },
+    {
+     "key": "superflex_jr",
+     "group": "Superflex",
+     "label": "JR",
+     "kind": "rank"
+    },
+    {
+     "key": "superflex_ecr",
+     "group": "Superflex",
+     "label": "ECR",
+     "kind": "rank"
+    },
+    {
+     "key": "k_jr",
+     "group": "K",
+     "label": "JR",
+     "kind": "rank"
+    },
+    {
+     "key": "k_ecr",
+     "group": "K",
+     "label": "ECR",
+     "kind": "rank"
+    },
+    {
+     "key": "dst_jr",
+     "group": "DST",
+     "label": "JR",
+     "kind": "rank"
+    },
+    {
+     "key": "dst_ecr",
+     "group": "DST",
+     "label": "ECR",
+     "kind": "rank"
+    }
+   ],
+   "rows": [
+    {
+     "manager": "Alex",
+     "cells": {
+      "overall_change": null,
+      "jr_score": 2.08,
+      "jr": 1,
+      "overall_ecr": 1,
+      "total_change": -1,
+      "jrplus_score": 2.77,
+      "jrplus": 3,
+      "qb_jr": 1,
+      "qb_ecr": 3,
+      "rb_jr": 5,
+      "rb_ecr": 5,
+      "wr_jr": 3,
+      "wr_ecr": 2,
+      "te_jr": 1,
+      "te_ecr": 1,
+      "superflex_jr": 1,
+      "superflex_ecr": 2,
+      "k_jr": 7,
+      "k_ecr": 9,
+      "dst_jr": 4,
+      "dst_ecr": 4
+     }
+    },
+    {
+     "manager": "Chris",
+     "cells": {
+      "overall_change": null,
+      "jr_score": 2.37,
+      "jr": 2,
+      "overall_ecr": 3,
+      "total_change": 1,
+      "jrplus_score": 2.69,
+      "jrplus": 1,
+      "qb_jr": 2,
+      "qb_ecr": 2,
+      "rb_jr": 7,
+      "rb_ecr": 4,
+      "wr_jr": 2,
+      "wr_ecr": 4,
+      "te_jr": 2,
+      "te_ecr": 2,
+      "superflex_jr": 2,
+      "superflex_ecr": 1,
+      "k_jr": 5,
+      "k_ecr": 7,
+      "dst_jr": 1,
+      "dst_ecr": 2
+     }
+    },
+    {
+     "manager": "Dave",
+     "cells": {
+      "overall_change": 1,
+      "jr_score": 2.38,
+      "jr": 3,
+      "overall_ecr": 4,
+      "total_change": 1,
+      "jrplus_score": 2.85,
+      "jrplus": 2,
+      "qb_jr": 3,
+      "qb_ecr": 7,
+      "rb_jr": 2,
+      "rb_ecr": 1,
+      "wr_jr": 4,
+      "wr_ecr": 6,
+      "te_jr": 2,
+      "te_ecr": 4,
+      "superflex_jr": 4,
+      "superflex_ecr": 3,
+      "k_jr": 7,
+      "k_ecr": 8,
+      "dst_jr": 1,
+      "dst_ecr": 3
+     }
+    },
+    {
+     "manager": "Mike",
+     "cells": {
+      "overall_change": -2,
+      "jr_score": 2.4,
+      "jr": 4,
+      "overall_ecr": 2,
+      "total_change": -2,
+      "jrplus_score": 3.14,
+      "jrplus": 5,
+      "qb_jr": 3,
+      "qb_ecr": 4,
+      "rb_jr": 1,
+      "rb_ecr": 2,
+      "wr_jr": 4,
+      "wr_ecr": 3,
+      "te_jr": 5,
+      "te_ecr": 6,
+      "superflex_jr": 3,
+      "superflex_ecr": 4,
+      "k_jr": 1,
+      "k_ecr": 4,
+      "dst_jr": 9,
+      "dst_ecr": 10
+     }
+    },
+    {
+     "manager": "Lee",
+     "cells": {
+      "overall_change": null,
+      "jr_score": 2.65,
+      "jr": 5,
+      "overall_ecr": 5,
+      "total_change": 1,
+      "jrplus_score": 3.04,
+      "jrplus": 4,
+      "qb_jr": 3,
+      "qb_ecr": 6,
+      "rb_jr": 3,
+      "rb_ecr": 3,
+      "wr_jr": 1,
+      "wr_ecr": 1,
+      "te_jr": 8,
+      "te_ecr": 8,
+      "superflex_jr": 5,
+      "superflex_ecr": 6,
+      "k_jr": 7,
+      "k_ecr": 10,
+      "dst_jr": 1,
+      "dst_ecr": 1
+     }
+    },
+    {
+     "manager": "Ross",
+     "cells": {
+      "overall_change": null,
+      "jr_score": 3.62,
+      "jr": 6,
+      "overall_ecr": 6,
+      "total_change": null,
+      "jrplus_score": 3.58,
+      "jrplus": 6,
+      "qb_jr": 7,
+      "qb_ecr": 1,
+      "rb_jr": 7,
+      "rb_ecr": 7,
+      "wr_jr": 6,
+      "wr_ecr": 5,
+      "te_jr": 9,
+      "te_ecr": 10,
+      "superflex_jr": 7,
+      "superflex_ecr": 9,
+      "k_jr": 1,
+      "k_ecr": 1,
+      "dst_jr": 4,
+      "dst_ecr": 5
+     }
+    },
+    {
+     "manager": "Neil",
+     "cells": {
+      "overall_change": null,
+      "jr_score": 3.67,
+      "jr": 7,
+      "overall_ecr": 8,
+      "total_change": -1,
+      "jrplus_score": 4.19,
+      "jrplus": 8,
+      "qb_jr": 6,
+      "qb_ecr": 9,
+      "rb_jr": 4,
+      "rb_ecr": 8,
+      "wr_jr": 8,
+      "wr_ecr": 7,
+      "te_jr": 9,
+      "te_ecr": 7,
+      "superflex_jr": 6,
+      "superflex_ecr": 5,
+      "k_jr": 5,
+      "k_ecr": 5,
+      "dst_jr": 9,
+      "dst_ecr": 10
+     }
+    },
+    {
+     "manager": "Gareth",
+     "cells": {
+      "overall_change": null,
+      "jr_score": 3.73,
+      "jr": 8,
+      "overall_ecr": 7,
+      "total_change": 1,
+      "jrplus_score": 3.95,
+      "jrplus": 7,
+      "qb_jr": 9,
+      "qb_ecr": 10,
+      "rb_jr": 5,
+      "rb_ecr": 6,
+      "wr_jr": 7,
+      "wr_ecr": 8,
+      "te_jr": 5,
+      "te_ecr": 3,
+      "superflex_jr": 9,
+      "superflex_ecr": 8,
+      "k_jr": 1,
+      "k_ecr": 3,
+      "dst_jr": 7,
+      "dst_ecr": 10
+     }
+    },
+    {
+     "manager": "Rich",
+     "cells": {
+      "overall_change": null,
+      "jr_score": 4.13,
+      "jr": 9,
+      "overall_ecr": 9,
+      "total_change": 1,
+      "jrplus_score": 4.38,
+      "jrplus": 9,
+      "qb_jr": 8,
+      "qb_ecr": 8,
+      "rb_jr": 9,
+      "rb_ecr": 10,
+      "wr_jr": 9,
+      "wr_ecr": 9,
+      "te_jr": 2,
+      "te_ecr": 5,
+      "superflex_jr": 10,
+      "superflex_ecr": 10,
+      "k_jr": 10,
+      "k_ecr": 6,
+      "dst_jr": 6,
+      "dst_ecr": 10
+     }
+    },
+    {
+     "manager": "Jebus",
+     "cells": {
+      "overall_change": null,
+      "jr_score": 4.68,
+      "jr": 10,
+      "overall_ecr": 10,
+      "total_change": -1,
+      "jrplus_score": 4.63,
+      "jrplus": 10,
+      "qb_jr": 9,
+      "qb_ecr": 5,
+      "rb_jr": 10,
+      "rb_ecr": 9,
+      "wr_jr": 10,
+      "wr_ecr": 10,
+      "te_jr": 7,
+      "te_ecr": 9,
+      "superflex_jr": 8,
+      "superflex_ecr": 7,
+      "k_jr": 1,
+      "k_ecr": 2,
+      "dst_jr": 7,
+      "dst_ecr": 10
+     }
+    }
+   ]
+  },
+  {
+   "id": "dynasty",
+   "title": "Dynasty Rankings",
+   "subtitle": "The same rosters judged for the long haul, draft capital and all.",
+   "updated": "2026-08-27",
+   "rank_by": "jdr",
+   "notes": [
+    "Jebus Dynasty Rankings (JDR) - top players (3QB, 4RB, 4WR, 2TE, 5SF, top 6 picks).",
+    "JDR - DC is the same without draft capital.",
+    "KTC - the whole roster on KeepTradeCut's power rankings; KTC - DC, its starters."
+   ],
+   "columns": [
+    {
+     "key": "overall_change",
+     "group": "Overall",
+     "label": "Change",
+     "kind": "change"
+    },
+    {
+     "key": "jdr_score",
+     "group": "Overall",
+     "label": "JDR Score",
+     "kind": "score"
+    },
+    {
+     "key": "jdr",
+     "group": "Overall",
+     "label": "JDR",
+     "kind": "rank"
+    },
+    {
+     "key": "jdr_dc",
+     "group": "Overall",
+     "label": "JDR - DC",
+     "kind": "rank"
+    },
+    {
+     "key": "overall_ecr",
+     "group": "Overall",
+     "label": "ECR",
+     "kind": "rank"
+    },
+    {
+     "key": "ktc",
+     "group": "Overall",
+     "label": "KTC",
+     "kind": "rank"
+    },
+    {
+     "key": "ktc_dc",
+     "group": "Overall",
+     "label": "KTC - DC",
+     "kind": "rank"
+    },
+    {
+     "key": "qb_jdr",
+     "group": "QB",
+     "label": "JDR",
+     "kind": "rank"
+    },
+    {
+     "key": "qb_ecr",
+     "group": "QB",
+     "label": "ECR",
+     "kind": "rank"
+    },
+    {
+     "key": "qb_ktc",
+     "group": "QB",
+     "label": "KTC",
+     "kind": "rank"
+    },
+    {
+     "key": "rb_jdr",
+     "group": "RB",
+     "label": "JDR",
+     "kind": "rank"
+    },
+    {
+     "key": "rb_ecr",
+     "group": "RB",
+     "label": "ECR",
+     "kind": "rank"
+    },
+    {
+     "key": "rb_ktc",
+     "group": "RB",
+     "label": "KTC",
+     "kind": "rank"
+    },
+    {
+     "key": "wr_jdr",
+     "group": "WR",
+     "label": "JDR",
+     "kind": "rank"
+    },
+    {
+     "key": "wr_ecr",
+     "group": "WR",
+     "label": "ECR",
+     "kind": "rank"
+    },
+    {
+     "key": "wr_ktc",
+     "group": "WR",
+     "label": "KTC",
+     "kind": "rank"
+    },
+    {
+     "key": "te_jdr",
+     "group": "TE",
+     "label": "JDR",
+     "kind": "rank"
+    },
+    {
+     "key": "te_ecr",
+     "group": "TE",
+     "label": "ECR",
+     "kind": "rank"
+    },
+    {
+     "key": "te_ktc",
+     "group": "TE",
+     "label": "KTC",
+     "kind": "rank"
+    },
+    {
+     "key": "sf_jdr",
+     "group": "Superflex",
+     "label": "JDR",
+     "kind": "rank"
+    },
+    {
+     "key": "sf_ecr",
+     "group": "Superflex",
+     "label": "ECR",
+     "kind": "rank"
+    },
+    {
+     "key": "dc_jdr",
+     "group": "Draft Capital",
+     "label": "JDR",
+     "kind": "rank"
+    },
+    {
+     "key": "dc_ktc",
+     "group": "Draft Capital",
+     "label": "KTC",
+     "kind": "rank"
+    }
+   ],
+   "rows": [
+    {
+     "manager": "Alex",
+     "cells": {
+      "overall_change": null,
+      "jdr_score": 2.2,
+      "jdr": 1,
+      "jdr_dc": 1,
+      "overall_ecr": 1,
+      "ktc": 1,
+      "ktc_dc": 1,
+      "qb_jdr": 1,
+      "qb_ecr": 2,
+      "qb_ktc": 1,
+      "rb_jdr": 6,
+      "rb_ecr": 8,
+      "rb_ktc": 5,
+      "wr_jdr": 2,
+      "wr_ecr": 2,
+      "wr_ktc": 2,
+      "te_jdr": 1,
+      "te_ecr": 1,
+      "te_ktc": 1,
+      "sf_jdr": 1,
+      "sf_ecr": 1,
+      "dc_jdr": 5,
+      "dc_ktc": 5
+     }
+    },
+    {
+     "manager": "Dave",
+     "cells": {
+      "overall_change": null,
+      "jdr_score": 2.98,
+      "jdr": 2,
+      "jdr_dc": 3,
+      "overall_ecr": 3,
+      "ktc": 2,
+      "ktc_dc": 2,
+      "qb_jdr": 4,
+      "qb_ecr": 7,
+      "qb_ktc": 4,
+      "rb_jdr": 1,
+      "rb_ecr": 1,
+      "rb_ktc": 2,
+      "wr_jdr": 4,
+      "wr_ecr": 5,
+      "wr_ktc": 3,
+      "te_jdr": 2,
+      "te_ecr": 4,
+      "te_ktc": 2,
+      "sf_jdr": 5,
+      "sf_ecr": 4,
+      "dc_jdr": 7,
+      "dc_ktc": 7
+     }
+    },
+    {
+     "manager": "Chris",
+     "cells": {
+      "overall_change": 1,
+      "jdr_score": 3.06,
+      "jdr": 3,
+      "jdr_dc": 4,
+      "overall_ecr": 4,
+      "ktc": 7,
+      "ktc_dc": 5,
+      "qb_jdr": 2,
+      "qb_ecr": 3,
+      "qb_ktc": 2,
+      "rb_jdr": 6,
+      "rb_ecr": 6,
+      "rb_ktc": 8,
+      "wr_jdr": 3,
+      "wr_ecr": 4,
+      "wr_ktc": 7,
+      "te_jdr": 4,
+      "te_ecr": 2,
+      "te_ktc": 5,
+      "sf_jdr": 4,
+      "sf_ecr": 2,
+      "dc_jdr": 7,
+      "dc_ktc": 8
+     }
+    },
+    {
+     "manager": "Mike",
+     "cells": {
+      "overall_change": -1,
+      "jdr_score": 3.07,
+      "jdr": 4,
+      "jdr_dc": 2,
+      "overall_ecr": 2,
+      "ktc": 3,
+      "ktc_dc": 3,
+      "qb_jdr": 3,
+      "qb_ecr": 6,
+      "qb_ktc": 3,
+      "rb_jdr": 2,
+      "rb_ecr": 2,
+      "rb_ktc": 1,
+      "wr_jdr": 4,
+      "wr_ecr": 3,
+      "wr_ktc": 4,
+      "te_jdr": 4,
+      "te_ecr": 6,
+      "te_ktc": 4,
+      "sf_jdr": 2,
+      "sf_ecr": 3,
+      "dc_jdr": 9,
+      "dc_ktc": 9
+     }
+    },
+    {
+     "manager": "Gareth",
+     "cells": {
+      "overall_change": null,
+      "jdr_score": 3.4,
+      "jdr": 5,
+      "jdr_dc": 6,
+      "overall_ecr": 6,
+      "ktc": 5,
+      "ktc_dc": 6,
+      "qb_jdr": 10,
+      "qb_ecr": 10,
+      "qb_ktc": 10,
+      "rb_jdr": 3,
+      "rb_ecr": 3,
+      "rb_ktc": 4,
+      "wr_jdr": 7,
+      "wr_ecr": 8,
+      "wr_ktc": 6,
+      "te_jdr": 4,
+      "te_ecr": 3,
+      "te_ktc": 3,
+      "sf_jdr": 8,
+      "sf_ecr": 9,
+      "dc_jdr": 5,
+      "dc_ktc": 6
+     }
+    },
+    {
+     "manager": "Ross",
+     "cells": {
+      "overall_change": 1,
+      "jdr_score": 3.52,
+      "jdr": 6,
+      "jdr_dc": 7,
+      "overall_ecr": 7,
+      "ktc": 4,
+      "ktc_dc": 7,
+      "qb_jdr": 7,
+      "qb_ecr": 1,
+      "qb_ktc": 5,
+      "rb_jdr": 4,
+      "rb_ecr": 4,
+      "rb_ktc": 6,
+      "wr_jdr": 6,
+      "wr_ecr": 7,
+      "wr_ktc": 5,
+      "te_jdr": 8,
+      "te_ecr": 7,
+      "te_ktc": 8,
+      "sf_jdr": 7,
+      "sf_ecr": 10,
+      "dc_jdr": 3,
+      "dc_ktc": 4
+     }
+    },
+    {
+     "manager": "Neil",
+     "cells": {
+      "overall_change": 1,
+      "jdr_score": 3.59,
+      "jdr": 7,
+      "jdr_dc": 8,
+      "overall_ecr": 8,
+      "ktc": 6,
+      "ktc_dc": 8,
+      "qb_jdr": 6,
+      "qb_ecr": 9,
+      "qb_ktc": 8,
+      "rb_jdr": 4,
+      "rb_ecr": 5,
+      "rb_ktc": 3,
+      "wr_jdr": 8,
+      "wr_ecr": 6,
+      "wr_ktc": 8,
+      "te_jdr": 8,
+      "te_ecr": 9,
+      "te_ktc": 10,
+      "sf_jdr": 6,
+      "sf_ecr": 7,
+      "dc_jdr": 3,
+      "dc_ktc": 3
+     }
+    },
+    {
+     "manager": "Lee",
+     "cells": {
+      "overall_change": -2,
+      "jdr_score": 3.92,
+      "jdr": 8,
+      "jdr_dc": 5,
+      "overall_ecr": 5,
+      "ktc": 8,
+      "ktc_dc": 4,
+      "qb_jdr": 5,
+      "qb_ecr": 4,
+      "qb_ktc": 6,
+      "rb_jdr": 6,
+      "rb_ecr": 7,
+      "rb_ktc": 7,
+      "wr_jdr": 1,
+      "wr_ecr": 1,
+      "wr_ktc": 1,
+      "te_jdr": 10,
+      "te_ecr": 10,
+      "te_ktc": 9,
+      "sf_jdr": 3,
+      "sf_ecr": 5,
+      "dc_jdr": 10,
+      "dc_ktc": 10
+     }
+    },
+    {
+     "manager": "Rich",
+     "cells": {
+      "overall_change": null,
+      "jdr_score": 4.0,
+      "jdr": 9,
+      "jdr_dc": 9,
+      "overall_ecr": 9,
+      "ktc": 9,
+      "ktc_dc": 9,
+      "qb_jdr": 7,
+      "qb_ecr": 8,
+      "qb_ktc": 7,
+      "rb_jdr": 9,
+      "rb_ecr": 10,
+      "rb_ktc": 10,
+      "wr_jdr": 9,
+      "wr_ecr": 9,
+      "wr_ktc": 9,
+      "te_jdr": 2,
+      "te_ecr": 5,
+      "te_ktc": 6,
+      "sf_jdr": 9,
+      "sf_ecr": 6,
+      "dc_jdr": 1,
+      "dc_ktc": 1
+     }
+    },
+    {
+     "manager": "Jebus",
+     "cells": {
+      "overall_change": null,
+      "jdr_score": 4.24,
+      "jdr": 10,
+      "jdr_dc": 10,
+      "overall_ecr": 10,
+      "ktc": 10,
+      "ktc_dc": 10,
+      "qb_jdr": 7,
+      "qb_ecr": 5,
+      "qb_ktc": 9,
+      "rb_jdr": 9,
+      "rb_ecr": 9,
+      "rb_ktc": 9,
+      "wr_jdr": 10,
+      "wr_ecr": 10,
+      "wr_ktc": 10,
+      "te_jdr": 7,
+      "te_ecr": 8,
+      "te_ktc": 7,
+      "sf_jdr": 10,
+      "sf_ecr": 8,
+      "dc_jdr": 1,
+      "dc_ktc": 2
+     }
+    }
+   ]
+  }
+ ]
+}

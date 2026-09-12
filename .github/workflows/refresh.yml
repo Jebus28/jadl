@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
   pages: write
   id-token: write
 
@@ -41,7 +42,34 @@ jobs:
         run: python -m pip install --quiet pypdfium2==5.13.0 pillow==12.3.0
 
       - name: Build the site
+        env:
+          JADL_TODO_FILE: ${{ runner.temp }}/season-todo.md
         run: python scripts/build_site.py
+
+      # The jobs a settled season leaves, as an issue rather than a line in a log
+      # nobody reads: opened when there is something outstanding, edited as the
+      # list changes, closed by itself once it is empty.
+      - name: End-of-season reminders
+        # A reminder that will not post must never stop the site refreshing.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TODO: ${{ runner.temp }}/season-todo.md
+          TITLE: End-of-season jobs
+        run: |
+          gh label create end-of-season --color B02828 \
+            --description "Jobs a settled season leaves the commissioner" --force || true
+          open=$(gh issue list --state open --label end-of-season --limit 1 --json number --jq '.[0].number // empty')
+          if [ -s "$TODO" ]; then
+            printf 'The site cannot do these on its own.\n\n' | cat - "$TODO" > "$TODO.body"
+            if [ -n "$open" ]; then
+              gh issue edit "$open" --title "$TITLE" --body-file "$TODO.body"
+            else
+              gh issue create --title "$TITLE" --label end-of-season --body-file "$TODO.body"
+            fi
+          elif [ -n "$open" ]; then
+            gh issue close "$open" --comment "Nothing outstanding - closing."
+          fi
 
       - name: Commit anything that changed
         run: |
