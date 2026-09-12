@@ -19,6 +19,11 @@ from pathlib import Path
 import documents as D
 import stats as S
 
+try:
+    from PIL import Image, ImageChops
+except ImportError:  # the build still runs, with no home-screen icon
+    Image = None
+
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 DOCS = ROOT / "docs"
@@ -189,6 +194,37 @@ NAV = [("index.html", "Scoreboard"), ("standings.html", "Standings"), ("teams.ht
        ("records.html", "Records"), ("rules.html", "Rules")]
 
 
+ICON = "assets/league/apple-touch-icon.png"
+FAVICON = "assets/league/favicon.png"
+
+
+def home_screen_icons(cfg):
+    """The league logo as the icon an iPhone puts on its home screen, and the tab's favicon.
+
+    iOS wants a square, and draws the page title's first letter without one. The
+    logo is wide with a broad white margin, so the margin is trimmed, as the
+    masthead trims it, and the artwork set whole in the middle of a white square.
+    Nothing is cut from it or recoloured; the logo file itself is untouched.
+    """
+    logo = ASSETS / "league" / (cfg["league"].get("logo") or "")
+    if Image is None or not logo.is_file():
+        return
+    art = Image.open(logo).convert("RGB")
+    # Anything more than faintly off-white counts as artwork, so JPEG noise in the
+    # margin does not stop the trim.
+    ink = ImageChops.difference(art, Image.new("RGB", art.size, "white")).convert("L")
+    box = ink.point(lambda v: 255 if v > 24 else 0).getbbox()
+    if box:
+        art = art.crop(box)
+    side = round(max(art.size) * 1.12)
+    square = Image.new("RGB", (side, side), "white")
+    square.paste(art, ((side - art.width) // 2, (side - art.height) // 2))
+    out = DOCS / ICON
+    out.parent.mkdir(parents=True, exist_ok=True)
+    square.resize((180, 180), Image.LANCZOS).save(out, optimize=True)
+    square.resize((48, 48), Image.LANCZOS).save(DOCS / FAVICON, optimize=True)
+
+
 def page(cfg, title, active, body):
     league, season = cfg["league"], cfg["season"]
     stamp = datetime.now(timezone.utc).strftime("%d %b %Y, %H:%M UTC")
@@ -203,6 +239,11 @@ def page(cfg, title, active, body):
                 + '" alt="' + e(league["name"]) + '"></a>')
     else:
         mark = '<a class="mark" href="index.html">' + e(league["short_name"]) + "</a>"
+    # Saved to an iPhone's home screen, the site wears the league logo and is called JADL.
+    icons = '<meta name="apple-mobile-web-app-title" content="' + e(league["short_name"]) + '">\n'
+    if (DOCS / ICON).exists():
+        icons += ('<link rel="apple-touch-icon" href="' + ICON + '">\n'
+                  '<link rel="icon" type="image/png" href="' + FAVICON + '">\n')
     return f"""<!doctype html>
 <html lang="en-GB">
 <head>
@@ -210,7 +251,7 @@ def page(cfg, title, active, body):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{e(title)} &middot; {e(league['short_name'])}</title>
 <meta name="description" content="{e(league['name'])} &mdash; {e(cfg['site']['tagline'])}">
-<link rel="preconnect" href="https://fonts.googleapis.com">
+{icons}<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@600;700;800;900&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="assets/site.css">
@@ -2435,6 +2476,7 @@ def main():
     DOCS.mkdir(parents=True, exist_ok=True)
     if ASSETS.exists():
         shutil.copytree(ASSETS, DOCS / "assets", dirs_exist_ok=True)
+    home_screen_icons(cfg)
     (DOCS / ".nojekyll").write_text("", encoding="utf-8")
 
     # Playoff odds, while the regular season still has games to play.

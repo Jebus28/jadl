@@ -637,6 +637,11 @@ and as a table per conference, while regular-season games remain.
   out, recolour it or make a dark version. The masthead is a white band in both
   themes for that reason; the page only trims the empty white margin round the
   artwork with CSS (`.leaguelogo`), and the file is a byte-for-byte copy.
+  The **home-screen icon** (`apple-touch-icon.png`, and the favicon) is drawn
+  from it by `build_site.home_screen_icons` on every build: the same margin
+  trimmed, the whole artwork centred on a white square. Without one, an iPhone
+  shows the first letter of the page title. A new logo updates the icon by
+  itself, though iOS keeps the old one until the bookmark is removed and re-added.
 - **The palette comes from the logo** (September 2026). Red is the accent,
   from DYNASTY and the Lombardi L: the active tab's underline, links, the rule
   on each section heading. Navy is the NFL shield and the Madden M: the nav bar,
