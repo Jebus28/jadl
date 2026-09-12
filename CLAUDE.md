@@ -642,6 +642,9 @@ and as a table per conference, while regular-season games remain.
   trimmed, the whole artwork centred on a white square. Without one, an iPhone
   shows the first letter of the page title. A new logo updates the icon by
   itself, though iOS keeps the old one until the bookmark is removed and re-added.
+  Android gets the same from `docs/manifest.webmanifest`, written alongside: 192
+  and 512px icons, and a maskable one with the logo shrunk so a launcher's circle
+  crop keeps all of it. It opens standalone, without the browser bar.
 - **The palette comes from the logo** (September 2026). Red is the accent,
   from DYNASTY and the Lombardi L: the active tab's underline, links, the rule
   on each section heading. Navy is the NFL shield and the Madden M: the nav bar,

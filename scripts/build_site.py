@@ -196,6 +196,7 @@ NAV = [("index.html", "Scoreboard"), ("standings.html", "Standings"), ("teams.ht
 
 ICON = "assets/league/apple-touch-icon.png"
 FAVICON = "assets/league/favicon.png"
+MANIFEST = "manifest.webmanifest"
 
 
 def home_screen_icons(cfg):
@@ -216,13 +217,37 @@ def home_screen_icons(cfg):
     box = ink.point(lambda v: 255 if v > 24 else 0).getbbox()
     if box:
         art = art.crop(box)
-    side = round(max(art.size) * 1.12)
-    square = Image.new("RGB", (side, side), "white")
-    square.paste(art, ((side - art.width) // 2, (side - art.height) // 2))
+
+    def framed(side):
+        square = Image.new("RGB", (side, side), "white")
+        square.paste(art, ((side - art.width) // 2, (side - art.height) // 2))
+        return square
+
+    square = framed(round(max(art.size) * 1.12))
     out = DOCS / ICON
     out.parent.mkdir(parents=True, exist_ok=True)
     square.resize((180, 180), Image.LANCZOS).save(out, optimize=True)
     square.resize((48, 48), Image.LANCZOS).save(DOCS / FAVICON, optimize=True)
+
+    # Android reads a web app manifest instead. Its launchers may cut an icon to a
+    # circle, and only the middle 80% is sure to survive, so the "maskable" icon
+    # sets the logo small enough that even its corners sit inside that circle.
+    icons = []
+    for size in (192, 512):
+        name = "assets/league/icon-" + str(size) + ".png"
+        square.resize((size, size), Image.LANCZOS).save(DOCS / name, optimize=True)
+        icons.append({"src": name, "sizes": str(size) + "x" + str(size), "type": "image/png",
+                      "purpose": "any"})
+    diagonal = (art.width ** 2 + art.height ** 2) ** 0.5
+    framed(round(diagonal / 0.8)).resize((512, 512), Image.LANCZOS).save(
+        DOCS / "assets/league/icon-maskable-512.png", optimize=True)
+    icons.append({"src": "assets/league/icon-maskable-512.png", "sizes": "512x512",
+                  "type": "image/png", "purpose": "maskable"})
+    league = cfg["league"]
+    manifest = {"name": league["name"], "short_name": league["short_name"],
+                "start_url": "index.html", "scope": "./", "display": "standalone",
+                "background_color": "#FFFFFF", "theme_color": "#13285E", "icons": icons}
+    (DOCS / MANIFEST).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
 def page(cfg, title, active, body):
@@ -243,7 +268,9 @@ def page(cfg, title, active, body):
     icons = '<meta name="apple-mobile-web-app-title" content="' + e(league["short_name"]) + '">\n'
     if (DOCS / ICON).exists():
         icons += ('<link rel="apple-touch-icon" href="' + ICON + '">\n'
-                  '<link rel="icon" type="image/png" href="' + FAVICON + '">\n')
+                  '<link rel="icon" type="image/png" href="' + FAVICON + '">\n'
+                  '<link rel="manifest" href="' + MANIFEST + '">\n'
+                  '<meta name="theme-color" content="#13285E">\n')
     return f"""<!doctype html>
 <html lang="en-GB">
 <head>
