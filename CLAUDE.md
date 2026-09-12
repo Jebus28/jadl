@@ -38,8 +38,8 @@ Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.ap
 
 | Path | What it is |
 |---|---|
-| `league.config.json` | **The only file Matt should ever need to edit.** Season, league ID, conferences, managers, consolation trophy names, and the draft-day trades Sleeper never recorded (`manual_trades`). Champions are *not* in it — they come from the brackets. |
-| `scripts/fetch_data.py` | Pulls league, users, rosters, matchups, brackets, trades, completed waiver claims, cross-team commissioner moves and the rookie drafts for every season, walking `previous_league_id` back to 2020. Also Sleeper's player projections for the regular-season weeks still to play (`data/projections.json`), for the playoff odds. |
+| `league.config.json` | **The only file Matt should ever need to edit**, and even the season and league ID look after themselves now (see "The off-season, and rolling into a new season"). Conferences, managers, divisional-week names, consolation trophy names, and the draft-day trades Sleeper never recorded (`manual_trades`). Champions are *not* in it — they come from the brackets. |
+| `scripts/fetch_data.py` | Works out which league is the current one (walking *forward* from the config), then pulls league, users, rosters, matchups, brackets, trades, completed waiver claims, cross-team commissioner moves and the rookie drafts for every season, walking `previous_league_id` back to 2020. Also Sleeper's player projections for the regular-season weeks still to play (`data/projections.json`), for the playoff odds. |
 | `scripts/stats.py` | All-time maths: career records, era splits, head-to-head, trades, season tables, team honours. |
 | `scripts/build_site.py` | Renders the HTML. |
 | `scripts/prepare_media.py` | Turns a champion GIF or loser photo into `assets/records/<season>-<champion\|loser>.*` — GIFs become silent looping WebPs under 2.5MB, photos are straightened and shrunk. |
@@ -51,7 +51,7 @@ Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.ap
 | `assets/site.css` | One stylesheet, themed light and dark via CSS custom properties. |
 | `assets/league/` | `league-logo.jpg`, the league logo exactly as Matt made it, named by `league.logo` in the config. |
 | `assets/teams/` | `<manager>.jpg`, the AI pictures, shown whole on the Scoreboard; `<manager>-crest.jpg` square crops, now only a fallback; and `<manager>-logo.*`, team logos that override Sleeper's. |
-| `data/` | Fetched JSON. Committed so builds are reproducible; regenerated every run. |
+| `data/` | Fetched JSON. Committed so builds are reproducible; regenerated every run. The exception is `data/power_rankings.json`, which the build writes and never rewrites: a week's power ranking is fixed at noon on Wednesday and has to survive later builds. |
 | `docs/` | Generated output. **Never edit by hand** — it is overwritten. |
 
 ## League knowledge
@@ -359,6 +359,95 @@ Five-round rookie drafts. Seven seasons on Sleeper, 2020 through 2026, linked by
 the winners bracket; the hand-kept list in `league.config.json` was removed
 once the computed one matched it.
 
+### Power rankings (Scoreboard)
+
+Rebuilt in September 2026 from the **Power Rankings tab of `Team Tracking 2026 -
+altpr.xlsx`**, which had replaced the older cumulative formula. The site no
+longer runs a season-long total up; it ranks the league afresh every week.
+
+- **The formula**, read off the Week sheets' Score column (X) and ranked by
+  column Y: `(the last two weeks you played + this week's projected points) / 3
+  − your opponent's projected points that week`. Week 2 has only one week behind
+  it, so it divides by 2. **Week 1 has none, so it is simply your projection
+  less your opponent's** — the advantage the fixture gives you, highest first.
+  One rule covers all fourteen weeks; `stats.power_rankings` is it.
+- **Projected points** are Sleeper's projections for the best lineup a team can
+  start (not IR, not taxi), the same feed the playoff odds use, scored with the
+  league's own settings. The odds nudge that figure towards a team's real
+  scoring; **the power rankings do not** — the workbook uses the raw projection.
+- **A week is fixed at noon UK on the Wednesday before its games** and never
+  moves again, however the projections shift afterwards. `stats.power_freeze`
+  works the moment out: the Wednesday on or before Sleeper's own season start
+  date (a Thursday most years, but **9 September in 2026**), plus seven days a
+  week. `stats.uk_noon` handles BST without a `tzdata` dependency, so noon is
+  11:00 UTC until the clocks go back and 12:00 after.
+- **Each week is kept in `data/power_rankings.json`**, written by
+  `build_site.power_store` on the first build past the freeze and left alone
+  from then on. Sleeper only projects weeks still to come, so **a week missed at
+  the time can never be filled in** — that is why `refresh.yml` has a
+  `0 11,12 * * 3` cron. The file holds one season and starts itself again when
+  the league rolls over.
+- **Week 1 of 2026 is seeded** from Matt's workbook, since the site was not
+  computing these yet. Recomputing it from the projections gives the same ten
+  places in the same order, so the seed is belt and braces; leave it.
+- **The page shows the week's ranking and the move on the week before, and
+  nothing else** — Matt asked for exactly that in September 2026. The score is
+  kept in the data file but not shown: every score is a large negative number
+  (the opponent's whole projection is subtracted), which reads as nonsense. The
+  old bar chart went with it.
+- **The method stays off the site.** Matt asked in September 2026 that how the
+  rankings are worked out is not published. The section note reads exactly
+  "Week X — fixed at noon on Wednesday." and nothing more. This is the one
+  place where the usual rule of explaining a computed figure on the page does
+  not apply, so do not helpfully add the formula back.
+
+### The off-season, and rolling into a new season
+
+Built in September 2026. Three things used to need a human between one season
+and the next; none of them does now.
+
+**The league id finds itself.** `fetch_data.resolve_league` walks forward from
+the `current_league_id` in `league.config.json`. Sleeper links each season back
+to the one before but never forward, so the way on is
+`/user/<user_id>/leagues/nfl/<season+1>`: whichever of a manager's leagues
+points back at the one we hold. It only looks ahead once the league it holds is
+`complete`, or the NFL has moved on a year, so an ordinary in-season refresh
+costs one extra call. **Checked in September 2026 by walking from the 2020
+league: it landed on 2026 through all six roll-overs.** So when Matt creates the
+2027 league on Sleeper the site follows it by itself, and the id in the config
+is only ever the starting point.
+
+**The season's shape comes from Sleeper too.** `build_site.season_setup`
+replaces `cfg["season"]` at the start of the build: the year from the league,
+`playoff_start_week` and `playoff_teams` from its settings, the regular season
+as the week before the playoffs and the championship week from the number of
+rounds. The config values are the fallback and nothing more. Nothing in
+`league.config.json` has to change from one season to the next.
+
+**The Scoreboard knows where the year is.** `build_site.season_phase` reads it
+off the games, not Sleeper's clock:
+
+- `"over"` — every placement game is played, so the season is settled;
+- `"season"` — games have been played, or kickoff has passed;
+- `"preseason"` — the new league is up but nobody has played yet.
+
+In `"season"` the front page is as it always was. In the other two it is
+`offseason_home` instead: what is coming next (the rookie draft and kickoff,
+with the days to each, or a line saying the next season is not on Sleeper yet),
+the last settled season in review (the podium and the final standings), that
+season's rookie draft pick by pick, and every trade in the off-season window.
+Playoff odds and power rankings are not computed at all out of season. The
+Honours cabinet stays on the bottom in every phase.
+
+**The jobs a settled season leaves** are in `build_site.season_todo`, printed at
+the end of every build and written to `$GITHUB_STEP_SUMMARY`, so they show on
+the Actions run page. They are the ones that only come round once a year: the
+champion's loop and the Loser of All Losers picture for
+`scripts/prepare_media.py`, next year's consolation trophy name, and the
+championships-by-conference count against the stars on the crests and the
+league logo (see "The stars on the conference crests" — those are still
+pictures, and still go stale). The list is empty while the season is on.
+
 ### Playoff odds (Scoreboard)
 
 Built in September 2026 to replace the Dynasty Daddy screenshots Matt used to
@@ -407,8 +496,9 @@ and as a table per conference, while regular-season games remain.
 
 - **British English** throughout, in copy and in code comments.
 - Everything that changes season to season lives in `league.config.json`. Matt
-  regenerates team images every year and adjusts the playoff setup, and wants to
-  do that himself without touching code.
+  regenerates team images every year and wants to do that himself without
+  touching code. The season year, the league id and the playoff setup are no
+  longer among them — Sleeper is the source for all three.
 - **Team images: the AI pictures are for the Scoreboard only.** Matt asked for
   this in September 2026. The AI pictures (`portrait` in the config, the 1400px
   `<manager>.jpg` from his `Team AI` folder) are shown **whole and large** on
@@ -447,10 +537,9 @@ and as a table per conference, while regular-season games remain.
   and the whole of dark mode, which is NFL navy rather than black, as Matt asked.
   Gold (`--gold`) is for trophies only: champions, the 1.01, the title stars.
   Headings are Roboto Slab, after the slab lettering of DYNASTY.
-- Power rankings reproduce Matt's own spreadsheet formula:
-  `((cumulative wins + own points) / 2) − opponent points`, averaged over weeks
-  played. His workbook used projected points he typed in each week; this uses real
-  results. If you change the method, say so on the page.
+- Power rankings reproduce the Power Rankings tab of Matt's Team Tracking
+  workbook. See "Power rankings (Scoreboard)". The method is deliberately not
+  published on the site.
 
 ## Validated against the old site
 
@@ -490,8 +579,11 @@ On his Windows machine, under `OneDrive\Documents\Fantasy Football\Dynasty`:
 - `Website\Team Uniforms\`, `Trades\`, `Season Review\`, `Winners and Losers\`,
   `End of Year Awards\`, `Team Announcements\`, `Podcasts\` — the archive
   material, none of it yet on the new site.
-- `Claude\Team Tracking 2026 - altpr.xlsx` — the weekly workbook, including the
-  power rankings formula and the Finishes tab.
+- `Claude\Team Tracking 2026 - altpr.xlsx` — the weekly workbook. The Power
+  Rankings tab is a collector: column B is week 1 typed by hand, C–O pull
+  `'Week N'!Y`, and the formula itself is each Week sheet's Score column (X),
+  ranked by `RANK.EQ` in Y. R–AE are the projected points it uses. Also the
+  Awards and Finishes tabs.
 
 Google Drive has the season review PDFs (2020–2026), schedules, rules PDFs,
 records sheets and the Trade Log, in `FF/Website`.
@@ -501,6 +593,8 @@ records sheets and the Trade Log, in `FF/Website`.
 Roughly in the order discussed with Matt, though he has not yet picked:
 
 1. **Playoff odds.** Done in September 2026. See "Playoff odds (Scoreboard)".
+   So are the **power rankings** and the **off-season and season roll-over**,
+   the two Matt raised in September 2026; both have sections above.
 2. **Conference crests with computed stars.** The colour scheme and identity
    were done in September 2026 (see Conventions). What is left of it is drawing
    the stars on the crests from the computed title count, so they stop going

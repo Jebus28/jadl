@@ -132,12 +132,62 @@ def fetch_projections(current: dict, state: dict, last_week: int) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# which league is the current one
+# --------------------------------------------------------------------------- #
+def successor(league: dict, managers: list) -> dict | None:
+    """
+    The league that follows this one on Sleeper, or None if there is not one
+    yet. Sleeper links each season back to the one before but never forward, so
+    the way on is a manager's own leagues for the next season: whichever of them
+    points back at the league we hold. Tried manager by manager, because only
+    the people in a league can list it.
+    """
+    season = int(league.get("season") or 0) + 1
+    if season < 2020:
+        return None
+    for uid in managers:
+        for lg in get(f"{API}/user/{uid}/leagues/nfl/{season}") or []:
+            if lg.get("previous_league_id") == league.get("league_id"):
+                return lg
+    return None
+
+
+def resolve_league(cfg: dict, state: dict) -> str:
+    """
+    The league id of the season the league is on now, walking forward from the
+    one in league.config.json. Sleeper mints a new id every season, and this is
+    what saves Matt changing the config when the league rolls over: as soon as
+    he creates the new season on Sleeper, the site follows it.
+
+    The walk only looks ahead once the season it holds is finished, so an
+    ordinary in-season refresh costs one extra call and no more.
+    """
+    league_id = cfg["league"]["current_league_id"]
+    managers = list(cfg.get("managers") or {})
+    for _step in range(10):
+        league = get(f"{API}/league/{league_id}")
+        if not league:
+            return league_id
+        over = (league.get("status") == "complete"
+                or int(state.get("season") or 0) > int(league.get("season") or 0))
+        nxt = successor(league, managers) if over else None
+        if not nxt:
+            return league_id
+        print(f"  {league.get('season')} has rolled over to {nxt.get('season')}"
+              f" ({nxt['league_id']})")
+        league_id = nxt["league_id"]
+    return league_id
+
+
+# --------------------------------------------------------------------------- #
 # one season
 # --------------------------------------------------------------------------- #
 def fetch_season(league_id: str, weeks: int, want_matchups: bool = True) -> dict:
     league = get(f"{API}/league/{league_id}")
     if not league:
         raise SystemExit(f"Sleeper has no league {league_id}")
+    # However the playoffs are set up, go as far as the championship week.
+    weeks = max(weeks, ((league.get("settings") or {}).get("playoff_week_start") or 0) + 2)
 
     season = {
         "league_id": league_id,
@@ -237,7 +287,6 @@ def fetch_season(league_id: str, weeks: int, want_matchups: bool = True) -> dict
 # --------------------------------------------------------------------------- #
 def main() -> int:
     cfg = load_config()
-    current_id = cfg["league"]["current_league_id"]
     total_weeks = cfg["season"]["championship_week"]
 
     print("Sleeper state")
@@ -246,6 +295,7 @@ def main() -> int:
     print(f"  {state.get('season')} {state.get('season_type')} week {state.get('week')}")
 
     print("Current season")
+    current_id = resolve_league(cfg, state)
     current = fetch_season(current_id, total_weeks)
     write("current.json", current)
 

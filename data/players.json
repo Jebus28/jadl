@@ -159,6 +159,7 @@
  },
  "10214": {
   "full_name": "Davis Allen",
+  "injury_status": "Questionable",
   "position": "TE",
   "team": "LAR",
   "years_exp": 3
@@ -1133,7 +1134,6 @@
  },
  "10930": {
   "full_name": "Riley Moss",
-  "injury_status": "Questionable",
   "position": "DB",
   "team": "DEN",
   "years_exp": 3
@@ -1145,7 +1145,7 @@
  },
  "10932": {
   "full_name": "Garrett Williams",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "DB",
   "team": "ARI",
   "years_exp": 3
@@ -1503,7 +1503,7 @@
  "10987": {
   "full_name": "Atonio Mafi",
   "position": "OL",
-  "team": "LV",
+  "team": "TEN",
   "years_exp": 3
  },
  "10988": {
@@ -1934,7 +1934,7 @@
  },
  "11054": {
   "full_name": "Travis Bell",
-  "injury_status": "IR",
+  "injury_status": "Questionable",
   "position": "DL",
   "years_exp": 3
  },
@@ -2002,6 +2002,7 @@
  },
  "11066": {
   "full_name": "Austin Ajiake",
+  "injury_status": "Questionable",
   "position": "LB",
   "team": "IND",
   "years_exp": 3
@@ -2094,9 +2095,8 @@
  },
  "11082": {
   "full_name": "Ben Sims",
-  "injury_status": "IR",
+  "injury_status": "Questionable",
   "position": "TE",
-  "team": "MIA",
   "years_exp": 3
  },
  "11083": {
@@ -3364,6 +3364,7 @@
  "11306": {
   "full_name": "Xavier Gipson",
   "position": "WR",
+  "team": "PHI",
   "years_exp": 3
  },
  "11307": {
@@ -4381,6 +4382,7 @@
  "11481": {
   "full_name": "Natrone Brooks",
   "position": "CB",
+  "team": "DET",
   "years_exp": 3
  },
  "11482": {
@@ -4950,7 +4952,7 @@
  },
  "11579": {
   "full_name": "Audric Estime",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "RB",
   "team": "NO",
   "years_exp": 2
@@ -4979,7 +4981,6 @@
  },
  "11583": {
   "full_name": "Jonathon Brooks",
-  "injury_status": "Questionable",
   "position": "RB",
   "team": "CAR",
   "years_exp": 2
@@ -5115,7 +5116,7 @@
  },
  "11604": {
   "full_name": "Brock Bowers",
-  "injury_status": "Doubtful",
+  "injury_status": "Out",
   "position": "TE",
   "team": "LV",
   "years_exp": 2
@@ -5197,7 +5198,7 @@
  },
  "11618": {
   "full_name": "Jalen McMillan",
-  "injury_status": "Questionable",
+  "injury_status": "Doubtful",
   "position": "WR",
   "team": "TB",
   "years_exp": 2
@@ -5299,7 +5300,7 @@
  },
  "11633": {
   "full_name": "Jamari Thrash",
-  "injury_status": "IR",
+  "injury_status": "Questionable",
   "position": "WR",
   "team": "CLE",
   "years_exp": 2
@@ -5854,7 +5855,7 @@
  },
  "11718": {
   "full_name": "Isaiah Adams",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "OL",
   "team": "ARI",
   "years_exp": 2
@@ -6004,7 +6005,6 @@
  },
  "11740": {
   "full_name": "Brandon Dorlus",
-  "injury_status": "Questionable",
   "position": "DE",
   "team": "ATL",
   "years_exp": 2
@@ -6016,7 +6016,7 @@
  },
  "11742": {
   "full_name": "Cedric Gray",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "LB",
   "team": "TEN",
   "years_exp": 2
@@ -6029,7 +6029,7 @@
  },
  "11744": {
   "full_name": "Dadrion Taylor-Demerson",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "DB",
   "team": "ARI",
   "years_exp": 2
@@ -6182,7 +6182,7 @@
  },
  "11767": {
   "full_name": "Xavier Thomas",
-  "injury_status": "Questionable",
+  "injury_status": "Sus",
   "position": "DE",
   "years_exp": 2
  },
@@ -6365,7 +6365,7 @@
  "11795": {
   "full_name": "Jaden Crumedy",
   "position": "DT",
-  "team": "GB",
+  "team": "HOU",
   "years_exp": 2
  },
  "11796": {
@@ -6425,7 +6425,6 @@
  },
  "11804": {
   "full_name": "Mekhi Wingo",
-  "injury_status": "Questionable",
   "position": "DT",
   "team": "DET",
   "years_exp": 2
@@ -6666,6 +6665,7 @@
  },
  "11842": {
   "full_name": "Tatum Bethune",
+  "injury_status": "Out",
   "position": "LB",
   "team": "SF",
   "years_exp": 2
@@ -10276,6 +10276,7 @@
  },
  "12467": {
   "full_name": "Jordan James",
+  "injury_status": "Out",
   "position": "RB",
   "team": "SF",
   "years_exp": 1
@@ -10340,6 +10341,7 @@
  },
  "12477": {
   "full_name": "Kurtis Rourke",
+  "injury_status": "Out",
   "position": "QB",
   "team": "SF",
   "years_exp": 1
@@ -10712,7 +10714,6 @@
  },
  "12533": {
   "full_name": "Jacory Croskey-Merritt",
-  "injury_status": "Questionable",
   "position": "RB",
   "team": "WAS",
   "years_exp": 1
@@ -10889,6 +10890,7 @@
  },
  "12560": {
   "full_name": "Shemar Stewart",
+  "injury_status": "Doubtful",
   "position": "DL",
   "team": "CIN",
   "years_exp": 1
@@ -11059,6 +11061,7 @@
  },
  "12586": {
   "full_name": "Cameron Williams",
+  "injury_status": "Out",
   "position": "OL",
   "team": "ATL",
   "years_exp": 1
@@ -11088,7 +11091,7 @@
  },
  "12590": {
   "full_name": "Alfred Collins",
-  "injury_status": "Out",
+  "injury_status": "IR",
   "position": "DL",
   "team": "SF",
   "years_exp": 1
@@ -11313,7 +11316,6 @@
  },
  "12623": {
   "full_name": "Ashton Gillotte",
-  "injury_status": "Questionable",
   "position": "DE",
   "team": "KC",
   "years_exp": 1
@@ -11386,6 +11388,7 @@
  },
  "12634": {
   "full_name": "Jordan Watkins",
+  "injury_status": "Out",
   "position": "WR",
   "team": "SF",
   "years_exp": 1
@@ -11427,7 +11430,7 @@
  },
  "12640": {
   "full_name": "Teddye Buchanan",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "LB",
   "team": "BAL",
   "years_exp": 1
@@ -11452,7 +11455,6 @@
  },
  "12644": {
   "full_name": "Barryn Sorrell",
-  "injury_status": "Questionable",
   "position": "DE",
   "team": "GB",
   "years_exp": 1
@@ -11471,7 +11473,7 @@
  },
  "12647": {
   "full_name": "Billy Bowman",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "DB",
   "team": "ATL",
   "years_exp": 1
@@ -11725,6 +11727,7 @@
  "12685": {
   "full_name": "Bryce Cabeldue",
   "position": "OT",
+  "team": "LV",
   "years_exp": 1
  },
  "12686": {
@@ -11781,7 +11784,6 @@
  },
  "12694": {
   "full_name": "RJ Mickens",
-  "injury_status": "Questionable",
   "position": "DB",
   "team": "LAC",
   "years_exp": 1
@@ -11805,7 +11807,6 @@
  },
  "12698": {
   "full_name": "Ajani Cornelius",
-  "injury_status": "Questionable",
   "position": "OL",
   "team": "DAL",
   "years_exp": 1
@@ -11852,7 +11853,7 @@
  },
  "12704": {
   "full_name": "Warren Brinson",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "DL",
   "team": "GB",
   "years_exp": 1
@@ -13011,7 +13012,7 @@
  },
  "12895": {
   "full_name": "Malik Verdon",
-  "injury_status": "IR",
+  "injury_status": "Questionable",
   "position": "DB",
   "team": "ATL",
   "years_exp": 1
@@ -14353,7 +14354,6 @@
  "13118": {
   "full_name": "Melvin Smith",
   "position": "DB",
-  "team": "TEN",
   "years_exp": 1
  },
  "13119": {
@@ -15249,6 +15249,7 @@
  },
  "13270": {
   "full_name": "CJ Daniels",
+  "injury_status": "Out",
   "position": "WR",
   "team": "LAR",
   "years_exp": 0
@@ -15278,6 +15279,7 @@
  },
  "13275": {
   "full_name": "Ty Simpson",
+  "injury_status": "Out",
   "position": "QB",
   "team": "LAR",
   "years_exp": 0
@@ -15296,6 +15298,7 @@
  },
  "13278": {
   "full_name": "Max Klare",
+  "injury_status": "Out",
   "position": "TE",
   "team": "LAR",
   "years_exp": 0
@@ -15564,7 +15567,7 @@
  },
  "13319": {
   "full_name": "Oscar Delp",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "TE",
   "team": "NO",
   "years_exp": 0
@@ -15576,7 +15579,6 @@
  },
  "13320": {
   "full_name": "Zachariah Branch",
-  "injury_status": "Questionable",
   "position": "WR",
   "team": "ATL",
   "years_exp": 0
@@ -15703,7 +15705,6 @@
  },
  "13340": {
   "full_name": "Rueben Bain",
-  "injury_status": "Questionable",
   "position": "DL",
   "team": "TB",
   "years_exp": 0
@@ -15912,7 +15913,6 @@
  },
  "13372": {
   "full_name": "R Mason Thomas",
-  "injury_status": "Questionable",
   "position": "DL",
   "team": "KC",
   "years_exp": 0
@@ -15925,7 +15925,7 @@
  },
  "13374": {
   "full_name": "Kayden McDonald",
-  "injury_status": "Questionable",
+  "injury_status": "IR",
   "position": "DL",
   "team": "HOU",
   "years_exp": 0
@@ -15966,7 +15966,6 @@
  },
  "13380": {
   "full_name": "Brenen Thompson",
-  "injury_status": "Questionable",
   "position": "WR",
   "team": "LAC",
   "years_exp": 0
@@ -16002,7 +16001,7 @@
  },
  "13386": {
   "full_name": "D'Angelo Ponds",
-  "injury_status": "Questionable",
+  "injury_status": "Doubtful",
   "position": "DB",
   "team": "NYJ",
   "years_exp": 0
@@ -16212,6 +16211,7 @@
  },
  "13417": {
   "full_name": "De'Zhaun Stribling",
+  "injury_status": "Out",
   "position": "WR",
   "team": "SF",
   "years_exp": 0
@@ -16324,7 +16324,6 @@
  },
  "13434": {
   "full_name": "Will Kacmarek",
-  "injury_status": "Questionable",
   "position": "TE",
   "team": "MIA",
   "years_exp": 0
@@ -16480,7 +16479,6 @@
  },
  "13458": {
   "full_name": "Derrick Moore",
-  "injury_status": "Questionable",
   "position": "DE",
   "team": "DET",
   "years_exp": 0
@@ -16512,14 +16510,12 @@
  },
  "13462": {
   "full_name": "Jakobe Thomas",
-  "injury_status": "Questionable",
   "position": "DB",
   "team": "MIN",
   "years_exp": 0
  },
  "13463": {
   "full_name": "Caleb Tiernan",
-  "injury_status": "Questionable",
   "position": "OT",
   "team": "MIN",
   "years_exp": 0
@@ -16616,6 +16612,7 @@
  },
  "13478": {
   "full_name": "Ephesians Prysock",
+  "injury_status": "Out",
   "position": "CB",
   "team": "SF",
   "years_exp": 0
@@ -16645,7 +16642,6 @@
  },
  "13482": {
   "full_name": "Kendal Daniels",
-  "injury_status": "Questionable",
   "position": "LB",
   "team": "ATL",
   "years_exp": 0
@@ -16802,7 +16798,6 @@
  },
  "13505": {
   "full_name": "Jude Bowry",
-  "injury_status": "Questionable",
   "position": "OT",
   "team": "BUF",
   "years_exp": 0
@@ -16816,6 +16811,7 @@
  },
  "13507": {
   "full_name": "Enrique Cruz",
+  "injury_status": "Out",
   "position": "OL",
   "team": "SF",
   "years_exp": 0
@@ -17543,7 +17539,6 @@
  },
  "13618": {
   "full_name": "Jacob Thomas",
-  "injury_status": "Questionable",
   "position": "DB",
   "team": "MIN",
   "years_exp": 0
@@ -19359,7 +19354,6 @@
  "13917": {
   "full_name": "Marlen Sewell",
   "position": "DB",
-  "team": "CHI",
   "years_exp": 0
  },
  "13918": {
@@ -23305,6 +23299,7 @@
  "1932": {
   "full_name": "DaQuan Jones",
   "position": "DT",
+  "team": "NE",
   "years_exp": 12
  },
  "1933": {
@@ -30539,7 +30534,6 @@
  },
  "3236": {
   "full_name": "Maliek Collins",
-  "injury_status": "Questionable",
   "position": "DT",
   "team": "CLE",
   "years_exp": 10
@@ -30656,7 +30650,6 @@
  },
  "3256": {
   "full_name": "Javon Hargrave",
-  "injury_status": "Questionable",
   "position": "DT",
   "team": "GB",
   "years_exp": 10
@@ -32364,6 +32357,7 @@
  },
  "3558": {
   "full_name": "Chris Jones",
+  "injury_status": "Questionable",
   "position": "DT",
   "team": "KC",
   "years_exp": 10
@@ -34891,7 +34885,7 @@
  },
  "4018": {
   "full_name": "Joe Mixon",
-  "injury_status": "Out",
+  "injury_status": "",
   "position": "RB",
   "years_exp": 9
  },
@@ -35044,7 +35038,6 @@
  },
  "4046": {
   "full_name": "Patrick Mahomes",
-  "injury_status": "Questionable",
   "position": "QB",
   "team": "KC",
   "years_exp": 9
@@ -35905,7 +35898,6 @@
  },
  "4193": {
   "full_name": "Jordan Morgan",
-  "injury_status": "Questionable",
   "position": "G",
   "years_exp": 5
  },
@@ -36811,7 +36803,7 @@
  },
  "4351": {
   "full_name": "Tim Patrick",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "WR",
   "team": "NYJ",
   "years_exp": 9
@@ -40596,7 +40588,6 @@
  },
  "5025": {
   "full_name": "Ronnie Harrison",
-  "injury_status": "Questionable",
   "position": "DB",
   "team": "MIA",
   "years_exp": 8
@@ -42479,7 +42470,6 @@
  },
  "5351": {
   "full_name": "Da'Shawn Hand",
-  "injury_status": "Questionable",
   "position": "DT",
   "team": "ATL",
   "years_exp": 8
@@ -45368,7 +45358,7 @@
  },
  "5859": {
   "full_name": "A.J. Brown",
-  "injury_status": "Out",
+  "injury_status": "IR",
   "position": "WR",
   "team": "NE",
   "years_exp": 7
@@ -45899,7 +45889,6 @@
  },
  "5947": {
   "full_name": "Jakobi Meyers",
-  "injury_status": "Questionable",
   "position": "WR",
   "team": "JAX",
   "years_exp": 7
@@ -46919,7 +46908,6 @@
  },
  "6121": {
   "full_name": "Jawaan Taylor",
-  "injury_status": "Questionable",
   "position": "OL",
   "team": "ATL",
   "years_exp": 7
@@ -47041,7 +47029,6 @@
  },
  "6141": {
   "full_name": "Drue Tranquill",
-  "injury_status": "Questionable",
   "position": "LB",
   "team": "KC",
   "years_exp": 7
@@ -47480,7 +47467,7 @@
  },
  "6221": {
   "full_name": "Justin Skule",
-  "injury_status": "Questionable",
+  "injury_status": "Doubtful",
   "position": "OT",
   "team": "TB",
   "years_exp": 7
@@ -50453,7 +50440,7 @@
  },
  "6768": {
   "full_name": "Tua Tagovailoa",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "QB",
   "team": "ATL",
   "years_exp": 6
@@ -50651,7 +50638,6 @@
  },
  "6800": {
   "full_name": "K'Lavon Chaisson",
-  "injury_status": "Questionable",
   "position": "LB",
   "team": "WAS",
   "years_exp": 6
@@ -50762,7 +50748,7 @@
  },
  "6818": {
   "full_name": "Nnamdi Madubuike",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "DT",
   "team": "BAL",
   "years_exp": 6
@@ -51262,7 +51248,7 @@
  },
  "6900": {
   "full_name": "Jonathan Greenard",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "DE",
   "team": "PHI",
   "years_exp": 6
@@ -51643,7 +51629,6 @@
   "full_name": "Sean McKeon",
   "injury_status": "Questionable",
   "position": "TE",
-  "team": "IND",
   "years_exp": 6
  },
  "6965": {
@@ -52263,7 +52248,6 @@
  },
  "7069": {
   "full_name": "Alohi Gilman",
-  "injury_status": "Questionable",
   "position": "DB",
   "team": "KC",
   "years_exp": 6
@@ -52554,7 +52538,6 @@
  },
  "7117": {
   "full_name": "L'Jarius Sneed",
-  "injury_status": "Questionable",
   "position": "CB",
   "team": "KC",
   "years_exp": 6
@@ -52668,6 +52651,7 @@
  },
  "7136": {
   "full_name": "Kam Curl",
+  "injury_status": "Questionable",
   "position": "DB",
   "team": "LAR",
   "years_exp": 6
@@ -53987,6 +53971,7 @@
  },
  "7369": {
   "full_name": "Bill Murray",
+  "injury_status": "Out",
   "position": "DT",
   "team": "LAR",
   "years_exp": 6
@@ -55087,6 +55072,7 @@
  },
  "7562": {
   "full_name": "Tutu Atwell",
+  "injury_status": "Out",
   "position": "WR",
   "team": "LAR",
   "years_exp": 5
@@ -55279,7 +55265,7 @@
  },
  "7599": {
   "full_name": "Jermar Jefferson",
-  "injury_status": "IR",
+  "injury_status": "Questionable",
   "position": "RB",
   "team": "MIN",
   "years_exp": 5
@@ -55444,7 +55430,6 @@
  },
  "7626": {
   "full_name": "Odafe Oweh",
-  "injury_status": "Questionable",
   "position": "LB",
   "team": "WAS",
   "years_exp": 5
@@ -55685,7 +55670,7 @@
  },
  "7663": {
   "full_name": "Teven Jenkins",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "OL",
   "team": "CLE",
   "years_exp": 5
@@ -55756,7 +55741,7 @@
  },
  "7674": {
   "full_name": "Patrick Jones",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "DE",
   "team": "CAR",
   "years_exp": 5
@@ -55780,7 +55765,7 @@
  },
  "7678": {
   "full_name": "Joseph Ossai",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "DE",
   "team": "NYJ",
   "years_exp": 5
@@ -56048,6 +56033,7 @@
  },
  "7720": {
   "full_name": "Kene Nwangwu",
+  "injury_status": "Doubtful",
   "position": "RB",
   "team": "NYJ",
   "years_exp": 5
@@ -56377,7 +56363,6 @@
  },
  "7777": {
   "full_name": "Trey Smith",
-  "injury_status": "Questionable",
   "position": "OL",
   "team": "KC",
   "years_exp": 5
@@ -56425,7 +56410,6 @@
  },
  "7785": {
   "full_name": "Cole Van Lanen",
-  "injury_status": "Questionable",
   "position": "OL",
   "team": "JAX",
   "years_exp": 5
@@ -58524,7 +58508,6 @@
  },
  "8142": {
   "full_name": "Alec Pierce",
-  "injury_status": "Questionable",
   "position": "WR",
   "team": "IND",
   "years_exp": 4
@@ -58730,6 +58713,7 @@
  },
  "8176": {
   "full_name": "Danny Gray",
+  "injury_status": "Questionable",
   "position": "WR",
   "team": "PHI",
   "years_exp": 4
@@ -59297,7 +59281,6 @@
  },
  "8270": {
   "full_name": "Devonte Wyatt",
-  "injury_status": "Questionable",
   "position": "DL",
   "team": "GB",
   "years_exp": 4
@@ -60561,7 +60544,6 @@
  },
  "8474": {
   "full_name": "Luke Wattenberg",
-  "injury_status": "Questionable",
   "position": "OL",
   "team": "DEN",
   "years_exp": 4
@@ -60842,7 +60824,7 @@
  },
  "8519": {
   "full_name": "Deane Leonard",
-  "injury_status": "Questionable",
+  "injury_status": "Out",
   "position": "DB",
   "team": "LAC",
   "years_exp": 4
@@ -61781,6 +61763,7 @@
  },
  "8698": {
   "full_name": "Jake Tonges",
+  "injury_status": "Questionable",
   "position": "TE",
   "team": "SF",
   "years_exp": 4
@@ -62382,6 +62365,7 @@
  },
  "8800": {
   "full_name": "Malik Davis",
+  "injury_status": "Out",
   "position": "RB",
   "team": "DAL",
   "years_exp": 4
@@ -62477,7 +62461,6 @@
  },
  "8818": {
   "full_name": "Obinna Eze",
-  "injury_status": "Questionable",
   "position": "T",
   "years_exp": 4
  },
@@ -63634,7 +63617,6 @@
  },
  "9494": {
   "full_name": "Marvin Mims",
-  "injury_status": "Questionable",
   "position": "WR",
   "team": "DEN",
   "years_exp": 3
@@ -63713,7 +63695,7 @@
  },
  "9506": {
   "full_name": "Sean Tucker",
-  "injury_status": "Questionable",
+  "injury_status": "Doubtful",
   "position": "RB",
   "team": "TB",
   "years_exp": 3
@@ -63748,7 +63730,6 @@
  },
  "9511": {
   "full_name": "Keaton Mitchell",
-  "injury_status": "Questionable",
   "position": "RB",
   "team": "LAC",
   "years_exp": 3

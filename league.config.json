@@ -204,8 +204,8 @@
     ]
   },
   "power_rankings": {
-    "_comment": "Reproduces the workbook formula: score = ((previous cumulative wins + own projected points) / 2) - opponent projected points.",
-    "method": "matt",
+    "_comment": "Reproduces the Power Rankings tab of the Team Tracking workbook, week by week: score = (the last two weeks you played, plus this week's projected points, averaged) - your opponent's projected points. Week one has nothing behind it, so it is simply the difference between the two projections. The week's ranking is fixed at noon UK on the Wednesday before its games and never moves again; each one is kept in data/power_rankings.json. Nothing to edit here.",
+    "method": "workbook",
     "projection_source": "sleeper"
   },
   "site": {

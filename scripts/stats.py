@@ -975,3 +975,115 @@ def playoff_odds(raw: dict, season: dict, history: list[dict], projections: dict
             "w": wins[rid], "l": losses[rid], "t": ties[rid], "games": total[rid],
         } for rid, t in tally.items()},
     }
+
+
+# --------------------------------------------------------------------------- #
+# power rankings - the Scoreboard
+# --------------------------------------------------------------------------- #
+# Matt's workbook ranks the league afresh every week rather than running a total
+# up. A week's ranking is fixed at noon UK on the Wednesday before its games and
+# never moves again, whatever the projections do afterwards, so the site keeps
+# each week as it was fixed rather than working it out anew on every build.
+def _last_sunday(year: int, month: int) -> date:
+    last = date(year, month, 31)
+    return last - timedelta(days=(last.weekday() + 1) % 7)
+
+
+def uk_noon(day: date) -> datetime:
+    """
+    Noon in London on `day`, as UTC. British Summer Time runs from the last
+    Sunday in March to the last Sunday in October, so noon is 11:00 UTC through
+    September and October and 12:00 UTC once the clocks go back.
+    """
+    summer = _last_sunday(day.year, 3) <= day < _last_sunday(day.year, 10)
+    return datetime.combine(day, time(11 if summer else 12), tzinfo=timezone.utc)
+
+
+def power_freeze(year: int, week: int, state: dict | None = None) -> datetime:
+    """
+    When a week's power ranking is fixed: noon UK on the Wednesday before its
+    games. Sleeper gives the day the season opens - a Thursday most years, but
+    a Wednesday in 2026 - so the anchor is the Wednesday on or before it, and
+    every week after that is seven days on.
+    """
+    start = kickoff(year, state)
+    wednesday = start - timedelta(days=(start.weekday() - 2) % 7)
+    return uk_noon(wednesday + timedelta(days=7 * (week - 1)))
+
+
+def week_fixtures(raw: dict, week: int) -> dict:
+    """roster_id -> the roster it meets in `week`, from Sleeper's own pairings."""
+    paired = defaultdict(list)
+    for entry in (raw.get("matchups") or {}).get(str(week)) or []:
+        if entry.get("matchup_id") is not None:
+            paired[entry["matchup_id"]].append(entry["roster_id"])
+    return {a: b for sides in paired.values() if len(sides) == 2
+            for a, b in (sides, sides[::-1])}
+
+
+def week_points(raw: dict, week: int) -> dict:
+    """roster_id -> what it scored in `week`. Zero where the week is unplayed."""
+    return {entry["roster_id"]: round(float(entry.get("points") or 0), 2)
+            for entry in (raw.get("matchups") or {}).get(str(week)) or []
+            if entry.get("matchup_id") is not None}
+
+
+def projected_points(raw: dict, season: dict, projections: dict | None,
+                     players: dict, week: int) -> dict:
+    """
+    Each team's projected points for `week`: Sleeper's projection for the best
+    lineup it could put out from the players it holds (not IR, not taxi). The
+    workbook's Proj Points column. Empty where Sleeper has not projected that
+    week, which is every week already played - the feed only looks forward.
+    """
+    if str((projections or {}).get("season")) != str(season["season"]):
+        return {}
+    week_proj = ((projections or {}).get("weeks") or {}).get(str(week)) or {}
+    if not week_proj:
+        return {}
+    out = {}
+    for r in raw.get("rosters") or []:
+        away = set(r.get("reserve") or []) | set(r.get("taxi") or [])
+        mine = {p: week_proj[p] for p in r.get("players") or []
+                if p not in away and p in week_proj}
+        out[r["roster_id"]] = optimal_points(mine, season["roster_positions"], players,
+                                             season["played_as"])
+    return out
+
+
+def power_rankings(raw: dict, season: dict, projections: dict | None,
+                   players: dict, week: int) -> list | None:
+    """
+    The workbook's power ranking for one week, best first. A team's score is the
+    last two weeks it played and this week's projected points, averaged, less
+    what its opponent is projected to score. Week one has nothing behind it, so
+    it comes down to the two projections - the advantage the fixture gives you.
+
+    None where the week cannot be worked out: no projections for it, or no
+    fixtures. `raw` is the season as fetched and `season` is it indexed.
+    """
+    proj = projected_points(raw, season, projections, players, week)
+    against = week_fixtures(raw, week)
+    if not proj or not against:
+        return None
+    form = [week_points(raw, wk) for wk in range(max(1, week - 2), week)]
+    rows = []
+    for rid in sorted(proj):
+        other = against.get(rid)
+        if other is None or other not in proj:
+            continue
+        past = [p for p in (pts.get(rid) for pts in form) if p]
+        rows.append({
+            "roster_id": rid,
+            "owner_id": season["roster_owner"].get(rid),
+            "proj": proj[rid],
+            "opp_proj": proj[other],
+            "weeks": len(past),
+            "score": round((sum(past) + proj[rid]) / (len(past) + 1) - proj[other], 2),
+        })
+    if not rows:
+        return None
+    rows.sort(key=lambda r: r["score"], reverse=True)
+    for i, row in enumerate(rows, 1):
+        row["rank"] = i
+    return rows

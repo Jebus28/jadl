@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import re
 import shutil
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -112,29 +113,73 @@ def weekly_results(season, players):
     return out
 
 
-def power_rankings(teams, results, upto):
-    tally = {rid: {"score": 0.0, "weeks": 0, "wins": 0} for rid in teams}
-    for wk in sorted(results):
-        if wk > upto:
+POWER_FILE = "power_rankings.json"
+
+
+def power_store(cfg, current, season, projections, players, state, now=None):
+    """
+    Every week's power ranking as it was fixed. A week is settled at noon UK on
+    the Wednesday before its games and never moves again, however the
+    projections shift afterwards, so each one is written to
+    data/power_rankings.json the first time a build runs past that moment and
+    left alone from then on. The file holds one season; it starts again by
+    itself when the league rolls over.
+    """
+    now = now or datetime.now(timezone.utc)
+    year = str(current.get("season"))
+    store = load(POWER_FILE, {}) or {}
+    if str(store.get("season")) != year:
+        store = {"season": year, "weeks": {}}
+    weeks = store.setdefault("weeks", {})
+    changed = False
+    for wk in range(1, cfg["season"]["regular_season_weeks"] + 1):
+        if str(wk) in weeks:
+            continue
+        if now < S.power_freeze(int(year), wk, state):
             break
-        for fx in results[wk]:
-            if fx["home"]["points"] == 0 and fx["away"]["points"] == 0:
-                continue
-            for side, other in (("home", "away"), ("away", "home")):
-                rid = fx[side]["roster_id"]
-                if rid not in tally:
-                    continue
-                mine, theirs = fx[side]["points"], fx[other]["points"]
-                if mine > theirs:
-                    tally[rid]["wins"] += 1
-                tally[rid]["score"] += ((tally[rid]["wins"] + mine) / 2) - theirs
-                tally[rid]["weeks"] += 1
-    rows = [dict(teams[rid], power=round(t["score"] / max(t["weeks"], 1), 2), played=t["weeks"])
-            for rid, t in tally.items()]
-    rows.sort(key=lambda r: r["power"], reverse=True)
-    for i, row in enumerate(rows, 1):
-        row["rank"] = i
-    return rows
+        rows = S.power_rankings(current, season, projections, players, wk)
+        if not rows:
+            # Sleeper only projects weeks still to come, so a week missed at the
+            # time can never be filled in. The next one carries on regardless.
+            continue
+        weeks[str(wk)] = {
+            "fixed": now.replace(microsecond=0).isoformat(),
+            "source": "projections",
+            "teams": {r["owner_id"]: {k: r[k] for k in ("rank", "score", "proj", "opp_proj")}
+                      for r in rows if r["owner_id"]},
+        }
+        changed = True
+    if changed:
+        DATA.mkdir(parents=True, exist_ok=True)
+        (DATA / POWER_FILE).write_text(json.dumps(store, indent=1, sort_keys=True),
+                                       encoding="utf-8")
+    return store
+
+
+def power_table(store, teams):
+    """
+    The week showing on the Scoreboard: the last one fixed, and how far each
+    team has moved since the week fixed before it. None until a week is fixed.
+    """
+    fixed = sorted((int(w) for w in (store.get("weeks") or {})), reverse=True)
+    if not fixed:
+        return None
+    week, before = fixed[0], {}
+    if len(fixed) > 1:
+        before = (store["weeks"][str(fixed[1])].get("teams") or {})
+    by_owner = {t["user_id"]: t for t in teams.values()}
+    rows = []
+    for uid, row in (store["weeks"][str(week)].get("teams") or {}).items():
+        if uid not in by_owner:
+            continue
+        was = (before.get(uid) or {}).get("rank")
+        rows.append(dict(by_owner[uid], rank=row["rank"],
+                         move=None if not was else was - row["rank"]))
+    if not rows:
+        return None
+    rows.sort(key=lambda r: r["rank"])
+    return {"week": week, "rows": rows, "since": fixed[1] if len(fixed) > 1 else None,
+            "source": store["weeks"][str(week)].get("source")}
 
 
 NAV = [("index.html", "Scoreboard"), ("standings.html", "Standings"), ("teams.html", "Teams"),
@@ -446,29 +491,171 @@ def standings_section(cfg, teams, heading):
             + standings_table(cfg, teams, "2") + "</div></section>")
 
 
-def power_section(cfg, rankings):
-    if not rankings or all(r["played"] == 0 for r in rankings):
+def move_chip(move):
+    """How far a team has moved since the week before, as an arrow."""
+    if move is None:
+        return '<span class="move new">&mdash;</span>'
+    if move > 0:
+        return '<span class="move up">&#9650;&#8202;' + str(move) + "</span>"
+    if move < 0:
+        return '<span class="move down">&#9660;&#8202;' + str(-move) + "</span>"
+    return '<span class="move level">&ndash;</span>'
+
+
+def power_section(cfg, table):
+    if not table:
         return ""
-    top = max((abs(r["power"]) for r in rankings), default=1) or 1
+    # The workbook formula stays off the site: Matt's own, and not for publishing.
+    note = "Week " + str(table["week"]) + " — fixed at noon on Wednesday."
     rows = []
-    for r in rankings:
-        width = max(2, min(100, (r["power"] / top) * 100)) if r["power"] > 0 else 2
+    for r in table["rows"]:
         rows.append(f"""
       <div class="prrow{' top' if r['rank'] == 1 else ''}">
         <div class="prrank num">{r['rank']}</div>
         <div class="prname"><a href="team-{e(r['slug'])}.html">{e(r['team'])}</a> <span class="hd">{e(r['manager'])}</span></div>
-        <div class="bar"><span style="width:{width:.0f}%"></span></div>
-        <div class="prpts">{r['power']:+.1f}</div>
+        <div class="prmove">{move_chip(r['move'])}</div>
       </div>""")
-    return ("<section>" + sechead("Power Rankings", "Your workbook formula, computed on real results.")
-            + '<div class="pr"><div class="prrow prhead"><div class="prrank">#</div><div class="prname">Team</div>'
-            + '<div class="bar" style="border:0;background:none"></div><div class="prpts">Score</div></div>'
+    return ("<section>" + sechead("Power Rankings", note)
+            + '<div class="pr"><div class="prrow prhead"><div class="prrank">#</div>'
+            + '<div class="prname">Team</div><div class="prmove">Move</div></div>'
             + "".join(rows) + "</div></section>")
 
 
 def placed(season, place):
     """Whoever finished in `place` once the placement games were played, or None."""
     return next((uid for uid, p in season["final"].items() if p == place), None)
+
+
+# --------------------------------------------------------------------------- #
+# the off-season Scoreboard
+# --------------------------------------------------------------------------- #
+# Between the final and kickoff there are no fixtures, no playoff odds and no
+# power rankings, and the front page used to go on showing the last week of the
+# season as though it were still being played. In their place it looks back at
+# the season just gone and forward to the next one.
+def in_days(when, today):
+    """"Today", "Tomorrow", "In 23 days" - or None once the day is past."""
+    gap = (when - today).days
+    if gap < 0:
+        return None
+    return {0: "Today", 1: "Tomorrow"}.get(gap, "In " + str(gap) + " days")
+
+
+def day_words(day):
+    return str(day.day) + day.strftime(" %B %Y")
+
+
+def next_draft(current):
+    """The rookie draft still to come in the season now on, or None."""
+    year = str(current.get("season"))
+    drafts = [d for d in current.get("drafts") or []
+              if str(d.get("season")) == year and d.get("status") != "complete"
+              and d.get("start_time")]
+    return min(drafts, key=lambda d: d["start_time"], default=None)
+
+
+def up_next(cfg, current, state, today=None):
+    """
+    What the league is waiting for: the rookie draft and kickoff, with the days
+    to each. Empty once both are behind us.
+    """
+    today = today or datetime.now(timezone.utc).date()
+    year = int(current.get("season") or 0)
+    dates = []
+    draft = next_draft(current)
+    if draft:
+        when = datetime.fromtimestamp(draft["start_time"] / 1000, timezone.utc).date()
+        rounds = draft.get("rounds")
+        dates.append(("Rookie draft", when, (str(rounds) + " rounds") if rounds else ""))
+    if year:
+        dates.append(("Kickoff", S.kickoff(year, state), "Week 1 of " + str(year)))
+    cards = []
+    for label, when, note in dates:
+        away = in_days(when, today)
+        if not away:
+            continue
+        cards.append(f"""
+      <div class="upnext">
+        <span class="uplabel">{e(label)}</span>
+        <span class="upwhen">{e(day_words(when))}</span>
+        <span class="upaway">{e(away)}</span>
+        <span class="upnote">{e(note)}</span>
+      </div>""")
+    if not cards:
+        # The season is settled and Matt has not created the next one on Sleeper
+        # yet, so there is no draft date and no kickoff to count down to.
+        if not year:
+            return ""
+        return ("<section>" + sechead("Next up")
+                + '<p class="empty">The ' + e(year + 1) + " season is not up on Sleeper yet. "
+                + "As soon as it is, the site will follow it.</p></section>")
+    return ("<section>" + sechead("Next up", "Counting down to the new season.")
+            + '<div class="upgrid">' + "".join(cards) + "</div></section>")
+
+
+def draft_class_section(cfg, current, names):
+    """The rookie draft just made, pick by pick. Nothing until it has been."""
+    year = str(current.get("season"))
+    picks = []
+    for draft in current.get("drafts") or []:
+        if str(draft.get("season")) == year and draft.get("status") == "complete":
+            owner = {r["roster_id"]: r.get("owner_id") for r in current.get("rosters") or []}
+            teams = draft.get("teams") or 10
+            for p in sorted(draft.get("picks") or [], key=lambda p: p.get("pick_no") or 0):
+                if not p.get("round") or not p.get("pick_no"):
+                    continue
+                picks.append((f"{p['round']}.{p['pick_no'] - (p['round'] - 1) * teams:02d}",
+                              p.get("name") or "&mdash;", p.get("position") or "",
+                              names.get(owner.get(p.get("roster_id"))) or "Unknown"))
+    if not picks:
+        return ""
+    rows = "".join(f'<tr><td class="num">{e(no)}</td><td><div class="tm"><span class="nm">{e(who)}'
+                   f'</span></div></td><td>{e(pos)}</td><td>{e(by)}</td></tr>'
+                   for no, who, pos, by in picks)
+    return ("<section>" + sechead(year + " Rookie Draft", "Every pick, in order.")
+            + '<div class="finishes">'
+            + finish_card("The class of " + year, "As drafted.",
+                          "<th>Pick</th><th>Player</th><th>Pos</th><th>Drafted by</th>", [rows])
+            + "</div></section>")
+
+
+def offseason_home(cfg, phase, current, indexed, names, log, board, players, teams, state):
+    """
+    The Scoreboard between seasons. Looks forward to the draft and kickoff, back
+    at the season just settled, and at whatever has happened since the final:
+    the rookie draft, and every trade in this off-season window.
+    """
+    year = int(current.get("season") or 0)
+    # The season being looked back on: this one if it is settled, otherwise the
+    # most recent one that was.
+    review = max((s for s in indexed if s["final"]), key=lambda s: s["season"], default=None)
+    parts = [up_next(cfg, current, state, None)]
+
+    if review:
+        era = cfg["eras"].get(review["era"], {})
+        parts.append('<section class="seasonblock">'
+                     + sechead(str(review["season"]) + " in review", era.get("label", ""))
+                     + season_podium(cfg, review, names)
+                     + '<div class="finishes">' + final_standings_card(cfg, review, names)
+                     + "</div></section>")
+
+    parts.append(draft_class_section(cfg, current, names))
+
+    # Trades since the final. In the preseason that is this year's off-season
+    # window; once a season is settled but the next league is not up, the trades
+    # already belong to next year's window.
+    window = ("off", year if phase == "preseason" else year + 1)
+    moves = [t for t in log if t["window"] == window]
+    if moves:
+        slugs = {t["user_id"]: t["slug"] for t in teams.values()}
+        logos = {t["user_id"]: t["logo"] for t in teams.values()}
+        parts.append("<section>" + sechead(window_name(window) + " trades",
+                                           str(len(moves)) + " so far. Every one is in the Trade Centre.")
+                     + '<div class="trades">'
+                     + "".join(trade_card(t, board, names, players, slugs, logos)
+                               for t in reversed(moves))
+                     + "</div></section>")
+    return "".join(p for p in parts if p)
 
 
 def honours_section(cfg, indexed, names):
@@ -706,8 +893,8 @@ def team_page(cfg, team, career, names, won, best_weeks, players):
     return page(cfg, team["team"], "Teams", body)
 
 
-def teams_index(cfg, teams, rankings, career):
-    rank_by = {r["roster_id"]: r["rank"] for r in rankings}
+def teams_index(cfg, teams, table, career):
+    rank_by = {r["roster_id"]: r["rank"] for r in (table or {}).get("rows", [])}
     cards = []
     for t in sorted(teams.values(), key=lambda x: x["team"].lower()):
         conf = cfg["conferences"].get(t["division"], {})
@@ -751,6 +938,74 @@ def honour_figure(cls, role, who, media):
             f'<span class="role">{e(role)}</span><span class="who">{e(who)}</span></figcaption></figure>')
 
 
+def season_podium(cfg, season, names):
+    """
+    A season's honours: the champion and the Loser of All Losers with their
+    pictures, then the conference winners and whoever took the 1.01. Empty until
+    every placement game has been played, because none of it is settled before.
+    """
+    if not season["final"]:
+        return ""
+    side = cfg.get("side_competitions") or {}
+    cup = (side.get("consolation_by_season") or {}).get(str(season["season"])) or "Consolation bracket"
+    spoon = side.get("wooden_spoon", "Loser of All Losers")
+    in_conferences = season["era"] == "conference"
+    standing = S.conference_finish(season) if in_conferences else {}
+    first_loser, last, year = season["playoff_teams"] + 1, len(season["final"]), season["season"]
+
+    def who(uid):
+        return names.get(uid) or "Unknown"
+
+    podium = [
+        honour_figure("champion", "Champion", who(placed(season, 1)), record_media(year, "champion")),
+        honour_figure("spoon", spoon, who(placed(season, last)), record_media(year, "loser")),
+    ]
+    also = []
+    for division in (sorted(cfg["conferences"]) if in_conferences else []):
+        winner = next((u for u, (d, p) in standing.items() if d == division and p == 1), None)
+        cls = "lc" if division == "1" else "mc"
+        label = cfg["conferences"][division].get("short", "") + " regular season"
+        also.append(f'<div class="{cls}"><dt>{e(label)}</dt><dd>{e(who(winner))}</dd></div>')
+    also.append(f'<div class="trophy"><dt>{e(cup)}</dt><dd>{e(who(placed(season, first_loser)))}'
+                f'<span class="sub">{ordinal(first_loser)}, and the 1.01</span></dd></div>')
+    podium.append('<dl class="honourlist">' + "".join(also) + "</dl>")
+    return '<div class="seasonhonours">' + "".join(podium) + "</div>"
+
+
+def final_standings_card(cfg, season, names):
+    """
+    Where everyone finished, first to last, settled in the playoffs and the
+    toilet bowl. The three honours in it are badged: champion, the consolation
+    bracket and its 1.01, and Loser of All Losers.
+    """
+    if not season["final"]:
+        return ""
+    side = cfg.get("side_competitions") or {}
+    cup = (side.get("consolation_by_season") or {}).get(str(season["season"])) or "Consolation bracket"
+    spoon = side.get("wooden_spoon", "Loser of All Losers")
+    in_conferences = season["era"] == "conference"
+    division_of = {row["owner_id"]: row["division"] for row in S.season_table(season)}
+    first_loser, last = season["playoff_teams"] + 1, len(season["final"])
+    rows = []
+    for uid, place in sorted(season["final"].items(), key=lambda kv: kv[1]):
+        badge = ""
+        if place == 1:
+            badge = '<span class="badge trophy">Champion</span>'
+        elif place == first_loser:
+            badge = '<span class="badge trophy">' + e(cup) + "</span>"
+        elif place == last:
+            badge = '<span class="badge spoon">' + e(spoon) + "</span>"
+        short = cfg["conferences"].get(division_of.get(uid), {}).get("short", "")
+        conf_cell = "<td>" + e(short) + "</td>" if in_conferences else ""
+        rows.append(f"""<tr>
+              <td class="num">{ordinal(place)}</td>
+              <td><div class="tm"><span class="nm">{e(names.get(uid) or 'Unknown')}</span>{badge}</div></td>{conf_cell}
+            </tr>""")
+    return finish_card("Final standings", "Settled in the playoffs and the toilet bowl.",
+                       "<th>Pos</th><th>Manager</th>" + ("<th>Conf</th>" if in_conferences else ""),
+                       rows)
+
+
 def finish_card(title, note, head, rows):
     return f"""
       <div class="finish">
@@ -771,9 +1026,6 @@ def history_sections(cfg, indexed, names):
     The only honours are the regular-season conference winners, the champion,
     7th (the consolation bracket and the 1.01) and 10th.
     """
-    side = cfg.get("side_competitions") or {}
-    consolation = side.get("consolation_by_season", {})
-    spoon = side.get("wooden_spoon", "Loser of All Losers")
     blocks = []
     for season in sorted(indexed, key=lambda s: s["season"], reverse=True):
         table = S.season_table(season)
@@ -783,9 +1035,6 @@ def history_sections(cfg, indexed, names):
         in_conferences = season["era"] == "conference"
         era = cfg["eras"].get(season["era"], {})
         division_of = {row["owner_id"]: row["division"] for row in table}
-        cup = consolation.get(str(year)) or "Consolation bracket"
-        first_loser = season["playoff_teams"] + 1
-        last = len(season["final"])
 
         def who(uid):
             return names.get(uid) or "Unknown"
@@ -829,45 +1078,12 @@ def history_sections(cfg, indexed, names):
   </section>""")
             continue
 
-        # Final standings: settled in the playoffs and the toilet bowl.
-        fin_rows = []
-        for uid, place in sorted(season["final"].items(), key=lambda kv: kv[1]):
-            badge = ""
-            if place == 1:
-                badge = '<span class="badge trophy">Champion</span>'
-            elif place == first_loser:
-                badge = '<span class="badge trophy">' + e(cup) + "</span>"
-            elif place == last:
-                badge = '<span class="badge spoon">' + e(spoon) + "</span>"
-            conf_cell = "<td>" + e(short(uid)) + "</td>" if in_conferences else ""
-            fin_rows.append(f"""<tr>
-              <td class="num">{ordinal(place)}</td>
-              <td><div class="tm"><span class="nm">{e(who(uid))}</span>{badge}</div></td>{conf_cell}
-            </tr>""")
-        fin_card = finish_card("Final standings", "Settled in the playoffs and the toilet bowl.",
-                               "<th>Pos</th><th>Manager</th>" + ("<th>Conf</th>" if in_conferences else ""),
-                               fin_rows)
-
-        # The honours: champion and Loser of All Losers with their pictures, then
-        # the conference winners and the 1.01.
-        podium = [
-            honour_figure("champion", "Champion", who(placed(season, 1)), record_media(year, "champion")),
-            honour_figure("spoon", spoon, who(placed(season, last)), record_media(year, "loser")),
-        ]
-        also = []
-        for division in (sorted(cfg["conferences"]) if in_conferences else []):
-            winner = next((u for u, (d, p) in standing.items() if d == division and p == 1), None)
-            cls = "lc" if division == "1" else "mc"
-            label = cfg["conferences"][division].get("short", "") + " regular season"
-            also.append(f'<div class="{cls}"><dt>{e(label)}</dt><dd>{e(who(winner))}</dd></div>')
-        also.append(f'<div class="trophy"><dt>{e(cup)}</dt><dd>{e(who(placed(season, first_loser)))}'
-                    f'<span class="sub">{ordinal(first_loser)}, and the 1.01</span></dd></div>')
-        podium.append('<dl class="honourlist">' + "".join(also) + "</dl>")
+        fin_card = final_standings_card(cfg, season, names)
 
         blocks.append(f"""
   <section class="seasonblock">
     {sechead(str(year) + " Season", era.get('label', ''))}
-    <div class="seasonhonours">{''.join(podium)}</div>
+    {season_podium(cfg, season, names)}
     <div class="finishes">{fin_card}{reg_card}</div>
   </section>""")
     return "".join(blocks)
@@ -1554,6 +1770,97 @@ def rules_page(cfg, current, book, editions, others):
     return "".join(parts)
 
 
+def season_setup(cfg, current):
+    """
+    The shape of the season now on. Sleeper knows when the playoffs start and
+    how many teams are in them, so those come from the league itself and
+    league.config.json is only the fallback. The year comes from the league too:
+    the site follows Sleeper from one season to the next without being told.
+    """
+    shape = dict(cfg["season"])
+    settings = current.get("settings") or {}
+    start = settings.get("playoff_week_start") or shape["playoff_start_week"]
+    teams = settings.get("playoff_teams") or shape["playoff_teams"]
+    rounds = max(1, (teams - 1).bit_length())
+    shape.update(year=int(current.get("season") or shape["year"]),
+                 playoff_start_week=start,
+                 regular_season_weeks=start - 1,
+                 playoff_teams=teams,
+                 championship_week=start + rounds - 1)
+    return shape
+
+
+def season_phase(current, season, state, today=None):
+    """
+    Where the league is in its year, from the games rather than Sleeper's clock:
+
+      "over"       every placement game is done, so the season is settled and
+                   there is nothing left to play;
+      "season"     games are being played, or kickoff has been and gone;
+      "preseason"  the new season is up on Sleeper but has not started - the
+                   back half of the off-season.
+
+    `current` is the season as fetched, `season` is it indexed.
+    """
+    if season["final"]:
+        return "over"
+    if any((m.get("points") or 0) for entries in (current.get("matchups") or {}).values()
+           for m in entries):
+        return "season"
+    today = today or datetime.now(timezone.utc).date()
+    year = int(current.get("season") or 0)
+    return "season" if year and today >= S.kickoff(year, state) else "preseason"
+
+
+def conference_titles(cfg, indexed, teams):
+    """
+    Championships won by the managers in each conference now - what the stars on
+    the crests and the league logo are counting. They move when someone changes
+    conference and grow when someone wins, so they go stale on their own.
+    """
+    champions = Counter()
+    for season in indexed:
+        uid = placed(season, 1)
+        if uid:
+            champions[uid] += 1
+    stars = {}
+    for division, conf in cfg["conferences"].items():
+        members = [t["user_id"] for t in teams.values() if t["division"] == division]
+        stars[conf.get("short") or division] = sum(champions[uid] for uid in members)
+    return stars
+
+
+def season_todo(cfg, current, indexed, teams, phase):
+    """
+    The jobs a settled season leaves Matt, which are easy to forget because they
+    only come round once a year. Printed at the end of every build, so the
+    workflow can put them where he will see them. Empty while the season is on.
+    """
+    if phase == "season":
+        return []
+    settled = max((s for s in indexed if s["final"]), key=lambda s: s["season"], default=None)
+    if not settled:
+        return []
+    year = settled["season"]
+    jobs = []
+    if not record_media(year, "champion"):
+        jobs.append(f"No {year} champion loop in assets/records. Put the GIF through "
+                    f"scripts/prepare_media.py.")
+    if not record_media(year, "loser"):
+        jobs.append(f"No {year} Loser of All Losers picture in assets/records. Put it through "
+                    f"scripts/prepare_media.py.")
+    cups = (cfg.get("side_competitions") or {}).get("consolation_by_season") or {}
+    if not (cups.get(str(year + 1)) or "").strip():
+        jobs.append(f"The {year + 1} consolation trophy has no name in league.config.json. "
+                    f"Until it does, 7th place shows as \"Consolation bracket\".")
+    stars = conference_titles(cfg, indexed, teams)
+    jobs.append("Championships by conference are now "
+                + ", ".join(f"{short} {n}" for short, n in sorted(stars.items()))
+                + ". The crests in assets/conferences and the league logo are pictures, so "
+                  "check they still show that many stars.")
+    return jobs
+
+
 def last_complete_week(state, season):
     """
     The last week of `season` whose games are all over, by Sleeper's clock, or
@@ -1578,6 +1885,10 @@ def main():
     players = load("players.json", {}) or {}
     history = load("history.json", []) or []
 
+    # The season now on, its year and its shape, all from Sleeper. Nothing in
+    # league.config.json has to change when the league rolls over.
+    cfg["season"] = season_setup(cfg, current)
+
     conference_from = int(cfg.get("eras", {}).get("conference_from", 2022))
     all_seasons = [current] + history
     # A week still being played is not a result yet, so the current season only
@@ -1600,11 +1911,23 @@ def main():
     teams = manager_lookup(cfg, current.get("users", []), current.get("rosters", []))
     results = weekly_results(current, players)
 
+    # Where the league is in its year. Between the final and kickoff there are
+    # no fixtures to show, so the Scoreboard becomes an off-season page instead
+    # of going on showing the last week played.
+    phase = season_phase(current, indexed[0], state)
+
     week = int(state.get("week") or 1)
     if str(state.get("season")) != str(current.get("season")):
         week = cfg["season"]["regular_season_weeks"]
     week = max(1, min(week, cfg["season"]["championship_week"]))
-    rankings = power_rankings(teams, results, week)
+
+    # Power rankings: fixed at noon UK on the Wednesday before each week's games
+    # and kept as they were fixed, so the page shows the week that stands.
+    projections = load("projections.json")
+    power = None
+    if phase == "season":
+        power = power_table(power_store(cfg, current, indexed[0], projections, players, state),
+                            teams)
 
     # Last season's conference tables, which is what the divisional-week billings
     # are drawn from. Absent in the first conference year, when there is no
@@ -1620,13 +1943,17 @@ def main():
 
     # Playoff odds, while the regular season still has games to play.
     odds = None
-    if cfg["site"].get("show_playoff_odds"):
-        odds = S.playoff_odds(current, indexed[0], indexed[1:], load("projections.json"), players,
+    if cfg["site"].get("show_playoff_odds") and phase == "season":
+        odds = S.playoff_odds(current, indexed[0], indexed[1:], projections, players,
                               cfg["season"]["regular_season_weeks"])
 
-    home = (scoreboard(cfg, teams, results, week, career, prev_finish, odds)
-            + odds_section(cfg, teams, odds)
-            + power_section(cfg, rankings) + honours_section(cfg, indexed, names))
+    if phase == "season":
+        home = (scoreboard(cfg, teams, results, week, career, prev_finish, odds)
+                + odds_section(cfg, teams, odds) + power_section(cfg, power))
+    else:
+        home = offseason_home(cfg, phase, current, indexed, names, trade_log, board,
+                              players, teams, state)
+    home += honours_section(cfg, indexed, names)
     (DOCS / "index.html").write_text(page(cfg, "Scoreboard", "Scoreboard", home), encoding="utf-8")
 
     (DOCS / "standings.html").write_text(
@@ -1634,7 +1961,7 @@ def main():
              standings_section(cfg, teams, str(cfg["season"]["year"]) + " Standings")), encoding="utf-8")
 
     (DOCS / "teams.html").write_text(
-        page(cfg, "Teams", "Teams", teams_index(cfg, teams, rankings, career)), encoding="utf-8")
+        page(cfg, "Teams", "Teams", teams_index(cfg, teams, power, career)), encoding="utf-8")
 
     won, best_weeks = S.honours(indexed), S.best_managers(indexed, players)
     for team in teams.values():
@@ -1666,7 +1993,8 @@ def main():
     D.prune_covers(covers, {it["cover"] for it in others + [i for items in updates.values() for i in items]
                             if it["cover"]})
 
-    print("Built docs/ for " + str(current.get("season")) + " week " + str(week) + ": "
+    where = "week " + str(week) if phase == "season" else phase
+    print("Built docs/ for " + str(current.get("season")) + " " + where + ": "
           + str(len(teams)) + " teams, " + str(len(indexed)) + " seasons, "
           + str(len(career)) + " managers with career records, " + str(len(trade_log)) + " trades, "
           + str(sum(len(items) for items in updates.values())) + " commissioner updates, "
@@ -1675,6 +2003,19 @@ def main():
         print("  pypdfium2 is not installed: no document covers, and no changes between rule editions.")
     for end in ends:
         print("  Trade Centre loose end: " + end["kind"] + " " + str(end.get("pick") or end.get("player_id")))
+
+    # The jobs a settled season leaves, written where the workflow can pick them
+    # up: they only come round once a year, which is what makes them easy to miss.
+    jobs = season_todo(cfg, current, indexed, teams, phase)
+    if jobs:
+        print("\nEnd-of-season jobs:")
+        for job in jobs:
+            print("  - " + job)
+        summary = os.environ.get("GITHUB_STEP_SUMMARY")
+        if summary:
+            with open(summary, "a", encoding="utf-8") as fh:
+                fh.write("## End-of-season jobs\n\n"
+                         + "".join("- " + job + "\n" for job in jobs) + "\n")
     return 0
 
 

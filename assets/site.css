@@ -274,12 +274,12 @@
   /* ---------- power rankings ---------- */
   .pr{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
   .prrow{
-    display:grid;grid-template-columns:30px 1fr 150px 62px;align-items:center;gap:12px;
+    display:grid;grid-template-columns:30px 1fr 64px;align-items:center;gap:12px;
     padding:10px 16px;border-bottom:1px solid var(--line);
   }
   .prrow:last-child{border-bottom:0}
   .prrow.prhead{background:var(--surface-2)}
-  .prrow.prhead .prrank,.prrow.prhead .prname,.prrow.prhead .prpts{
+  .prrow.prhead .prrank,.prrow.prhead .prname,.prrow.prhead .prmove{
     font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;font-family:"Public Sans",sans-serif;
   }
   .prrank{
@@ -288,13 +288,28 @@
   }
   .prrow.top .prrank{color:var(--accent)}
   .prname{font-weight:600;font-size:14px}
-  .bar{height:7px;border-radius:4px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
-  .bar span{display:block;height:100%;background:var(--madden);border-radius:3px}
-  .prpts{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:13px;text-align:right;color:var(--ink-2)}
-  @media (max-width:560px){
-    .prrow{grid-template-columns:26px 1fr 62px}
-    .bar{display:none}
+  .prmove{text-align:right}
+  .move{
+    font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
+    font-size:12.5px;font-weight:600;
   }
+  .move.up{color:var(--live)}
+  .move.down{color:var(--accent)}
+  .move.level,.move.new{color:var(--muted);font-weight:400}
+  @media (max-width:560px){
+    .prrow{grid-template-columns:26px 1fr 56px}
+  }
+
+  /* ---------- off-season: what is coming next ---------- */
+  .upgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+  .upnext{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:16px 18px;display:grid;gap:4px;align-content:start;
+  }
+  .uplabel{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .upwhen{font-family:"Roboto Slab",Georgia,serif;font-size:19px;font-weight:600;color:var(--ink);line-height:1.25}
+  .upaway{font-size:13px;font-weight:700;color:var(--accent)}
+  .upnote{font-size:12.5px;color:var(--muted)}
 
   /* ---------- honours ---------- */
   .honours{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px}

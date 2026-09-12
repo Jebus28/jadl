@@ -5,6 +5,10 @@ on:
     # Frequent during US game windows (Sun/Mon/Thu evenings UK time), daily otherwise.
     - cron: "0 */2 * * 0,1,4"
     - cron: "30 7 * * *"
+    # Wednesday noon UK, when the week's power ranking is fixed. 11:00 UTC while
+    # the clocks are forward, 12:00 once they go back; the build only writes the
+    # ranking once noon has actually passed, so the early run is a no-op in winter.
+    - cron: "0 11,12 * * 3"
   workflow_dispatch:
   push:
     branches: [main]

@@ -1,0 +1,22 @@
+{
+ "_comment": "Every week's power ranking as it was fixed at noon UK on the Wednesday before its games. Written by scripts/build_site.py and never changed afterwards. Week 1 of 2026 is the one exception: the site was not yet computing these, so its order is the one Matt fixed in the Team Tracking 2026 workbook. From week 2 on, and in every season after this, the site works them out itself.",
+ "season": "2026",
+ "weeks": {
+  "1": {
+   "fixed": "2026-09-09T11:00:00+00:00",
+   "source": "workbook",
+   "teams": {
+    "572154314147561472": {"rank": 10, "score": null, "proj": null, "opp_proj": null},
+    "600292303692689408": {"rank": 7, "score": null, "proj": null, "opp_proj": null},
+    "600803296654979072": {"rank": 1, "score": null, "proj": null, "opp_proj": null},
+    "600805479135911936": {"rank": 3, "score": null, "proj": null, "opp_proj": null},
+    "600979696255041536": {"rank": 4, "score": null, "proj": null, "opp_proj": null},
+    "601466211523428352": {"rank": 2, "score": null, "proj": null, "opp_proj": null},
+    "601492329282453504": {"rank": 5, "score": null, "proj": null, "opp_proj": null},
+    "601535536053678080": {"rank": 8, "score": null, "proj": null, "opp_proj": null},
+    "601674687197544448": {"rank": 9, "score": null, "proj": null, "opp_proj": null},
+    "602040508755283968": {"rank": 6, "score": null, "proj": null, "opp_proj": null}
+   }
+  }
+ }
+}
