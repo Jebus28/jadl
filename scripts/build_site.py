@@ -622,6 +622,267 @@ def draft_class_section(cfg, current, names):
 
 
 # --------------------------------------------------------------------------- #
+# the Pro Bowl
+# --------------------------------------------------------------------------- #
+# Once a year the two conferences put an all-star side out against each other,
+# captained by last season's conference winners and drawn from the players their
+# conference holds. The captains pick; everything else here is computed. The
+# picks come from Matt's Google Sheet (data/probowl.json, fetched) or from
+# assets/probowl/<season>.json, which overrides it.
+PROBOWL = ASSETS / "probowl"
+
+# Sleeper files a defence under its team's code and keeps no name for it, so a
+# sheet saying "Rams" needs this to find LAR.
+NFL_NICKNAMES = {
+    "cardinals": "ARI", "falcons": "ATL", "ravens": "BAL", "bills": "BUF", "panthers": "CAR",
+    "bears": "CHI", "bengals": "CIN", "browns": "CLE", "cowboys": "DAL", "broncos": "DEN",
+    "lions": "DET", "packers": "GB", "texans": "HOU", "colts": "IND", "jaguars": "JAX",
+    "chiefs": "KC", "chargers": "LAC", "rams": "LAR", "raiders": "LV", "dolphins": "MIA",
+    "vikings": "MIN", "patriots": "NE", "saints": "NO", "giants": "NYG", "jets": "NYJ",
+    "eagles": "PHI", "steelers": "PIT", "seahawks": "SEA", "49ers": "SF", "niners": "SF",
+    "buccaneers": "TB", "bucs": "TB", "titans": "TEN", "commanders": "WAS",
+}
+
+
+def name_key(text):
+    """A name flattened for matching: lower case, letters and digits only."""
+    return re.sub(r"[^a-z0-9]+", "", str(text or "").lower())
+
+
+def conference_pool(current, teams, division):
+    """Every player held by a team in one conference, and how to find him by name."""
+    pool = set()
+    for r in current.get("rosters") or []:
+        team = teams.get(r["roster_id"])
+        if team and team["division"] == division:
+            pool.update(r.get("players") or [])
+    return pool
+
+
+# What a slot can be filled by, so the slot itself helps place a short name.
+SLOT_POSITIONS = {
+    "QB": {"QB"}, "RB": {"RB"}, "WR": {"WR"}, "TE": {"TE"}, "K": {"K"},
+    "DST": {"DEF"}, "DEF": {"DEF"}, "D": {"DEF"},
+    "FLEX": {"RB", "WR", "TE"},
+    "SUPERFLEX": {"QB", "RB", "WR", "TE"}, "SF": {"QB", "RB", "WR", "TE"},
+}
+
+
+def squad_index(pool, players):
+    """
+    Every way a player in the pool might be written - his full name, his
+    surname, his first name, his initial-and-surname, and everything after his
+    first name for the likes of St. Brown - each pointing at all the men it
+    could mean. Narrowing that to one is find_player's job.
+    """
+    by_name, defences = defaultdict(set), {}
+    for pid in pool:
+        info = players.get(pid) or {}
+        if info.get("position") == "DEF":
+            defences[(info.get("team") or pid).upper()] = pid
+            continue
+        name = (info.get("full_name") or "").strip()
+        if not name:
+            continue
+        keys, parts = {name_key(name)}, name.split()
+        if len(parts) > 1:
+            keys |= {name_key(parts[-1]), name_key(parts[0]),
+                     name_key(parts[0][0] + parts[-1]), name_key("".join(parts[1:]))}
+        for key in keys - {""}:
+            by_name[key].add(pid)
+    return by_name, defences
+
+
+def find_player(written, index, aliases, slot, players, projected):
+    """
+    The player a sheet entry means, as (id, how sure). Names in the sheet are
+    short - a surname, a nickname, sometimes an initialism - so candidates are
+    narrowed three ways: only players that conference actually holds, then only
+    those who can fill the slot, and if more than one is still standing, the one
+    projected to score most that week. The Madden conference holds five Allens;
+    only one of them is a quarterback.
+
+    "how" is "sure" when the name pointed at one man, "slot" when the slot
+    settled it, and "guess" when it came down to the projection.
+    """
+    by_name, defences = index
+    allowed = SLOT_POSITIONS.get(re.sub(r"[^A-Z]", "", str(slot or "").upper()))
+    for attempt in (written, aliases.get(written.strip()) or ""):
+        key = name_key(attempt)
+        if not key:
+            continue
+        code = NFL_NICKNAMES.get(key)
+        if code is None and attempt.strip().upper() in defences:
+            code = attempt.strip().upper()
+        if code in defences:
+            return defences[code], "sure"
+        found = set(by_name.get(key) or ())
+        if not found:
+            continue
+        if len(found) == 1:
+            return found.pop(), "sure"
+        if allowed:
+            found = {p for p in found if (players.get(p) or {}).get("position") in allowed} or found
+        if len(found) == 1:
+            return found.pop(), "slot"
+        return max(found, key=lambda p: float(projected.get(p) or 0)), "guess"
+    return None, None
+
+
+def thanksgiving(year):
+    """The fourth Thursday in November."""
+    return nth_weekday(year, 11, 3, 4)
+
+
+def pro_bowl_week(cfg, year, state):
+    """
+    The week the Pro Bowl is played in: Thanksgiving week, which is the football
+    week Thanksgiving itself falls in. None if it falls outside the season.
+    """
+    day = thanksgiving(year)
+    for week in range(1, cfg["season"]["regular_season_weeks"] + 1):
+        wednesday = S.week_wednesday(year, week, state)
+        if wednesday <= day < wednesday + timedelta(days=7):
+            return week
+    return None
+
+
+def load_squads(season):
+    """
+    The Pro Bowl picks. A file in assets/probowl/ wins, so Matt can correct the
+    sheet or work without one; otherwise whatever was last read from the sheet.
+    """
+    own = PROBOWL / (str(season) + ".json")
+    if own.exists():
+        try:
+            return json.loads(own.read_text(encoding="utf-8"))
+        except ValueError:
+            pass
+    got = load("probowl.json")
+    return got if got and str(got.get("season")) == str(season) else None
+
+
+def pro_bowl(cfg, current, teams, players, projections, prev_finish, state):
+    """
+    The Pro Bowl as it stands: each named slot with its man, what he is
+    projected to score and what he has scored. Points come from the week's own
+    matchups, since every player in it is on somebody's roster. None when there
+    is nothing to show - no picks in yet, or no Thanksgiving week this season.
+    """
+    year = cfg["season"]["year"]
+    week = pro_bowl_week(cfg, year, state)
+    squads = load_squads(year)
+    if not week or not squads or not squads.get("picks"):
+        return None
+
+    divisions = sorted(cfg["conferences"])
+    aliases = (cfg.get("pro_bowl") or {}).get("aliases") or {}
+    index = [squad_index(conference_pool(current, teams, d), players) for d in divisions]
+
+    projected = ((projections or {}).get("weeks") or {}).get(str(week)) or {}
+    if str((projections or {}).get("season")) != str(year):
+        projected = {}
+    scored = {}
+    for entry in (current.get("matchups") or {}).get(str(week)) or []:
+        scored.update(entry.get("players_points") or {})
+
+    rows, missing, guessed = [], [], []
+    totals = [{"proj": 0.0, "points": 0.0} for _ in divisions]
+    for pick in squads["picks"]:
+        slot, side = pick.get("slot") or "", []
+        for i, written in enumerate(pick.get("players") or []):
+            if i >= len(divisions):
+                break
+            written = (written or "").strip()
+            if not written:
+                side.append(None)
+                continue
+            pid, how = find_player(written, index[i], aliases, slot, players, projected)
+            name = (players.get(pid) or {}).get("full_name") if pid else None
+            if not pid:
+                missing.append(written)
+            elif how == "guess":
+                guessed.append(written + " → " + (name or pid))
+            proj = round(float(projected.get(pid) or 0), 2) if pid else 0.0
+            pts = round(float(scored.get(pid) or 0), 2) if pid else 0.0
+            totals[i]["proj"] += proj
+            totals[i]["points"] += pts
+            side.append({"written": written, "name": name or written, "found": bool(pid),
+                         "proj": proj, "points": pts})
+        rows.append({"slot": slot, "side": side})
+
+    if not any(p for row in rows for p in row["side"]):
+        return None
+    # Nobody has played yet until somebody scores, and a column of 0.00s before
+    # kickoff says nothing. Until then the projection is the figure that counts.
+    live = any(t["points"] for t in totals)
+    captains = {}
+    for uid, (division, place) in (prev_finish or {}).items():
+        if place == 1:
+            captains[division] = uid
+    return {
+        "week": week, "day": thanksgiving(year), "divisions": divisions, "rows": rows, "live": live,
+        "totals": [{k: round(v, 2) for k, v in t.items()} for t in totals],
+        "captains": captains, "missing": sorted(set(missing)), "guessed": sorted(set(guessed)),
+        "title": ((cfg.get("pro_bowl") or {}).get("titles") or {}).get(str(year)) or "JADL Pro Bowl",
+    }
+
+
+def pro_bowl_section(cfg, game, names):
+    """The Pro Bowl on the Scoreboard, laid out as Matt's sheet has it."""
+    if not game:
+        return ""
+    heads = []
+    for i, division in enumerate(game["divisions"]):
+        conf = cfg["conferences"].get(division, {})
+        cls = "lc" if division == "1" else "mc"
+        captain = names.get(game["captains"].get(division))
+        total = game["totals"][i]
+        big = total["points"] if game["live"] else total["proj"]
+        under = (f"{total['proj']:.2f} projected") if game["live"] else "projected"
+        heads.append(f"""
+        <div class="pbside {cls}">
+          <span class="pbconf">{e(conf.get('short') or conf.get('name') or '')}</span>
+          <span class="pbcap">{e(captain + ' (c)') if captain else '&mdash;'}</span>
+          <span class="pbtotal num">{big:.2f}</span>
+          <span class="pbproj num">{under}</span>
+        </div>""")
+
+    lines = []
+    for row in game["rows"]:
+        cells = []
+        for i, man in enumerate(row["side"]):
+            if man is None:
+                who, pts, proj = '<span class="pbtbn">To be named</span>', "", ""
+            else:
+                who = e(man["name"])
+                if not man["found"]:
+                    who = ('<span class="pbunknown" title="Not matched to a Sleeper player">'
+                           + e(man["written"]) + "</span>")
+                pts = f"{man['points']:.2f}" if game["live"] else ""
+                proj = f"{man['proj']:.2f}"
+            cells.append((who, pts, proj))
+        left, right = (cells + [("", "", "")] * 2)[:2]
+        lines.append(f"""
+        <li class="pbrow">
+          <span class="pbname l">{left[0]}</span>
+          <span class="pbproj num l">{left[2]}</span>
+          <span class="pbpts num l">{left[1]}</span>
+          <span class="pbslot">{e(row['slot'])}</span>
+          <span class="pbpts num r">{right[1]}</span>
+          <span class="pbproj num r">{right[2]}</span>
+          <span class="pbname r">{right[0]}</span>
+        </li>""")
+
+    note = ("Thanksgiving week &middot; Week " + str(game["week"]) + ". Last season's conference "
+            "winners captain a side drawn from their own conference.")
+    return ("<section>" + sechead(game["title"], "") + '<div class="pb">'
+            + '<div class="pbhead">' + heads[0] + '<div class="pbvs">v</div>' + heads[1] + "</div>"
+            + '<ol class="pbslots">' + "".join(lines) + "</ol>"
+            + '<p class="oddsnote">' + note + "</p></div></section>")
+
+
+# --------------------------------------------------------------------------- #
 # the Calendar
 # --------------------------------------------------------------------------- #
 # The old site's Calendar page, computed. Every date the league keeps follows
@@ -663,11 +924,16 @@ def season_calendar(cfg, year, current, state):
         if when:
             events.append((when, end, prefix, title, list(extra) + list(notes.get(key) or [])))
 
-    # The two Sleeper cannot know.
-    bowl = (cal.get("pro_bowl") or {}).get(str(year)) or {}
-    if bowl.get("from"):
-        add(date.fromisoformat(bowl["from"]), bowl.get("title") or "JADL Pro Bowl", "pro_bowl",
-            end=date.fromisoformat(bowl["to"]) if bowl.get("to") else None)
+    # The Pro Bowl: Thanksgiving week. It starts a day before an ordinary week,
+    # because the Thanksgiving games kick off in the afternoon over there, which
+    # is still Thursday evening here.
+    bowl = pro_bowl_week(cfg, year, state)
+    if bowl:
+        _opens, closes = S.week_window(year, bowl, state)
+        add(thanksgiving(year), ((cfg.get("pro_bowl") or {}).get("titles") or {}).get(str(year))
+            or "JADL Pro Bowl", "pro_bowl", end=closes,
+            extra=["Thanksgiving week, week " + str(bowl) + "."])
+
     agm = (cal.get("meeting") or {}).get(str(year)) or {}
     if agm.get("on"):
         title = "JADL " + str(year) + " Meeting"
@@ -2170,8 +2436,13 @@ def main():
         odds = S.playoff_odds(current, indexed[0], indexed[1:], projections, players,
                               cfg["season"]["regular_season_weeks"])
 
+    # The Pro Bowl sits straight after the week's fixtures, from the moment the
+    # first picks land until the end of the season.
+    game = pro_bowl(cfg, current, teams, players, projections, prev_finish, state)
+
     if phase == "season":
         home = (scoreboard(cfg, teams, results, week, career, prev_finish, odds)
+                + pro_bowl_section(cfg, game, names)
                 + odds_section(cfg, teams, odds) + power_section(cfg, power))
     else:
         home = offseason_home(cfg, phase, current, indexed, names, trade_log, board,
@@ -2229,6 +2500,14 @@ def main():
         print("  pypdfium2 is not installed: no document covers, and no changes between rule editions.")
     for end in ends:
         print("  Trade Centre loose end: " + end["kind"] + " " + str(end.get("pick") or end.get("player_id")))
+    # A Pro Bowl name nobody can be found for scores nothing, so say so loudly.
+    for who in (game or {}).get("missing") or []:
+        print('  Pro Bowl: no player found for "' + who + '". Add an alias in '
+              "league.config.json -> pro_bowl.aliases.")
+    # And one settled on the projection alone is worth a glance.
+    for who in (game or {}).get("guessed") or []:
+        print("  Pro Bowl: took " + who + " on this week's projection. Write the full name "
+              "or add an alias if that is the wrong man.")
 
     # The jobs a settled season leaves, written where the workflow can pick them
     # up: they only come round once a year, which is what makes them easy to miss.

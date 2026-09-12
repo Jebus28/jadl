@@ -208,11 +208,22 @@
     "method": "workbook",
     "projection_source": "sleeper"
   },
-  "calendar": {
-    "_comment": "The league year, as the old site's Calendar page had it. Every date is worked out - the free agency auction (third Monday in August), the roster deadline, the first waivers, kickoff, the playoff weeks, the trade deadline, the championship and the rookie draft all follow from Sleeper and the rules - so the only dates here are the two Sleeper cannot know. Add a year to pro_bowl or meeting and it appears on the page; leave it out and it does not. Dates are British: the NFL's Thursday night is our Friday morning, which is why a playing week reads Friday to Tuesday. The notes are yours to edit and show under the date they belong to.",
-    "pro_bowl": {
-      "2027": {"from": "2026-12-31", "to": "2027-01-04", "title": "JADL Pro Bowl V"}
+  "pro_bowl": {
+    "_comment": "The all-star game, played in Thanksgiving week. The week, the captains (last season's conference winners), the projections and the scores are all worked out; the only thing the site cannot know is who the captains picked. Put the picks in a Google Sheet, publish it (File > Share > Publish to web, comma separated values) and paste the link into sheet_url. The sheet wants one row a slot: a first column headed Slot, then a column for each conference. Blanks are slots not named yet. A file at assets/probowl/<season>.json overrides the sheet. Any name the site cannot place is called out at the end of the build - add it here under aliases, spelled as Sleeper has it.",
+    "sheet_url": "",
+    "titles": {
+      "2026": "JADL Pro Bowl V"
     },
+    "aliases": {
+      "ARSB": "Amon-Ra St. Brown",
+      "ETN": "Travis Etienne",
+      "Bijan": "Bijan Robinson",
+      "JSN": "Jaxon Smith-Njigba",
+      "CMC": "Christian McCaffrey"
+    }
+  },
+  "calendar": {
+    "_comment": "The league year, as the old site's Calendar page had it. Every date is worked out - the free agency auction (third Monday in August), the roster deadline, the first waivers, kickoff, the Pro Bowl (Thanksgiving week), the playoff weeks, the trade deadline, the championship and the rookie draft all follow from Sleeper and the rules - so the only date here is the one Sleeper cannot know. Add a year to meeting and it appears on the page; leave it out and it does not. Dates are British: the NFL's Thursday night is our Friday morning, which is why a playing week reads Friday to Tuesday. The notes are yours to edit and show under the date they belong to.",
     "meeting": {
       "2027": {"on": "2027-02-08", "qualifier": "or shortly thereafter"}
     },

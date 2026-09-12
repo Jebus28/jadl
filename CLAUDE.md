@@ -45,6 +45,7 @@ Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.ap
 | `scripts/prepare_media.py` | Turns a champion GIF or loser photo into `assets/records/<season>-<champion\|loser>.*` — GIFs become silent looping WebPs under 2.5MB, photos are straightened and shrunk. |
 | `assets/records/` | One champion loop and one Loser of All Losers picture per season, found by filename. No config entry. |
 | `assets/rankings/` | `<season>.json`, Matt's two personalised rankings. Read, never computed; a separate project writes them. See "The rankings (off-season)". |
+| `assets/probowl/` | `<season>.json`, the Pro Bowl picks, overriding the Google Sheet when there is one. `TEMPLATE.json` is the thing to copy and is never read. |
 | `scripts/documents.py` | Reads the two document tabs' files: PDF dates, covers and text, `.url` shortcuts, the rulebook's Word file, and the changes between editions. |
 | `assets/updates/<season>/` | The Commissioner Updates: PDFs, and `.url` shortcuts to the videos on Drive. Found by folder. No config entry. |
 | `assets/rules/` | Every edition of the rulebook as a PDF, the Word file of the current one, and the auction procedure. |
@@ -480,6 +481,50 @@ The shape is a list of `tables`, each with `title`, `subtitle`, `updated`,
   by name; the sheets call Rich "Dudders", so the converted file says Rich.
 - a blank `change` is no movement, not a missing value.
 
+### The Pro Bowl (Scoreboard)
+
+Built in September 2026. Once a year the two conferences put an all-star side
+out against each other, **captained by last season's conference winners** and
+drawn from the players their own conference holds. Matt used to keep the whole
+thing in a Google Sheet by hand. It now sits on the Scoreboard **straight after
+the week's fixtures**, from the moment the first picks land to the end of the
+season.
+
+- **Thanksgiving week, every year** (Matt, September 2026 — it used to be played
+  at New Year). `build_site.thanksgiving` is the fourth Thursday in November and
+  `pro_bowl_week` finds the football week it falls in: week 12 in both 2026 and
+  2027. The Calendar entry is computed the same way, and **starts on the
+  Thursday**, not the Friday an ordinary week starts on, because the
+  Thanksgiving games kick off in the afternoon over there.
+- **Only the picks are input. Everything else is computed.** Projections come
+  from `data/projections.json`, and points from that week's own matchups: every
+  Pro Bowl player is on somebody's roster, so `players_points` has him.
+- **The picks come from Matt's sheet first, a file second.** He publishes the
+  sheet (File → Share → Publish to web, CSV) and puts the link in
+  `league.config.json` → `pro_bowl.sheet_url`; `fetch_data.fetch_pro_bowl` reads
+  it into `data/probowl.json` on every refresh, keeping the last good copy if it
+  cannot. A file at `assets/probowl/<season>.json` **overrides** the sheet
+  entirely — `assets/probowl/TEMPLATE.json` is the thing to copy, and is itself
+  never read. He fills the sheet in through the week: players in the early games
+  before Thursday, the rest by 5pm on the Sunday. Slots not yet picked show as
+  "To be named".
+- **The sheet wants one row a slot**: a first column headed `Slot`, then a
+  column for each conference. Anything above the header row is ignored, so Matt
+  can keep his own workings at the top.
+- **Short names are matched, not demanded.** Matt writes "Taylor", "CMC",
+  "Rams". `build_site.find_player` narrows three ways: only players that
+  conference actually holds (168 of them), then only those who can fill the
+  slot, then the one projected to score most that week. The Madden conference
+  holds five Allens and only one is a quarterback; the Lombardi holds a Jordan
+  Love and a Jeremiyah Love, and the flex slot settles it. Defences are matched
+  by nickname through `NFL_NICKNAMES`, since Sleeper keeps no name for them.
+  Anything left over goes in `pro_bowl.aliases`. **The build prints every name
+  it could not place, and every one it settled on the projection alone** — a
+  silently wrong player would score somebody else's points.
+- **Before a ball is kicked the projection is the headline figure** and the
+  points columns are blank, because a column of 0.00s says nothing. They swap
+  the moment anybody scores.
+
 ### The Calendar
 
 Rebuilt in September 2026 from the old site's Calendar page, which was a
@@ -497,8 +542,9 @@ only the two Sleeper cannot know and the prose under each entry.
   playoff weeks, the trade deadline week and the championship week come from the
   season's shape; the first day of the post-season is the day after the
   championship window; the rookie draft and the roster-space deadline before it
-  come from Sleeper's draft, so they appear once the league exists. The roster
-  deadline's numbers (26, 8 IR, 7 taxi) are read off Sleeper too.
+  come from Sleeper's draft, so they appear once the league exists; and the Pro
+  Bowl is Thanksgiving week. The roster deadline's numbers (26, 8 IR, 7 taxi)
+  are read off Sleeper too.
 - **Checked against the old page in September 2026: every 2026 date matches,**
   all eleven of them. The old page's 2027 rows were wrong (first game 2
   September, before Labor Day; the Pro Bowl dated "4th January 2026"), which is

@@ -7,6 +7,8 @@ Sleeper's read API needs no key and no account.
 """
 from __future__ import annotations
 
+import csv
+import io
 import json
 import os
 import sys
@@ -129,6 +131,53 @@ def fetch_projections(current: dict, state: dict, last_week: int) -> None:
         print("  projections came back empty, keeping what we had")
         return
     write("projections.json", {"season": season, "fetched": int(time.time()), "weeks": weeks})
+
+
+# --------------------------------------------------------------------------- #
+# the Pro Bowl squads
+# --------------------------------------------------------------------------- #
+def fetch_pro_bowl(cfg, current) -> None:
+    """
+    The Pro Bowl squads, read from the Google Sheet Matt fills in on the day.
+    He publishes that sheet to the web (File > Share > Publish to web, comma
+    separated values) and puts the link in league.config.json; nothing here
+    needs a Google account.
+
+    The sheet is one row a slot: the slot name, then a column for each
+    conference. Blanks are slots not named yet, which is the normal state until
+    Sunday teatime. Kept in data/probowl.json so a build still has the squads
+    when the sheet cannot be reached, and so the site works at all if Matt never
+    publishes one - a file in assets/probowl/ overrides this either way.
+    """
+    url = ((cfg.get("pro_bowl") or {}).get("sheet_url") or "").strip()
+    if not url:
+        print("  no sheet_url in league.config.json, skipping")
+        return
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(req, timeout=45) as resp:
+            text = resp.read().decode("utf-8-sig", "replace")
+    except Exception as exc:
+        print(f"  sheet unavailable ({exc}), keeping what we had")
+        return
+    rows = [row for row in csv.reader(io.StringIO(text)) if any(cell.strip() for cell in row)]
+    # The header is the first row whose opening cell says "slot"; everything
+    # above it is whatever Matt has put at the top of the sheet.
+    head = next((i for i, row in enumerate(rows) if row and row[0].strip().lower() == "slot"), None)
+    if head is None:
+        print("  the sheet has no 'Slot' header row, keeping what we had")
+        return
+    sides = [cell.strip() for cell in rows[head][1:3]]
+    picks = [{"slot": row[0].strip(),
+              "players": [(row[i].strip() if i < len(row) else "") for i in (1, 2)]}
+             for row in rows[head + 1:] if row and row[0].strip()]
+    if not picks:
+        print("  the sheet has no slots, keeping what we had")
+        return
+    named = sum(1 for p in picks for who in p["players"] if who)
+    write("probowl.json", {"season": str(current.get("season")), "fetched": int(time.time()),
+                           "sides": sides, "picks": picks})
+    print(f"  {len(picks)} slots, {named} named")
 
 
 # --------------------------------------------------------------------------- #
@@ -301,6 +350,9 @@ def main() -> int:
 
     print("Projections")
     fetch_projections(current, state, cfg["season"]["regular_season_weeks"])
+
+    print("Pro Bowl")
+    fetch_pro_bowl(cfg, current)
 
     print("Player index")
     fetch_players()

@@ -1,0 +1,26 @@
+{
+ "_comment": "A fallback for the Pro Bowl picks, for when the Google Sheet cannot be read or has something wrong in it. Copy this file to <season>.json - 2026.json for the 2026 season - and fill in the names. A file named for the season OVERRIDES the sheet completely, so delete it again once the sheet is right. This file, TEMPLATE.json, is never read.",
+ "_names": "Write a player as Sleeper has him, or as anything listed under pro_bowl.aliases in league.config.json. A defence is its nickname: Rams, Texans. Leave a slot blank until it is picked. The build prints any name it cannot place.",
+ "season": "2026",
+ "sides": ["LFC", "MFC"],
+ "picks": [
+  {"slot": "QB", "players": ["", ""]},
+  {"slot": "QB", "players": ["", ""]},
+  {"slot": "RB", "players": ["", ""]},
+  {"slot": "RB", "players": ["", ""]},
+  {"slot": "RB", "players": ["", ""]},
+  {"slot": "WR", "players": ["", ""]},
+  {"slot": "WR", "players": ["", ""]},
+  {"slot": "WR", "players": ["", ""]},
+  {"slot": "WR", "players": ["", ""]},
+  {"slot": "TE", "players": ["", ""]},
+  {"slot": "TE", "players": ["", ""]},
+  {"slot": "Flex", "players": ["", ""]},
+  {"slot": "Flex", "players": ["", ""]},
+  {"slot": "Flex", "players": ["", ""]},
+  {"slot": "Superflex", "players": ["", ""]},
+  {"slot": "Superflex", "players": ["", ""]},
+  {"slot": "K", "players": ["", ""]},
+  {"slot": "DST", "players": ["", ""]}
+ ]
+}
