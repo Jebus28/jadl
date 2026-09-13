@@ -122,11 +122,23 @@
     font-family:"Roboto Slab",Georgia,serif;font-weight:900;font-size:28px;
     letter-spacing:.06em;color:var(--band-ink);text-decoration:none;
   }
-  .masthead .statuspill{justify-self:end;background:var(--band-live-soft);color:var(--band-live)}
+  .mastend{justify-self:end;display:flex;align-items:center;gap:8px}
+  .masthead .statuspill{background:var(--band-live-soft);color:var(--band-live)}
+  /* Refresh, only in the home-screen app: it has no address bar and no pull to
+     refresh, so this is the one way to reload it by hand. */
+  .refresh{
+    display:none;align-items:center;justify-content:center;width:36px;height:36px;padding:0;
+    border:1px solid #DDE1EB;border-radius:50%;background:var(--band);color:var(--band-ink);cursor:pointer;
+  }
+  @media (display-mode: standalone){.refresh{display:inline-flex}}
+  .standalone .refresh{display:inline-flex}
+  .refresh.spinning svg{animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion: reduce){.refresh.spinning svg{animation:none}}
   @media (max-width:640px){
     .masthead .wrap{grid-template-columns:1fr;justify-items:center;gap:6px;padding-block:6px 12px}
     .leaguename{display:none}
-    .masthead .statuspill{justify-self:center}
+    .mastend{justify-self:center}
   }
   .statuspill{
     display:inline-flex;align-items:center;gap:8px;
