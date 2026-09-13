@@ -27,10 +27,35 @@ python scripts/fetch_data.py    # Sleeper  -> data/*.json
 python scripts/build_site.py    # data/ + league.config.json -> docs/*.html
 ```
 
-`.github/workflows/refresh.yml` runs both on a schedule — every two hours on
-Sundays, Mondays and Thursdays, daily at 07:30 UTC otherwise, and on every push —
-then commits `data/` and `docs/` back to `main`. GitHub Pages serves `docs/` at
+`.github/workflows/refresh.yml` runs both on a schedule — every 15 minutes while
+games are on, daily at 07:30 UTC otherwise, and on every push — then commits
+`data/` and `docs/` back to `main`. GitHub Pages serves `docs/` at
 <https://jebus28.github.io/jadl/>.
+
+The schedule, as rebuilt on 13 September 2026:
+
+- **Game windows are UK evenings, which run into the next day in UTC.** Thursday
+  and Monday night games are Friday and Tuesday in cron; the old schedule ran on
+  Thursdays and Mondays and missed both. The windows run to 05:45 UTC so they
+  still cover the late games after the US clocks go back, and there are extra
+  windows for Thanksgiving (the Pro Bowl week), Black Friday and December Saturdays.
+- **One run at a time, and a new one replaces the old** (`cancel-in-progress:
+  true`, `timeout-minutes: 15`). On 13 September 2026 a run GitHub never started
+  sat "queued" for 16 hours, and because runs used to wait their turn, every
+  refresh that Sunday was cancelled behind it. If the site ever stops updating,
+  look at the Actions tab for a run stuck in "queued" and cancel it.
+- **A build that found nothing new is not committed.** Every page carries the
+  build time (the footer's "Last updated" and `<meta name="jadl-build">`), and so
+  does `docs/version.json`; the commit step ignores those lines and commits only
+  if anything else changed. So the footer shows when the site last *changed*,
+  not when it last looked. Anything new that is stamped on every build must be
+  added to that filter, or every run will commit again.
+- **Open pages reload themselves.** Saved to a home screen the site opens as an
+  app (the manifest's `standalone`, which iOS honours too), with no address bar
+  and no pull to refresh. `build_site.REFRESH_JS` checks `version.json` when a
+  page opens, when it comes back on screen and every two minutes, and reloads
+  only if a newer build is up. A ↻ button in the masthead, shown only in the
+  app, reloads regardless.
 
 Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.app/v1`.
 
@@ -644,7 +669,8 @@ and as a table per conference, while regular-season games remain.
   itself, though iOS keeps the old one until the bookmark is removed and re-added.
   Android gets the same from `docs/manifest.webmanifest`, written alongside: 192
   and 512px icons, and a maskable one with the logo shrunk so a launcher's circle
-  crop keeps all of it. It opens standalone, without the browser bar.
+  crop keeps all of it. It opens standalone, without the browser bar, on iPhone
+  as well as Android, so pages refresh themselves (see "How it runs").
 - **The palette comes from the logo** (September 2026). Red is the accent,
   from DYNASTY and the Lombardi L: the active tab's underline, links, the rule
   on each section heading. Navy is the NFL shield and the Madden M: the nav bar,
@@ -742,7 +768,8 @@ Roughly in the order discussed with Matt, though he has not yet picked:
   `%LOCALAPPDATA%\Programs\Python\Python313\python.exe`, and `git` is not on
   `PATH` either — use the copy inside GitHub Desktop's `app-*\resources\app\git\cmd`.
   A local `build_site.py` run reproduces the committed `docs/` exactly apart from
-  the "Last refreshed" timestamp, so a clean local build can be trusted.
+  the build stamps ("Last updated", `jadl-build`, `version.json`), so a clean
+  local build can be trusted.
 - That command-line `git` has **no GitHub credentials**, so `git push` fails with
   "could not read Username". Commit locally and have Matt press **Push origin**
   in GitHub Desktop. Every push triggers the bot, which commits a refresh a few

@@ -197,6 +197,59 @@ NAV = [("index.html", "Scoreboard"), ("standings.html", "Standings"), ("teams.ht
 ICON = "assets/league/apple-touch-icon.png"
 FAVICON = "assets/league/favicon.png"
 MANIFEST = "manifest.webmanifest"
+VERSION = "version.json"
+
+# One moment for the whole build. Every page carries it, and so does VERSION, so a
+# page left open can tell when a newer build has been published.
+BUILT = datetime.now(timezone.utc).replace(microsecond=0)
+BUILT_ISO = BUILT.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+# Saved to a home screen, the site opens as an app with no address bar and no pull
+# to refresh. So every page looks for a newer build itself: when it opens, when it
+# is brought back on screen, and every two minutes while it is showing. It reloads
+# only when there is one. The ↻ button in the masthead, shown only in the app,
+# reloads regardless.
+REFRESH_JS = """
+<script>
+(function () {
+  var meta = document.querySelector('meta[name="jadl-build"]');
+  if (!meta || !window.fetch) return;
+  var built = meta.content;
+  if (window.navigator.standalone === true) document.documentElement.classList.add("standalone");
+
+  function go(stamp) {
+    // A new address, so no cache on the way hands back the page already showing.
+    var url = new URL(location.href);
+    url.searchParams.set("v", stamp);
+    location.replace(url.toString());
+  }
+  function check() {
+    if (document.visibilityState === "hidden") return;
+    fetch("version.json?t=" + Date.now(), {cache: "no-store"})
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (v) {
+        if (!v || !v.built || v.built <= built) return;
+        // Chase a build only once a page, in case a cache still serves the old one.
+        var key = "jadl-reloaded:" + location.pathname;
+        try {
+          if (sessionStorage.getItem(key) === v.built) return;
+          sessionStorage.setItem(key, v.built);
+        } catch (err) {}
+        go(v.built);
+      })
+      .catch(function () {});
+  }
+  var button = document.querySelector(".refresh");
+  if (button) button.addEventListener("click", function () {
+    button.classList.add("spinning");
+    go(String(Date.now()));
+  });
+  document.addEventListener("visibilitychange", check);
+  window.addEventListener("pageshow", function (ev) { if (ev.persisted) check(); });
+  setInterval(check, 120000);
+  check();
+})();
+</script>"""
 
 
 def home_screen_icons(cfg):
@@ -252,7 +305,7 @@ def home_screen_icons(cfg):
 
 def page(cfg, title, active, body):
     league, season = cfg["league"], cfg["season"]
-    stamp = datetime.now(timezone.utc).strftime("%d %b %Y, %H:%M UTC")
+    stamp = BUILT.strftime("%d %b %Y, %H:%M UTC")
     bits = []
     for href, label in NAV:
         attr = ' aria-current="page"' if label == active else ""
@@ -278,6 +331,7 @@ def page(cfg, title, active, body):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{e(title)} &middot; {e(league['short_name'])}</title>
 <meta name="description" content="{e(league['name'])} &mdash; {e(cfg['site']['tagline'])}">
+<meta name="jadl-build" content="{BUILT_ISO}">
 {icons}<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@600;700;800;900&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -288,7 +342,10 @@ def page(cfg, title, active, body):
   <div class="wrap">
     <p class="leaguename">{e(league['name'])}<small>{e(cfg['site']['tagline'])}</small></p>
     {mark}
-    <span class="statuspill"><span class="dot" aria-hidden="true"></span>{e(season['year'])} season</span>
+    <span class="mastend">
+      <span class="statuspill"><span class="dot" aria-hidden="true"></span>{e(season['year'])} season</span>
+      <button class="refresh" type="button" title="Refresh" aria-label="Refresh"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M20 3.5V9h-5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </span>
   </div>
 </header>
 <nav class="sitenav" aria-label="Sections"><div class="wrap">{''.join(bits)}</div></nav>
@@ -297,10 +354,12 @@ def page(cfg, title, active, body):
 </main>
 <footer class="sitefoot">
   <div class="wrap">
-    <p>{e(cfg['site']['footer_note'])} Last refreshed {stamp}.</p>
+    <p>{e(cfg['site']['footer_note'])}
+      Last updated {stamp}.</p>
     <p><a href="{e(league['sleeper_url'])}">League on Sleeper</a></p>
   </div>
 </footer>
+{REFRESH_JS}
 </body>
 </html>
 """
@@ -2504,6 +2563,8 @@ def main():
     if ASSETS.exists():
         shutil.copytree(ASSETS, DOCS / "assets", dirs_exist_ok=True)
     home_screen_icons(cfg)
+    # What an open page checks to see whether it has been superseded (REFRESH_JS).
+    (DOCS / VERSION).write_text(json.dumps({"built": BUILT_ISO}) + "\n", encoding="utf-8")
     (DOCS / ".nojekyll").write_text("", encoding="utf-8")
 
     # Playoff odds, while the regular season still has games to play.

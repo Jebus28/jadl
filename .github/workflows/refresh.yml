@@ -2,8 +2,13 @@ name: Refresh JADL site
 
 on:
   schedule:
-    # Frequent during US game windows (Sun/Mon/Thu evenings UK time), daily otherwise.
-    - cron: "0 */2 * * 0,1,4"
+    # Every quarter of an hour while games are on. Cron runs on UTC, and the UK's
+    # late games are the small hours of the next day there, so those windows run to
+    # 05:45 UTC: late enough for the night games once the US clocks go back.
+    - cron: "*/15 13-23 * * 0"      # Sunday, from the London games to the late window
+    - cron: "*/15 0-5 * * 0,1,2,5"  # Sunday, Monday and Thursday night games (and Saturday's in December)
+    - cron: "*/15 17-23 * * 4,5,6"  # Thanksgiving, Black Friday and the December Saturdays
+    # Once a day otherwise, for trades, waivers and the rest.
     - cron: "30 7 * * *"
     # Wednesday noon UK, when the week's power ranking is fixed. 11:00 UTC while
     # the clocks are forward, 12:00 once they go back; the build only writes the
@@ -19,13 +24,19 @@ permissions:
   pages: write
   id-token: write
 
+# One refresh at a time, and a new one replaces whatever is running or waiting.
+# Every run fetches everything afresh, so nothing is lost. Waiting in line instead
+# let one run that GitHub never started block every refresh on 13 September 2026,
+# a Sunday, from 04:12 UTC until it was cancelled by hand that evening.
 concurrency:
   group: jadl-refresh
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    # A build takes a minute or two. One that hangs must not hold the next up.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -76,9 +87,21 @@ jobs:
           git config user.name "JADL bot"
           git config user.email "actions@github.com"
           git add -A data docs
-          if git diff --staged --quiet; then
-            echo "Nothing changed."
+          # Every build stamps every page with its time, so a build that found
+          # nothing new still differs in those stamps. Commit only when something
+          # else changed: a changed picture, or a changed line that is not a stamp.
+          # Otherwise the history is a commit every quarter of an hour, and every
+          # open page reloads for nothing.
+          real=$( { git diff --staged --numstat | awk '$1 == "-"'
+                    git diff --staged -U0 --no-color \
+                      | grep -E '^[+-]' | grep -vE '^(\+\+\+|---) (a/|b/|/dev/null)' \
+                      | grep -vE 'Last updated [0-9]|name="jadl-build"|"built": "'
+                  } | head -n 1 || true )
+          if [ -z "$real" ]; then
+            echo "Nothing new."
           else
             git commit -m "Refresh: $(date -u '+%Y-%m-%d %H:%M UTC')"
-            git push
+            # A run cancelled after it pushed can leave this one behind main. This
+            # run is the newer, so where the two builds differ, its build wins.
+            git push || { git pull --rebase -X theirs origin main && git push; }
           fi

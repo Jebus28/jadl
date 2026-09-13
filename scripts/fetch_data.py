@@ -166,8 +166,18 @@ def fetch_pro_bowl(cfg, current) -> None:
         print("  no slots found in the sheet, keeping what we had")
         return
     named = sum(1 for p in picks for who in p["players"] if who)
-    write("probowl.json", {"season": str(current.get("season")), "fetched": int(time.time()),
-                           "sides": sides, "picks": picks})
+    squads = json.loads(json.dumps({"season": str(current.get("season")), "sides": sides, "picks": picks}))
+    # Left alone when the sheet has not changed, so a refresh that found nothing
+    # new has nothing to commit.
+    path = DATA / "probowl.json"
+    try:
+        old = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        old = {}
+    if {key: old.get(key) for key in squads} == squads:
+        print(f"  {len(picks)} slots, {named} named, unchanged")
+        return
+    write("probowl.json", {**squads, "fetched": int(time.time())})
     print(f"  {len(picks)} slots, {named} named")
 
 
