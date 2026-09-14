@@ -88,16 +88,24 @@ jobs:
           git config user.email "actions@github.com"
           git add -A data docs
           # Every build stamps every page with its time, so a build that found
-          # nothing new still differs in those stamps. Commit only when something
-          # else changed: a changed picture, or a changed line that is not a stamp.
-          # Otherwise the history is a commit every quarter of an hour, and every
-          # open page reloads for nothing.
-          real=$( { git diff --staged --numstat | awk '$1 == "-"'
-                    git diff --staged -U0 --no-color \
-                      | grep -E '^[+-]' | grep -vE '^(\+\+\+|---) (a/|b/|/dev/null)' \
-                      | grep -vE 'Last updated [0-9]|name="jadl-build"|"built": "'
-                  } | head -n 1 || true )
-          if [ -z "$real" ]; then
+          # nothing new still differs in those stamps. The pages count as changed
+          # only when something else in them did: a changed picture, or a changed
+          # line that is not a stamp. Otherwise the history is a commit every
+          # quarter of an hour, and every open page reloads for nothing.
+          pages=$( { git diff --staged --numstat -- docs | awk '$1 == "-"'
+                     git diff --staged -U0 --no-color -- docs \
+                       | grep -E '^[+-]' | grep -vE '^(\+\+\+|---) (a/|b/|/dev/null)' \
+                       | grep -vE 'Last updated [0-9]|name="jadl-build"|"built": "'
+                   } | head -n 1 || true )
+          # Sleeper's data can change without changing a page: a bench player's
+          # stat correction, next week's lineup, the waiver counter. That data is
+          # still committed, but the pages keep their old stamps, so version.json
+          # stays put and open pages do not reload.
+          if [ -z "$pages" ]; then
+            git reset -q -- docs
+            git checkout -- docs
+          fi
+          if git diff --staged --quiet; then
             echo "Nothing new."
           else
             git commit -m "Refresh: $(date -u '+%Y-%m-%d %H:%M UTC')"

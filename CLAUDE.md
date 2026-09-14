@@ -50,6 +50,11 @@ The schedule, as rebuilt on 13 September 2026:
   if anything else changed. So the footer shows when the site last *changed*,
   not when it last looked. Anything new that is stamped on every build must be
   added to that filter, or every run will commit again.
+  Sleeper's data often changes without changing a page (a bench player's stat
+  correction, next week's lineup, the waiver counter). Then `data/` is committed
+  on its own and `docs/` is put back as it was, so `version.json` does not move
+  and open pages do not reload. Checked 14 September 2026: two overnight runs
+  had committed stamp-only pages that way before this was fixed.
 - **Open pages reload themselves.** Saved to a home screen the site opens as an
   app (the manifest's `standalone`, which iOS honours too), with no address bar
   and no pull to refresh. `build_site.REFRESH_JS` checks `version.json` when a
