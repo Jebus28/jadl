@@ -2499,6 +2499,27 @@ def last_complete_week(state, season):
     return max(0, int(state.get("week") or 1) - 1)
 
 
+def scoreboard_week(cfg, current, state, now=None):
+    """
+    The week the Scoreboard shows. Sleeper moves on to the next week on the
+    Tuesday, with Monday night's result barely in; Matt wants the week just
+    played to stay up until noon UK on the Wednesday, the moment the next
+    week's power ranking is fixed (September 2026). That gives the league a day
+    to take the result in, and gives Tuesday's stat corrections time to land.
+    """
+    last = cfg["season"]["championship_week"]
+    year = int(current.get("season") or 0)
+    if not year or str(state.get("season")) != str(year):
+        return max(1, min(cfg["season"]["regular_season_weeks"], last))
+    now = now or datetime.now(timezone.utc)
+    week = 1
+    for wk in range(2, last + 1):
+        if now < S.power_freeze(year, wk, state):
+            break
+        week = wk
+    return week
+
+
 def main():
     cfg = json.loads((ROOT / "league.config.json").read_text(encoding="utf-8"))
     current = load("current.json")
@@ -2539,10 +2560,9 @@ def main():
     # of going on showing the last week played.
     phase = season_phase(current, indexed[0], state)
 
-    week = int(state.get("week") or 1)
-    if str(state.get("season")) != str(current.get("season")):
-        week = cfg["season"]["regular_season_weeks"]
-    week = max(1, min(week, cfg["season"]["championship_week"]))
+    # The week on the Scoreboard turns over with the power rankings, at noon
+    # on Wednesday, not when Sleeper moves on.
+    week = scoreboard_week(cfg, current, state)
 
     # Power rankings: fixed at noon UK on the Wednesday before each week's games
     # and kept as they were fixed, so the page shows the week that stands.

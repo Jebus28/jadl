@@ -413,6 +413,13 @@ longer runs a season-long total up; it ranks the league afresh every week.
   date (a Thursday most years, but **9 September in 2026**), plus seven days a
   week. `stats.uk_noon` handles BST without a `tzdata` dependency, so noon is
   11:00 UTC until the clocks go back and 12:00 after.
+- **The Scoreboard's week turns over at the same moment**, not when Sleeper
+  moves on. Sleeper's `state.week` goes up on the Tuesday, with Monday night
+  barely finished; Matt asked in September 2026 for the week just played to stay
+  up until noon on Wednesday, so the league can take the result in and Tuesday's
+  stat corrections land first. `build_site.scoreboard_week` is it, and it runs
+  through the playoff weeks too. (Every week's matchups are refetched on every
+  run, so corrections to a finished week do reach the page.)
 - **Each week is kept in `data/power_rankings.json`**, written by
   `build_site.power_store` on the first build past the freeze and left alone
   from then on. Sleeper only projects weeks still to come, so **a week missed at
