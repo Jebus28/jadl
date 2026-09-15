@@ -1418,6 +1418,65 @@ def team_honours(cfg, uid, won, best_weeks, names, players):
             + inner + "</section>")
 
 
+TEAM_NICKNAMES = {}
+for _nick, _abbr in NFL_NICKNAMES.items():
+    TEAM_NICKNAMES.setdefault(_abbr, _nick.title())
+
+
+def player_name(pid, players):
+    """A player's name. Sleeper keeps none for a defence, so that is its nickname."""
+    p = players.get(pid) or {}
+    if p.get("position") == "DEF":
+        return TEAM_NICKNAMES.get((p.get("team") or pid).upper(), pid)
+    return p.get("full_name") or pid
+
+
+POSITION_ORDER = ("QB", "RB", "WR", "TE", "K", "DEF")
+
+
+def team_players(uid, totals, players):
+    """
+    The players who have scored this team the most: the top five overall and the
+    top three at each position, on the points they scored while in the lineup
+    (stats.player_totals).
+    """
+    mine = totals.get(uid) or []
+    if not mine:
+        return ""
+
+    def name(r, tag=True):
+        pos = '<span class="tag">' + e(r["position"]) + "</span>" if tag and r["position"] else ""
+        return '<span class="nm">' + e(player_name(r["player_id"], players)) + "</span>" + pos
+
+    top = [f"""<tr><td class="num">{i}</td><td class="l">{name(r)}</td><td class="num">{r['starts']}</td>
+          <td class="num ppg">{r['points'] / r['starts']:.2f}</td><td class="num">{r['points']:,.2f}</td></tr>"""
+           for i, r in enumerate(mine[:5], 1)]
+    top_card = finish_card("Top five", "Most points scored in the lineup, all time.",
+                           '<th>#</th><th class="l">Player</th><th>Starts</th><th class="ppg">PPG</th>'
+                           '<th>Points</th>', top)
+
+    blocks = []
+    for position in POSITION_ORDER:
+        rows = [r for r in mine if r["position"] == position][:3]
+        if not rows:
+            continue
+        body = "".join(f'<tr><td>{name(r, tag=False)}</td><td class="num">{r["starts"]}</td>'
+                       f'<td class="num">{r["points"]:,.2f}</td></tr>' for r in rows)
+        blocks.append(f"""
+      <div class="h2hblock">
+        <h4>{e(position)}</h4>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Player</th><th>Starts</th><th>Points</th></tr></thead>
+          <tbody>{body}</tbody>
+        </table></div>
+      </div>""")
+
+    return ("<section>" + sechead("Players", "Starters only, in every game that counts: regular season, "
+                                  "playoffs and toilet bowl.")
+            + '<div class="stack">' + top_card + '<div class="h2hgrid">' + "".join(blocks) + "</div></div>"
+            + "</section>")
+
+
 def title_stars(uid, won):
     """A star for every championship beside the team name, as the old pages had it."""
     years = [str(h["season"]) for h in won.get(uid, []) if h["kind"] == "champion"]
@@ -1428,7 +1487,7 @@ def title_stars(uid, won):
             + "&#9733;" * len(years) + "</span>")
 
 
-def team_page(cfg, team, career, names, won, best_weeks, players):
+def team_page(cfg, team, career, names, won, best_weeks, players, totals):
     s = career.get(team["user_id"])
     conf = cfg["conferences"].get(team["division"], {})
     logo = ('<img class="teamlogo" src="' + e(team["logo"]) + '" alt="' + e(team["team"])
@@ -1496,6 +1555,8 @@ def team_page(cfg, team, career, names, won, best_weeks, players):
     {sechead("Record", " ".join(sub))}
     <dl class="factgrid">{fact_html}</dl>
   </section>
+
+  {team_players(team['user_id'], totals, players)}
 
   <section>
     {sechead("Head to head", "The league changed shape in 2022, so the record does too.")}
@@ -2618,9 +2679,10 @@ def main():
         page(cfg, "Calendar", "Calendar", calendar_page(cfg, current, state)), encoding="utf-8")
 
     won, best_weeks = S.honours(indexed), S.best_managers(indexed, players)
+    totals = S.player_totals(indexed, players)
     for team in teams.values():
         (DOCS / ("team-" + team["slug"] + ".html")).write_text(
-            team_page(cfg, team, career, names, won, best_weeks, players), encoding="utf-8")
+            team_page(cfg, team, career, names, won, best_weeks, players, totals), encoding="utf-8")
 
     history_body = (honours_section(cfg, indexed, names)
                     + "<section>" + sechead("The two eras") + era_note(cfg) + "</section>"

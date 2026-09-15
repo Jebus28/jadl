@@ -185,6 +185,19 @@ all but a few team-seasons: Mike 2020 (+31.94) and 2021 (+23.12), Gareth 2023
 (+12.48) and 2024 (+22.18), and four more by a point or two. Not traced. It
 changes no Best Manager in the seasons that could be checked.
 
+### Players on the team pages
+
+Added in September 2026 at Matt's request: under Record, each team page shows
+its **top five players** and the **top three at each position** (QB, RB, WR,
+TE, K, DEF), on the points they scored for that team **while in the starting
+lineup**. It uses the same scope as the Best player weeks: starters only, in
+every game that counts (regular season, playoffs and toilet bowl), and the
+current season only up to its last finished week. `stats.player_totals` does it.
+A player is filed under his position in Sleeper's index, or, where that is no
+lineup slot, under the slot he was started at (Travis Hunter is a DB in the
+index but started at WR). Sleeper keeps no name for a defence, so defences show
+by nickname.
+
 ### The record books (Records tab)
 
 Rebuilt from the Google Sheets embedded on the old History page — Record Low

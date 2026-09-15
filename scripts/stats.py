@@ -596,6 +596,35 @@ def player_weeks(seasons: list[dict]) -> list[dict]:
     return out
 
 
+def player_totals(seasons: list[dict], players: dict) -> dict:
+    """
+    owner_id -> [{player_id, position, points, starts}], most points first: every
+    player a manager has started, and what he scored for them in the lineup, in
+    every game that counts, as player_weeks. A player is filed under his position
+    in Sleeper's index, or where that is no lineup slot (Travis Hunter, a DB there
+    now), under the slot he was started at.
+    """
+    totals = defaultdict(lambda: defaultdict(lambda: [0.0, 0]))
+    started_as = defaultdict(set)
+    for season in seasons:
+        for pid, slots in season["played_as"].items():
+            started_as[pid] |= slots
+    for row in player_weeks(seasons):
+        tally = totals[row["owner_id"]][row["player_id"]]
+        tally[0] += row["points"]
+        tally[1] += 1
+    out = {}
+    for uid, mine in totals.items():
+        rows = []
+        for pid, (pts, starts) in mine.items():
+            position = (players.get(pid) or {}).get("position")
+            if position not in SINGLE_SLOTS:
+                position = min(started_as.get(pid) or {position or ""})
+            rows.append({"player_id": pid, "position": position, "points": round(pts, 2), "starts": starts})
+        out[uid] = sorted(rows, key=lambda r: (-r["points"], r["starts"], r["player_id"]))
+    return out
+
+
 def season_records(seasons: list[dict]) -> list[dict]:
     """
     One row per manager per finished regular season, for the Dominators and the
