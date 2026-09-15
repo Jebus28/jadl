@@ -7,6 +7,7 @@ league.config.json. Nothing in here needs editing year to year.
 """
 from __future__ import annotations
 
+import hashlib
 import html
 import json
 import os
@@ -303,6 +304,17 @@ def home_screen_icons(cfg):
     (DOCS / MANIFEST).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
+def css_version():
+    """
+    A fingerprint of the stylesheet, for its address. The iPhone app keeps its
+    copy of assets/site.css long after the pages reload, so a page with new
+    markup was drawn with old styles. The address changes only when the CSS
+    does, so a build that leaves it alone changes nothing.
+    """
+    path = ASSETS / "site.css"
+    return hashlib.sha1(path.read_bytes()).hexdigest()[:10] if path.exists() else "0"
+
+
 def page(cfg, title, active, body):
     league, season = cfg["league"], cfg["season"]
     stamp = BUILT.strftime("%d %b %Y, %H:%M UTC")
@@ -335,7 +347,7 @@ def page(cfg, title, active, body):
 {icons}<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@600;700;800;900&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/site.css?v={css_version()}">
 </head>
 <body>
 <header class="masthead">
