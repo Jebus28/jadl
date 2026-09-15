@@ -787,7 +787,9 @@ Roughly in the order discussed with Matt, though he has not yet picked:
   (`assets/site.css?v=…`, `build_site.css_version`). Without it the iPhone app
   kept an old stylesheet after the pages reloaded, and the Fantasy Dispatch
   button showed as a plain blue link (September 2026). It changes only when the
-  CSS does, so it needs no place in the commit filter.
+  CSS does, so it needs no place in the commit filter. It is taken with line
+  endings evened out to LF, because Git on Windows checks the file out with CRLF
+  and a raw hash made a local build disagree with CI's.
 - The Action commits `data/` and `docs/` back to `main`, so **pull before you
   push** or you will collide with the bot.
 - Playoff-week fixtures that appear in neither bracket are Sleeper pairing off

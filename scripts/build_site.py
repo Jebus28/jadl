@@ -309,10 +309,14 @@ def css_version():
     A fingerprint of the stylesheet, for its address. The iPhone app keeps its
     copy of assets/site.css long after the pages reload, so a page with new
     markup was drawn with old styles. The address changes only when the CSS
-    does, so a build that leaves it alone changes nothing.
+    does, so a build that leaves it alone changes nothing. Line endings are
+    evened out first: Git on Windows checks the file out with CRLF and CI with
+    LF, and the two builds must agree.
     """
     path = ASSETS / "site.css"
-    return hashlib.sha1(path.read_bytes()).hexdigest()[:10] if path.exists() else "0"
+    if not path.exists():
+        return "0"
+    return hashlib.sha1(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()[:10]
 
 
 def page(cfg, title, active, body):
