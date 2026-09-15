@@ -255,6 +255,11 @@
   "site": {
     "tagline": "Ten teams. Two conferences. One Jessica Alba.",
     "show_playoff_odds": true,
-    "footer_note": "Updated automatically from Sleeper."
+    "footer_note": "Updated automatically from Sleeper.",
+    "dispatch": {
+      "url": "https://thefantasydispatch.com",
+      "label": "The Fantasy Dispatch",
+      "note": "Weekly previews and reviews"
+    }
   }
 }

@@ -591,7 +591,17 @@ def scoreboard(cfg, teams, results, week, career, prev_finish, odds=None):
         inner = "".join(html for _group, html in rows)
 
     return ("<section>" + sechead(week_heading(cfg, week), "Scores and records straight from Sleeper.")
-            + '<div class="fixtures">' + inner + "</div></section>")
+            + '<div class="fixtures">' + inner + "</div>" + dispatch_link(cfg) + "</section>")
+
+
+def dispatch_link(cfg):
+    """A button under the fixtures to The Fantasy Dispatch's weekly previews and reviews."""
+    link = (cfg.get("site") or {}).get("dispatch") or {}
+    if not link.get("url"):
+        return ""
+    note = '<span class="dnote">' + e(link["note"]) + "</span>" if link.get("note") else ""
+    return (f'<a class="dispatch" href="{e(link["url"])}" target="_blank" rel="noopener">'
+            f'<span class="dlabel">{e(link.get("label") or link["url"])} &rarr;</span>{note}</a>')
 
 
 def standings_table(cfg, teams, division):

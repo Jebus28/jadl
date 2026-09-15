@@ -531,6 +531,14 @@ The shape is a list of `tables`, each with `title`, `subtitle`, `updated`,
   by name; the sheets call Rich "Dudders", so the converted file says Rich.
 - a blank `change` is no movement, not a missing value.
 
+### The Fantasy Dispatch (Scoreboard)
+
+Added in September 2026 at Matt's request: a button straight under the week's
+fixtures linking to <https://thefantasydispatch.com>, which has weekly previews
+and reviews. The link, its label and the line under it are in
+`league.config.json` → `site.dispatch`; take the entry out and the button goes.
+It sits in the fixtures section, so it shows in season only.
+
 ### The Pro Bowl (Scoreboard)
 
 Built in September 2026. Once a year the two conferences put an all-star side
@@ -764,13 +772,11 @@ Roughly in the order discussed with Matt, though he has not yet picked:
    were done in September 2026 (see Conventions). What is left of it is drawing
    the stars on the crests from the computed title count, so they stop going
    stale (see "The stars on the conference crests").
-3. **Team uniforms.** The uniform images from the old team pages, the last thing
-   they have that the new ones do not. (The honours were done in September 2026.)
-4. **The archive.** Official team statements, Lee's Stat Corner. (The Trade
+3. **The archive.** Official team statements, Lee's Stat Corner. (The Trade
    Centre, Commissioner Updates and Rules were done in September 2026.)
-5. **Conference landing pages** (LC/MC), on the old site and not yet rebuilt.
+4. **Conference landing pages** (LC/MC), on the old site and not yet rebuilt.
    (The **calendar** was done in September 2026 — see "The Calendar".)
-6. **Generating the rankings.** Matt's own project: whatever works them out
+5. **Generating the rankings.** Matt's own project: whatever works them out
    needs to write `assets/rankings/<season>.json`. The site already reads and
    shows it.
 
