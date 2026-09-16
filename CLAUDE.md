@@ -83,7 +83,7 @@ Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.ap
 | `assets/site.css` | One stylesheet, themed light and dark via CSS custom properties. |
 | `assets/league/` | `league-logo.jpg`, the league logo exactly as Matt made it, named by `league.logo` in the config. |
 | `assets/teams/` | `<manager>.jpg`, the AI pictures, shown whole on the Scoreboard; `<manager>-crest.jpg` square crops, now only a fallback; and `<manager>-logo.*`, team logos that override Sleeper's. |
-| `data/` | Fetched JSON. Committed so builds are reproducible; regenerated every run. The exception is `data/power_rankings.json`, which the build writes and never rewrites: a week's power ranking is fixed at noon on Wednesday and has to survive later builds. |
+| `data/` | Fetched JSON. Committed so builds are reproducible; regenerated every run. The exceptions are three files the build writes itself and keeps a week at a time, because what they hold cannot be fetched again later: `data/power_rankings.json` (a week's power ranking, fixed at noon on Wednesday), `data/playoff_odds.json` (each week's odds, for the change on the week before) and `data/projected_scores.json` (each team's projected score, which the projections feed drops on the Tuesday). |
 | `docs/` | Generated output. **Never edit by hand** — it is overwritten. |
 
 ## League knowledge
@@ -655,6 +655,29 @@ and as a table per conference, while regular-season games remain.
   simulation is not a proof.
 - **Checked in week 1 of 2026.** Every run hands out exactly six places and
   two byes, and 10,000 runs take half a second.
+- **The change on the week before** (Matt, September 2026). A small green or
+  red arrow beside each chance, in percentage points as they read on the page,
+  on the fixtures and in the table. Green is good news for the team, so a rising
+  toilet bowl chance is red. The odds are kept a week at a time in
+  `data/playoff_odds.json` by `build_site.odds_store`: written on the first
+  build to show a week (noon Wednesday, with the Scoreboard) and only while that
+  week's games are unfinished, then never touched. The page compares against
+  the week kept before. **Week 1 of 2026 was rebuilt** by running the model on
+  the data committed on 11 September 2026 (`ddd50da`), before any week 1 result
+  counted; it matches the odds the site showed then to the percent.
+
+### Projected scores (Scoreboard)
+
+Added in September 2026 at Matt's request: under each score on a fixture, in
+small type, the projected score **for the lineup the manager has actually set**,
+as the Sleeper app shows it (Sleeper's projection for each starter, added up).
+Matt chose this over the best-lineup figure the power rankings use, so it can sit
+below that figure; it follows lineup changes. The projections feed drops a week
+when Sleeper moves on (Tuesday), but the Scoreboard keeps the week up until noon
+Wednesday, so `build_site.projected_store` keeps each week's figures in
+`data/projected_scores.json`, recomputed while the feed has the week and left as
+they stood once it does not. It is the pre-game projection throughout, not a
+live one that swaps in points as players finish.
 
 ## Conventions
 

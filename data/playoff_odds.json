@@ -1,0 +1,137 @@
+{
+ "_comment": "The playoff odds as they stood when each week came up on the Scoreboard, before its games, so the page can show the change on the week before. Written by scripts/build_site.py and never changed afterwards. Week 1 of 2026 was rebuilt from the data committed on 11 September 2026, before any week 1 result counted; it matches the odds the site showed then.",
+ "season": "2026",
+ "weeks": {
+  "1": {
+   "fixed": "2026-09-09T11:00:00+00:00",
+   "source": "rebuilt",
+   "teams": {
+    "572154314147561472": {
+     "bye": 0.0015,
+     "playoffs": 0.0726,
+     "toilet": 0.9274,
+     "wins": 2.993
+    },
+    "600292303692689408": {
+     "bye": 0.459,
+     "playoffs": 0.9524,
+     "toilet": 0.0476,
+     "wins": 9.3525
+    },
+    "600803296654979072": {
+     "bye": 0.2441,
+     "playoffs": 0.9114,
+     "toilet": 0.0886,
+     "wins": 8.9639
+    },
+    "600805479135911936": {
+     "bye": 0.2706,
+     "playoffs": 0.9253,
+     "toilet": 0.0747,
+     "wins": 9.1396
+    },
+    "600979696255041536": {
+     "bye": 0.4746,
+     "playoffs": 0.9626,
+     "toilet": 0.0374,
+     "wins": 10.0721
+    },
+    "601466211523428352": {
+     "bye": 0.4665,
+     "playoffs": 0.947,
+     "toilet": 0.053,
+     "wins": 9.4632
+    },
+    "601492329282453504": {
+     "bye": 0.0445,
+     "playoffs": 0.5802,
+     "toilet": 0.4198,
+     "wins": 6.0011
+    },
+    "601535536053678080": {
+     "bye": 0.0285,
+     "playoffs": 0.4182,
+     "toilet": 0.5818,
+     "wins": 5.4548
+    },
+    "601674687197544448": {
+     "bye": 0.0004,
+     "playoffs": 0.0371,
+     "toilet": 0.9629,
+     "wins": 3.434
+    },
+    "602040508755283968": {
+     "bye": 0.0103,
+     "playoffs": 0.1932,
+     "toilet": 0.8068,
+     "wins": 5.1258
+    }
+   }
+  },
+  "2": {
+   "fixed": "2026-09-16T19:05:29+00:00",
+   "teams": {
+    "572154314147561472": {
+     "bye": 0.0028,
+     "playoffs": 0.0775,
+     "toilet": 0.9225,
+     "wins": 3.1738
+    },
+    "600292303692689408": {
+     "bye": 0.3474,
+     "playoffs": 0.9186,
+     "toilet": 0.0814,
+     "wins": 8.5722
+    },
+    "600803296654979072": {
+     "bye": 0.184,
+     "playoffs": 0.9103,
+     "toilet": 0.0897,
+     "wins": 8.882
+    },
+    "600805479135911936": {
+     "bye": 0.1837,
+     "playoffs": 0.9156,
+     "toilet": 0.0844,
+     "wins": 9.0676
+    },
+    "600979696255041536": {
+     "bye": 0.6259,
+     "playoffs": 0.9878,
+     "toilet": 0.0122,
+     "wins": 10.8633
+    },
+    "601466211523428352": {
+     "bye": 0.525,
+     "playoffs": 0.9529,
+     "toilet": 0.0471,
+     "wins": 9.4508
+    },
+    "601492329282453504": {
+     "bye": 0.1029,
+     "playoffs": 0.7353,
+     "toilet": 0.2647,
+     "wins": 6.9873
+    },
+    "601535536053678080": {
+     "bye": 0.0219,
+     "playoffs": 0.2944,
+     "toilet": 0.7056,
+     "wins": 5.0522
+    },
+    "601674687197544448": {
+     "bye": 0.0001,
+     "playoffs": 0.0213,
+     "toilet": 0.9787,
+     "wins": 2.9324
+    },
+    "602040508755283968": {
+     "bye": 0.0063,
+     "playoffs": 0.1863,
+     "toilet": 0.8137,
+     "wins": 5.0184
+    }
+   }
+  }
+ }
+}

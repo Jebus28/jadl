@@ -189,6 +189,88 @@ def power_table(store, teams):
             "source": store["weeks"][str(week)].get("source")}
 
 
+ODDS_FILE = "playoff_odds.json"
+
+
+def odds_store(current, week, odds, through, now=None):
+    """
+    The playoff odds as they stood when each week came up on the Scoreboard, at
+    noon on its Wednesday, so the page can show how far each team's chances
+    have moved since the week before. Written to data/playoff_odds.json the
+    first time a build shows the week, and only while that week's games are
+    still to finish, so a week's figure never has its own results in it. The
+    file holds one season and starts again by itself when the league rolls over.
+    """
+    now = now or datetime.now(timezone.utc)
+    year = str(current.get("season"))
+    store = load(ODDS_FILE, {}) or {}
+    if str(store.get("season")) != year:
+        store = {"season": year, "weeks": {}}
+    weeks = store.setdefault("weeks", {})
+    if odds and str(week) not in weeks and (through is None or through < week):
+        weeks[str(week)] = {
+            "fixed": now.replace(microsecond=0).isoformat(),
+            "teams": {uid: {k: round(o[k], 4) for k in ("playoffs", "bye", "toilet", "wins")}
+                      for uid, o in odds["teams"].items()},
+        }
+        DATA.mkdir(parents=True, exist_ok=True)
+        (DATA / ODDS_FILE).write_text(json.dumps(store, indent=1, sort_keys=True),
+                                      encoding="utf-8")
+    return store
+
+
+def odds_since(store, week, odds):
+    """
+    Each team's odds as they stood a week ago, set on `odds` as `before`, and
+    the week they are from as `since`. Nothing where no earlier week was kept.
+    """
+    earlier = [int(w) for w in (store.get("weeks") or {}) if int(w) < week]
+    if not odds or not earlier:
+        return odds
+    odds["since"] = max(earlier)
+    before = store["weeks"][str(odds["since"])].get("teams") or {}
+    for uid, o in odds["teams"].items():
+        o["before"] = before.get(uid)
+    return odds
+
+
+PROJECTED_FILE = "projected_scores.json"
+
+
+def projected_store(current, projections, week):
+    """
+    Each team's projected score for the lineup its manager has set: Sleeper's
+    projection for every starter, added up, as the Sleeper app shows it. The
+    projections feed drops a week once Sleeper moves on, on the Tuesday, but
+    the Scoreboard keeps that week up until noon on Wednesday, so each week's
+    figure is kept in data/projected_scores.json. It is worked out afresh on
+    every build while the feed still has the week, following lineup changes,
+    and stays as it last stood once the feed lets the week go.
+    """
+    year = str(current.get("season"))
+    store = load(PROJECTED_FILE, {}) or {}
+    if str(store.get("season")) != year:
+        store = {"season": year, "weeks": {}}
+    weeks = store.setdefault("weeks", {})
+    feed = (projections or {}).get("weeks") or {} if str((projections or {}).get("season")) == year else {}
+    changed = False
+    for wk, proj in feed.items():
+        entries = (current.get("matchups") or {}).get(wk) or []
+        if int(wk) > week or not entries:
+            continue
+        scores = {str(entry["roster_id"]): round(sum(float(proj.get(p) or 0)
+                                                     for p in entry.get("starters") or [] if p != "0"), 2)
+                  for entry in entries if entry.get("matchup_id") is not None}
+        if scores and weeks.get(wk) != scores:
+            weeks[wk] = scores
+            changed = True
+    if changed:
+        DATA.mkdir(parents=True, exist_ok=True)
+        (DATA / PROJECTED_FILE).write_text(json.dumps(store, indent=1, sort_keys=True),
+                                           encoding="utf-8")
+    return (store["weeks"].get(str(week)) or {})
+
+
 NAV = [("index.html", "Scoreboard"), ("standings.html", "Standings"), ("teams.html", "Teams"),
        ("calendar.html", "Calendar"), ("updates.html", "Commissioner Updates"),
        ("trades.html", "Trade Centre"), ("history.html", "History"),
@@ -479,13 +561,31 @@ def chance(p):
     return f"{p * 100:.0f}%"
 
 
+def shift(o, key, good=True):
+    """
+    How far a chance has moved since the week before, in percentage points, as
+    they read on the page: 45% to 52% shows as 7. Green when it is good news for
+    the team, red when it is not, so a rising toilet bowl chance is red. Nothing
+    when it has not moved, or there is no week before to compare with.
+    """
+    before = o.get("before")
+    if not before or key not in before:
+        return ""
+    move = int(f"{o[key] * 100:.0f}") - int(f"{before[key] * 100:.0f}")
+    if not move:
+        return ""
+    arrow = "&#9650;" if move > 0 else "&#9660;"
+    tone = "good" if (move > 0) == good else "bad"
+    return f'<span class="shift {tone}">{arrow}&#8202;{abs(move)}</span>'
+
+
 def odds_line(odds, team):
     """Playoff and bye chances under a team on the Scoreboard, while there is a race."""
     o = (odds or {}).get("teams", {}).get(team["user_id"])
     if not o:
         return ""
-    return (f'<div class="odds">Playoffs <b>{chance(o["playoffs"])}</b> &middot; '
-            f'Bye <b>{chance(o["bye"])}</b></div>')
+    return (f'<div class="odds">Playoffs <b>{chance(o["playoffs"])}</b>{shift(o, "playoffs")} &middot; '
+            f'Bye <b>{chance(o["bye"])}</b>{shift(o, "bye")}</div>')
 
 
 def odds_section(cfg, teams, odds):
@@ -511,9 +611,9 @@ def odds_section(cfg, teams, odds):
         <td><div class="tm"><span class="nm"><a href="team-{e(t['slug'])}.html">{e(t['team'])}</a></span><span class="hd">{e(t['manager'])}</span></div></td>
         <td class="num">{rec(o)}</td>
         <td class="num">{o['wins']:.1f}</td>
-        <td class="num pct"><span class="pbar" style="--p:{o['playoffs'] * 100:.1f}%"></span>{chance(o['playoffs'])}</td>
-        <td class="num">{chance(o['bye'])}</td>
-        <td class="num">{chance(o['toilet'])}</td></tr>""")
+        <td class="num pct"><span class="pbar" style="--p:{o['playoffs'] * 100:.1f}%"></span>{chance(o['playoffs'])}{shift(o, 'playoffs')}</td>
+        <td class="num">{chance(o['bye'])}{shift(o, 'bye')}</td>
+        <td class="num">{chance(o['toilet'])}{shift(o, 'toilet', good=False)}</td></tr>""")
         blocks.append(f"""
       <div class="conf {cls}">
         <div class="conf-head"><span class="swatch" aria-hidden="true"></span><h3>{e(conf.get('name', 'Conference'))}</h3></div>
@@ -534,13 +634,23 @@ def odds_section(cfg, teams, odds):
         missing = weeks - odds["weeks_projected"]
         note += (f" Sleeper had no projections for {missing} of those week{'s' if missing != 1 else ''}, "
                  "so they use each team's scoring average instead.")
-    return ("<section>" + sechead("Playoff odds", "Updated with every refresh.")
+    since = ("Updated with every refresh. Arrows show the change on the odds going into week "
+             + str(odds["since"]) + "." if odds.get("since") else "Updated with every refresh.")
+    return ("<section>" + sechead("Playoff odds", since)
             + '<div class="conf-grid oddsgrid">' + "".join(blocks) + "</div>"
             + '<p class="oddsnote">' + e(note) + "</p></section>")
 
 
-def scoreboard(cfg, teams, results, week, career, prev_finish, odds=None):
+def score_box(points, proj, lead):
+    """A team's score on a fixture, with its projected score in small type underneath."""
+    under = f'<div class="proj">Proj {proj:.2f}</div>' if proj is not None else ""
+    return (f'<div class="scorebox"><div class="score {"lead" if lead else "trail"}">{points:.2f}</div>'
+            + under + "</div>")
+
+
+def scoreboard(cfg, teams, results, week, career, prev_finish, odds=None, projected=None):
     rows = []
+    projected = projected or {}
     places = conference_places(cfg, teams)
     for fx in results.get(week, []):
         home, away = teams.get(fx["home"]["roster_id"]), teams.get(fx["away"]["roster_id"])
@@ -575,7 +685,7 @@ def scoreboard(cfg, teams, results, week, career, prev_finish, odds=None):
               <div class="mgr">{e(home['manager'])} &middot; {home['wins']}&ndash;{home['losses']} &middot; {e(places.get(home['roster_id'], ''))}</div>
               {odds_line(odds, home)}
             </div>
-            <div class="score {'lead' if hp >= ap else 'trail'}">{hp:.2f}</div>
+            {score_box(hp, projected.get(str(home['roster_id'])), hp >= ap)}
           </div>
         </div>
         <div class="vs">vs{h2h}</div>
@@ -587,7 +697,7 @@ def scoreboard(cfg, teams, results, week, career, prev_finish, odds=None):
               <div class="mgr">{e(away['manager'])} &middot; {away['wins']}&ndash;{away['losses']} &middot; {e(places.get(away['roster_id'], ''))}</div>
               {odds_line(odds, away)}
             </div>
-            <div class="score {'lead' if ap >= hp else 'trail'}">{ap:.2f}</div>
+            {score_box(ap, projected.get(str(away['roster_id'])), ap >= hp)}
           </div>
         </div>
       </article>"""))
@@ -2679,13 +2789,19 @@ def main():
     if cfg["site"].get("show_playoff_odds") and phase == "season":
         odds = S.playoff_odds(current, indexed[0], indexed[1:], projections, players,
                               cfg["season"]["regular_season_weeks"])
+        # Kept a week at a time, so each team's chances can show how far they
+        # have moved since the week before.
+        odds = odds_since(odds_store(current, week, odds, through), week, odds)
+
+    # Each team's projected score for the lineup it has set, under the score.
+    projected = projected_store(current, projections, week) if phase == "season" else {}
 
     # The Pro Bowl sits straight after the week's fixtures, from the moment the
     # first picks land until the end of the season.
     game = pro_bowl(cfg, current, teams, players, projections, prev_finish, state)
 
     if phase == "season":
-        home = (scoreboard(cfg, teams, results, week, career, prev_finish, odds)
+        home = (scoreboard(cfg, teams, results, week, career, prev_finish, odds, projected)
                 + pro_bowl_section(cfg, game, names)
                 + odds_section(cfg, teams, odds) + power_section(cfg, power))
     else:
