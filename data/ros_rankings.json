@@ -1,0 +1,97 @@
+{
+ "_comment": "The rest-of-season power ranking as it was fixed at noon UK on the Wednesday before each week's games. Written by scripts/build_site.py and never changed afterwards. The figure is kept but never shown on the site. Week 1 of 2026 was rebuilt from the data committed on 11 September 2026, before any week 1 result counted.",
+ "season": "2026",
+ "weeks": {
+  "1": {
+   "fixed": "2026-09-09T11:00:00+00:00",
+   "source": "rebuilt",
+   "teams": {
+    "572154314147561472": {
+     "allplay": 0.2135,
+     "rank": 10
+    },
+    "600292303692689408": {
+     "allplay": 0.6611,
+     "rank": 2
+    },
+    "600803296654979072": {
+     "allplay": 0.6425,
+     "rank": 4
+    },
+    "600805479135911936": {
+     "allplay": 0.6598,
+     "rank": 3
+    },
+    "600979696255041536": {
+     "allplay": 0.7078,
+     "rank": 1
+    },
+    "601466211523428352": {
+     "allplay": 0.6406,
+     "rank": 5
+    },
+    "601492329282453504": {
+     "allplay": 0.4394,
+     "rank": 6
+    },
+    "601535536053678080": {
+     "allplay": 0.3719,
+     "rank": 8
+    },
+    "601674687197544448": {
+     "allplay": 0.269,
+     "rank": 9
+    },
+    "602040508755283968": {
+     "allplay": 0.3945,
+     "rank": 7
+    }
+   }
+  },
+  "2": {
+   "fixed": "2026-09-16T19:25:52+00:00",
+   "teams": {
+    "572154314147561472": {
+     "allplay": 0.2504,
+     "rank": 9
+    },
+    "600292303692689408": {
+     "allplay": 0.6313,
+     "rank": 5
+    },
+    "600803296654979072": {
+     "allplay": 0.6386,
+     "rank": 2
+    },
+    "600805479135911936": {
+     "allplay": 0.6356,
+     "rank": 3
+    },
+    "600979696255041536": {
+     "allplay": 0.7336,
+     "rank": 1
+    },
+    "601466211523428352": {
+     "allplay": 0.6355,
+     "rank": 4
+    },
+    "601492329282453504": {
+     "allplay": 0.4659,
+     "rank": 6
+    },
+    "601535536053678080": {
+     "allplay": 0.3546,
+     "rank": 8
+    },
+    "601674687197544448": {
+     "allplay": 0.2369,
+     "rank": 10
+    },
+    "602040508755283968": {
+     "allplay": 0.4176,
+     "rank": 7
+    }
+   }
+  }
+ }
+}

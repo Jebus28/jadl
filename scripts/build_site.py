@@ -234,6 +234,47 @@ def odds_since(store, week, odds):
     return odds
 
 
+def past_projections(store):
+    """
+    owner_id -> {week: projected points}, each as its power ranking fixed it on
+    the Wednesday before the games. The playoff odds weigh a team's results
+    against these, since the projections feed keeps no week once it has gone.
+    """
+    out = defaultdict(dict)
+    for wk, entry in ((store or {}).get("weeks") or {}).items():
+        for uid, row in (entry.get("teams") or {}).items():
+            if row.get("proj"):
+                out[uid][int(wk)] = row["proj"]
+    return out
+
+
+ROS_FILE = "ros_rankings.json"
+
+
+def ros_store(current, week, rows, through, now=None):
+    """
+    The rest-of-season power ranking as it was fixed for each week, at noon on
+    its Wednesday with the weekly ranking, and never moved again. Written to
+    data/ros_rankings.json the first time a build shows the week, and only while
+    that week's games are still to finish. The figure is kept with the rank but
+    never shown. One season a file, as with the others.
+    """
+    now = now or datetime.now(timezone.utc)
+    year = str(current.get("season"))
+    store = load(ROS_FILE, {}) or {}
+    if str(store.get("season")) != year:
+        store = {"season": year, "weeks": {}}
+    weeks = store.setdefault("weeks", {})
+    if rows and str(week) not in weeks and (through is None or through < week):
+        weeks[str(week)] = {
+            "fixed": now.replace(microsecond=0).isoformat(),
+            "teams": {r["owner_id"]: {"rank": r["rank"], "allplay": r["allplay"]} for r in rows},
+        }
+        DATA.mkdir(parents=True, exist_ok=True)
+        (DATA / ROS_FILE).write_text(json.dumps(store, indent=1, sort_keys=True), encoding="utf-8")
+    return store
+
+
 PROJECTED_FILE = "projected_scores.json"
 
 
@@ -767,7 +808,12 @@ def move_chip(move):
     return '<span class="move level">&ndash;</span>'
 
 
-def power_section(cfg, table):
+def power_section(cfg, table, heading="Power Rankings"):
+    """
+    A power ranking as the Scoreboard shows it: rank, team and the move on the
+    ranking fixed the week before, nothing more. The weekly one and the rest of
+    season one both use it.
+    """
     if not table:
         return ""
     # The workbook formula stays off the site: Matt's own, and not for publishing.
@@ -780,7 +826,7 @@ def power_section(cfg, table):
         <div class="prname"><a href="team-{e(r['slug'])}.html">{e(r['team'])}</a> <span class="hd">{e(r['manager'])}</span></div>
         <div class="prmove">{move_chip(r['move'])}</div>
       </div>""")
-    return ("<section>" + sechead("Power Rankings", note)
+    return ("<section>" + sechead(heading, note)
             + '<div class="pr"><div class="prrow prhead"><div class="prrank">#</div>'
             + '<div class="prname">Team</div><div class="prmove">Move</div></div>'
             + "".join(rows) + "</div></section>")
@@ -2764,10 +2810,10 @@ def main():
     # Power rankings: fixed at noon UK on the Wednesday before each week's games
     # and kept as they were fixed, so the page shows the week that stands.
     projections = load("projections.json")
-    power = None
+    power, fixed = None, {}
     if phase == "season":
-        power = power_table(power_store(cfg, current, indexed[0], projections, players, state),
-                            teams)
+        fixed = power_store(cfg, current, indexed[0], projections, players, state)
+        power = power_table(fixed, teams)
 
     # Last season's conference tables, which is what the divisional-week billings
     # are drawn from. Absent in the first conference year, when there is no
@@ -2785,13 +2831,18 @@ def main():
     (DOCS / ".nojekyll").write_text("", encoding="utf-8")
 
     # Playoff odds, while the regular season still has games to play.
-    odds = None
-    if cfg["site"].get("show_playoff_odds") and phase == "season":
-        odds = S.playoff_odds(current, indexed[0], indexed[1:], projections, players,
-                              cfg["season"]["regular_season_weeks"])
-        # Kept a week at a time, so each team's chances can show how far they
-        # have moved since the week before.
-        odds = odds_since(odds_store(current, week, odds, through), week, odds)
+    # The same model gives the rest-of-season power ranking, so it runs whether
+    # or not the odds are shown.
+    odds = ros = None
+    if phase == "season":
+        model = S.playoff_odds(current, indexed[0], indexed[1:], projections, players,
+                               cfg["season"]["regular_season_weeks"], past=past_projections(fixed))
+        if cfg["site"].get("show_playoff_odds"):
+            # Kept a week at a time, so each team's chances can show how far they
+            # have moved since the week before.
+            odds = odds_since(odds_store(current, week, model, through), week, model)
+        # Fixed at noon on Wednesday with the weekly ranking, and kept as fixed.
+        ros = power_table(ros_store(current, week, S.rest_of_season(model), through), teams)
 
     # Each team's projected score for the lineup it has set, under the score.
     projected = projected_store(current, projections, week) if phase == "season" else {}
@@ -2803,7 +2854,8 @@ def main():
     if phase == "season":
         home = (scoreboard(cfg, teams, results, week, career, prev_finish, odds, projected)
                 + pro_bowl_section(cfg, game, names)
-                + odds_section(cfg, teams, odds) + power_section(cfg, power))
+                + odds_section(cfg, teams, odds) + power_section(cfg, power)
+                + power_section(cfg, ros, "Rest of Season Power Rankings"))
     else:
         home = offseason_home(cfg, phase, current, indexed, names, trade_log, board,
                               players, teams, state)

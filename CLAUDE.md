@@ -83,7 +83,7 @@ Sleeper's read API needs no key and no account. Base URL `https://api.sleeper.ap
 | `assets/site.css` | One stylesheet, themed light and dark via CSS custom properties. |
 | `assets/league/` | `league-logo.jpg`, the league logo exactly as Matt made it, named by `league.logo` in the config. |
 | `assets/teams/` | `<manager>.jpg`, the AI pictures, shown whole on the Scoreboard; `<manager>-crest.jpg` square crops, now only a fallback; and `<manager>-logo.*`, team logos that override Sleeper's. |
-| `data/` | Fetched JSON. Committed so builds are reproducible; regenerated every run. The exceptions are three files the build writes itself and keeps a week at a time, because what they hold cannot be fetched again later: `data/power_rankings.json` (a week's power ranking, fixed at noon on Wednesday), `data/playoff_odds.json` (each week's odds, for the change on the week before) and `data/projected_scores.json` (each team's projected score, which the projections feed drops on the Tuesday). |
+| `data/` | Fetched JSON. Committed so builds are reproducible; regenerated every run. The exceptions are four files the build writes itself and keeps a week at a time, because what they hold cannot be fetched again later: `data/power_rankings.json` (a week's power ranking, fixed at noon on Wednesday), `data/ros_rankings.json` (the rest-of-season one, fixed alongside it), `data/playoff_odds.json` (each week's odds, for the change on the week before) and `data/projected_scores.json` (each team's projected score, which the projections feed drops on the Tuesday). |
 | `docs/` | Generated output. **Never edit by hand** — it is overwritten. |
 
 ## League knowledge
@@ -631,8 +631,16 @@ and as a table per conference, while regular-season games remain.
     `api.sleeper.app/projections/nfl/<season>/<week>`. That feed is not in
     Sleeper's documented API. It is saved in `data/projections.json` and
     refreshed at most every six hours, with the time kept inside the file.
-  - The projection is nudged towards the team's actual scoring this season,
-    by n/(n+8) of the gap after n games.
+  - The projection is nudged by n/(n+8) of the team's average gap between
+    what it scored and what it was projected to score, over the n weeks
+    played. **The gap is taken week by week against the projection fixed for
+    that week** (the `proj` each week's power ranking keeps in
+    `data/power_rankings.json`, via `build_site.past_projections`), never
+    against the weeks still to come. It used to be the latter, which meant a
+    star's injury lowered the projection, widened the gap and handed back part
+    of the loss, about half of it by midseason. Matt had it fixed in September
+    2026. Week 1 of 2026's `proj` was added from the 11 September projections,
+    since that week's ranks came from the workbook without them.
   - Where there is no projection for a week, the model uses this season's
     average, leaning on the league's. If the feed fails, the old file stays.
     If it's missing, every week falls back like that and the page says so.
@@ -665,6 +673,31 @@ and as a table per conference, while regular-season games remain.
   the week kept before. **Week 1 of 2026 was rebuilt** by running the model on
   the data committed on 11 September 2026 (`ddd50da`), before any week 1 result
   counted; it matches the odds the site showed then to the percent.
+
+### Rest of Season Power Rankings (Scoreboard)
+
+Added in September 2026, straight under the weekly Power Rankings and laid out
+exactly like them: rank, team, and the move on the ranking fixed the week before.
+**No figure and no method on the site** (Matt, as with the weekly ranking); the
+section note is only "Week X — fixed at noon on Wednesday."
+
+- **All-play** (`stats.rest_of_season`): each team's average chance of beating
+  each of the other nine in every regular-season week left, on the playoff
+  odds' expected scores, with the spread of a score difference being
+  √(2 × (swing² + doubt²)). The fixture list plays no part.
+- **Chosen from three.** Matt compared it with the weekly formula run on over
+  the remaining weeks (weighted to the nearer weeks) and with the simulation's
+  wins still to come. He picked all-play; the other two are not in the code.
+  Tested on 2026 week 2: a season-ending injury moves all-play (and wins to
+  come) about two and a half times as far, relative to the spread of the
+  league, as the weighted formula, which dilutes a team's own projection to a
+  third and discounts later weeks.
+- **Fixed and kept like the others**: `build_site.ros_store` writes
+  `data/ros_rankings.json` on the first build to show a week, while its games
+  are unfinished, rank and figure both, and never changes it. Week 1 of 2026 was
+  rebuilt from the data committed on 11 September 2026.
+- The odds model runs in season even when `show_playoff_odds` is off, because
+  this ranking is drawn from it.
 
 ### Projected scores (Scoreboard)
 

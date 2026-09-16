@@ -13,6 +13,7 @@ conference, against the other one, and everything from BCE.
 """
 from __future__ import annotations
 
+import math
 import random
 from collections import Counter, defaultdict
 from datetime import date, datetime, time, timedelta, timezone
@@ -873,15 +874,18 @@ def scoring_level(seasons: list[dict], year: int, weight: float = 4.0) -> tuple[
 
 
 def playoff_odds(raw: dict, season: dict, history: list[dict], projections: dict | None,
-                 players: dict, regular_weeks: int, sims: int = 10_000) -> dict | None:
+                 players: dict, regular_weeks: int, sims: int = 10_000,
+                 past: dict | None = None) -> dict | None:
     """
     Every team's chance of the playoffs, of a bye and of the toilet bowl, from
     playing the rest of the regular season out `sims` times on the real fixtures.
 
     A team's expected score in a week to come is Sleeper's projection for its
-    best lineup from the players it can start (not IR, not taxi), nudged towards
-    its own results this season, or its scoring average this season where there
-    is no projection. Each run then gives every team a season-long drift from
+    best lineup from the players it can start (not IR, not taxi), nudged by how
+    far it has beaten or missed its projections in the weeks already played, or
+    its scoring average this season where there is no projection. `past` is
+    those projections, owner_id -> {week: points}, as each week's power ranking
+    fixed them; the feed itself only looks forward. Each run then gives every team a season-long drift from
     that (level_doubt) and every game its own luck (weekly_swing), both the
     league's figures rather than the team's: a team's past is no guide to a
     rebuilt roster. Games already played count as they finished; a week in
@@ -900,11 +904,12 @@ def playoff_odds(raw: dict, season: dict, history: list[dict], projections: dict
         return None
     teams = [rid for rid in owner if owner[rid]]
     wins, losses, ties, pf = ({rid: 0 for rid in teams} for _ in range(4))
-    played = set()
+    played, scored = set(), defaultdict(dict)
     for wk, phase, (ra, pa), (rb, pb) in games(season):
         if phase != "regular" or ra not in wins or rb not in wins:
             continue
         played.add(wk)
+        scored[ra][wk], scored[rb][wk] = pa, pb
         pf[ra] += pa
         pf[rb] += pb
         if pa == pb:
@@ -949,13 +954,19 @@ def playoff_odds(raw: dict, season: dict, history: list[dict], projections: dict
             if best:
                 best_by[rid][wk] = best
     games_played = {rid: wins[rid] + losses[rid] + ties[rid] for rid in teams}
-    # The projection, nudged towards what the team has actually scored this
-    # season as the games come in: nothing in week one, about half by midway. A
-    # manager who keeps beating or missing Sleeper's numbers shows up here.
+    # The projection, nudged by how far the team has beaten or missed its own
+    # projections in the weeks already played: nothing in week one, about half
+    # by midway. A manager who keeps beating or missing Sleeper's numbers shows
+    # up here. The gap is taken week by week against what was projected at the
+    # time, never against the weeks still to come: compared with those, a star's
+    # injury would lower the projection and raise the gap, and the nudge would
+    # hand back part of what the injury took away.
     expected = {}
     for rid in teams:
-        mine, n = best_by[rid], games_played[rid]
-        lean = n / (n + 8) * (pf[rid] / n - sum(mine.values()) / len(mine)) if n and mine else 0.0
+        mine, then = best_by[rid], (past or {}).get(owner[rid]) or {}
+        gaps = [pts - float(then[wk]) for wk, pts in scored[rid].items() if then.get(wk)]
+        n = len(gaps)
+        lean = n / (n + 8) * sum(gaps) / n if n else 0.0
         for wk in weeks:
             expected[(rid, wk)] = mine[wk] + lean if wk in mine else level.get(owner[rid], league)
     fixtures = [(a, b, expected[(a, wk)], expected[(b, wk)]) for wk, a, b in remaining]
@@ -1002,8 +1013,48 @@ def playoff_odds(raw: dict, season: dict, history: list[dict], projections: dict
             "playoffs": t["playoffs"] / sims, "bye": t["bye"] / sims,
             "toilet": 1 - t["playoffs"] / sims, "wins": t["wins"] / sims,
             "w": wins[rid], "l": losses[rid], "t": ties[rid], "games": total[rid],
+            # Each week still to play, the score the simulation centres on.
+            "expected": {wk: expected[(rid, wk)] for wk in weeks},
         } for rid, t in tally.items()},
     }
+
+
+# --------------------------------------------------------------------------- #
+# rest of season power rankings - the Scoreboard
+# --------------------------------------------------------------------------- #
+# Matt compared three ways of ranking the run-in in September 2026 and picked
+# the all-play one. Like the weekly ranking it is fixed at noon UK on the
+# Wednesday, and neither the method nor the figure is published on the site.
+def rest_of_season(odds: dict | None) -> list | None:
+    """
+    The rest-of-season power ranking, best first: each team's chance of beating
+    an average opponent in a week, every team played against every other in
+    every regular-season week left, on the playoff odds' expected scores and
+    spread. The fixture list plays no part in it, and a star's injury comes
+    through in full, since his projection comes out of every week he misses.
+
+    None without the odds, which it is drawn from, and so once the regular
+    season is over.
+    """
+    if not odds:
+        return None
+    # One week's score for a team, against another's, varies by the weekly swing
+    # and the season-long drift, each twice over.
+    spread = math.sqrt(2 * (odds["swing"] ** 2 + odds["doubt"] ** 2))
+    teams = odds["teams"]
+    rows = []
+    for uid, o in teams.items():
+        chances = [0.5 * (1 + math.erf((mine - teams[other]["expected"][wk]) / spread / math.sqrt(2)))
+                   for wk, mine in o["expected"].items()
+                   for other in teams if other != uid and wk in teams[other]["expected"]]
+        if chances:
+            rows.append({"owner_id": uid, "allplay": round(sum(chances) / len(chances), 4)})
+    if not rows:
+        return None
+    rows.sort(key=lambda r: r["allplay"], reverse=True)
+    for i, row in enumerate(rows, 1):
+        row["rank"] = i
+    return rows
 
 
 # --------------------------------------------------------------------------- #

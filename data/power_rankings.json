@@ -1,5 +1,5 @@
 {
- "_comment": "Every week's power ranking as it was fixed at noon UK on the Wednesday before its games. Written by scripts/build_site.py and never changed afterwards. Week 1 of 2026 is the one exception: the site was not yet computing these, so its order is the one Matt fixed in the Team Tracking 2026 workbook. From week 2 on, and in every season after this, the site works them out itself.",
+ "_comment": "Every week's power ranking as it was fixed at noon UK on the Wednesday before its games. Written by scripts/build_site.py and never changed afterwards. Week 1 of 2026 is the one exception: the site was not yet computing these, so its order is the one Matt fixed in the Team Tracking 2026 workbook. From week 2 on, and in every season after this, the site works them out itself. Week 1's projected points were added afterwards, from the projections committed on 11 September 2026, for the playoff odds.",
  "season": "2026",
  "weeks": {
   "1": {
@@ -7,62 +7,62 @@
    "source": "workbook",
    "teams": {
     "572154314147561472": {
-     "opp_proj": null,
-     "proj": null,
+     "opp_proj": 145.33,
+     "proj": 104.99,
      "rank": 10,
      "score": null
     },
     "600292303692689408": {
-     "opp_proj": null,
-     "proj": null,
+     "opp_proj": 159.25,
+     "proj": 151.26,
      "rank": 7,
      "score": null
     },
     "600803296654979072": {
-     "opp_proj": null,
-     "proj": null,
+     "opp_proj": 104.99,
+     "proj": 145.33,
      "rank": 1,
      "score": null
     },
     "600805479135911936": {
-     "opp_proj": null,
-     "proj": null,
+     "opp_proj": 127.83,
+     "proj": 148.94,
      "rank": 3,
      "score": null
     },
     "600979696255041536": {
-     "opp_proj": null,
-     "proj": null,
+     "opp_proj": 151.26,
+     "proj": 159.25,
      "rank": 4,
      "score": null
     },
     "601466211523428352": {
-     "opp_proj": null,
-     "proj": null,
+     "opp_proj": 117.69,
+     "proj": 147.18,
      "rank": 2,
      "score": null
     },
     "601492329282453504": {
-     "opp_proj": null,
-     "proj": null,
+     "opp_proj": 126.49,
+     "proj": 130.83,
      "rank": 5,
      "score": null
     },
     "601535536053678080": {
-     "opp_proj": null,
-     "proj": null,
+     "opp_proj": 148.94,
+     "proj": 127.83,
      "rank": 8,
      "score": null
     },
     "601674687197544448": {
-     "opp_proj": null,
-     "proj": null,
+     "opp_proj": 147.18,
+     "proj": 117.69,
      "rank": 9,
      "score": null
     },
     "602040508755283968": {
-     "opp_proj": null,
-     "proj": null,
+     "opp_proj": 130.83,
+     "proj": 126.49,
      "rank": 6,
      "score": null
     }
