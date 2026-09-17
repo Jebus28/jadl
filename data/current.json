@@ -18916,7 +18916,9 @@
     "9756",
     "BAL"
    ],
-   "reserve": null,
+   "reserve": [
+    "9502"
+   ],
    "roster_id": 8,
    "settings": {
     "division": 1,
@@ -19191,7 +19193,7 @@
   "daily_waivers_base": 4,
   "daily_waivers_days": 10649,
   "daily_waivers_hour": 0,
-  "daily_waivers_last_ran": 16,
+  "daily_waivers_last_ran": 17,
   "disable_adds": 0,
   "disable_trades": 0,
   "divisions": 2,
