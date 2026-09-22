@@ -320,6 +320,40 @@
     .prrow{grid-template-columns:26px 1fr 56px}
   }
 
+  /* ---------- rookie draft order ---------- */
+  /* A pick goes green once it is fixed; until then it is as things stand. */
+  .draftorder th:nth-child(2),.draftorder td:nth-child(2){text-align:left}
+  .draftorder th:first-child,.draftorder td:first-child{width:1%}
+  .draftorder td:nth-child(2){white-space:normal}
+  .dpick{
+    display:inline-block;min-width:44px;text-align:center;
+    font-size:12.5px;font-weight:600;padding:3px 7px;border-radius:5px;
+    border:1px dashed var(--line-strong);color:var(--muted);
+  }
+  .dpick.fixed{border:1px solid var(--live);background:var(--live-soft);color:var(--live)}
+  .draftorder tr.fixed td{background:color-mix(in srgb, var(--live-soft) 45%, transparent)}
+  .dstate{font-size:11.5px;color:var(--muted);white-space:normal}
+  .draftorder tr.fixed .dstate{color:var(--live);font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:10.5px}
+  .dtraded{font-size:11.5px;color:var(--accent);margin-top:2px}
+  .draftorder .tm{flex-wrap:wrap;row-gap:0}
+  .dstate.narrow{display:none}
+  @media (max-width:560px){
+    .draftorder .wide{display:none}
+    .dstate.narrow{display:block;margin-top:2px}
+    .draftorder tr.fixed .dstate.narrow{font-size:10px}
+  }
+  .oddsnote a{color:var(--accent)}
+  .draftgrid{margin-top:18px}
+  .draftgrid th,.draftgrid td{text-align:left}
+  .draftgrid td{font-weight:600;font-size:13px}
+  .draftgrid td:first-child a{color:var(--ink);text-decoration:none}
+  .draftgrid td.traded{color:var(--accent)}
+  .draftgrid tr.fixed td{background:color-mix(in srgb, var(--live-soft) 45%, transparent)}
+  .dno{display:block;font-size:10.5px;font-weight:400;color:var(--muted)}
+  @media (max-width:560px){
+    .draftgrid th,.draftgrid td{padding:8px 6px;font-size:12px}
+  }
+
   /* ---------- off-season: what is coming next ---------- */
   .upgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
   .upnext{
