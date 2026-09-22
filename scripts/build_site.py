@@ -862,7 +862,36 @@ def draft_section(cfg, order, teams, holders, year, rounds):
     return ("<section>" + sechead(f"{year} Rookie Draft Order", note)
             + '<div class="pr"><div class="tablewrap"><table class="draftorder">'
             + '<thead><tr><th>Pick</th><th>Team</th><th>Max PF</th><th class="wide"></th></tr></thead>'
-            + "<tbody>" + "".join(rows) + "</tbody></table></div></div>" + rule + "</section>")
+            + "<tbody>" + "".join(rows) + "</tbody></table></div></div>" + rule
+            + draft_grid(order, by_owner, names, holders, year, rounds) + "</section>")
+
+
+def draft_grid(order, by_owner, names, holders, year, rounds):
+    """
+    Every pick in the draft, on the same order: a row for each team's slot and
+    a column for each round, naming whoever holds the pick. The draft is
+    straight, so a slot is the same in every round. A traded pick is in red.
+    """
+    rows = []
+    for r in order["rows"]:
+        t = by_owner.get(r["owner_id"])
+        if not t:
+            continue
+        cells = []
+        for rnd in range(1, rounds + 1):
+            who = holders.get((str(year), rnd, r["owner_id"]), r["owner_id"])
+            traded = ' class="traded"' if who != r["owner_id"] else ""
+            cells.append(f'<td{traded}><span class="dno num">{rnd}.{r["pick"]:02d}</span>'
+                         f'{e(names.get(who, "Another team"))}</td>')
+        rows.append(f'<tr class="{"fixed" if r["fixed"] else "open"}"><td>'
+                    f'<a href="team-{e(t["slug"])}.html">{e(t["manager"])}</a></td>' + "".join(cells) + "</tr>")
+    heads = "".join(f"<th>{ordinal(rnd)}</th>" for rnd in range(1, rounds + 1))
+    return ('<div class="pr draftgrid"><div class="conf-head"><h3>All ' + str(len(rows) * rounds)
+            + ' picks</h3></div><div class="tablewrap"><table>'
+            + "<thead><tr><th>Slot</th>" + heads + "</tr></thead><tbody>" + "".join(rows)
+            + "</tbody></table></div></div>"
+            + '<p class="oddsnote">Each row is one team&rsquo;s slot, the same in every round. A name in '
+              "red holds a pick traded to it. The picks move with the order above until they are fixed.</p>")
 
 
 def move_chip(move):

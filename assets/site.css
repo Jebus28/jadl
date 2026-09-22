@@ -343,6 +343,16 @@
     .draftorder tr.fixed .dstate.narrow{font-size:10px}
   }
   .oddsnote a{color:var(--accent)}
+  .draftgrid{margin-top:18px}
+  .draftgrid th,.draftgrid td{text-align:left}
+  .draftgrid td{font-weight:600;font-size:13px}
+  .draftgrid td:first-child a{color:var(--ink);text-decoration:none}
+  .draftgrid td.traded{color:var(--accent)}
+  .draftgrid tr.fixed td{background:color-mix(in srgb, var(--live-soft) 45%, transparent)}
+  .dno{display:block;font-size:10.5px;font-weight:400;color:var(--muted)}
+  @media (max-width:560px){
+    .draftgrid th,.draftgrid td{padding:8px 6px;font-size:12px}
+  }
 
   /* ---------- off-season: what is coming next ---------- */
   .upgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}

@@ -734,7 +734,11 @@ champion. The draft is straight, not snake, so every round goes the same way.
   shown has each undecided game going to the team ahead in it, or the better
   regular season before kick-off. A pick that isn't fixed shows every pick the
   team could still end up with.
-- Traded picks show who holds them, from the trade log (`stats.pick_holders`).
+- Traded picks show who holds them, from the trade log (`stats.pick_holders`);
+  checked against Sleeper's `traded_picks` in September 2026, all 20 of the
+  2027 picks. Below the top ten, Matt asked for **all 50 picks** as a plain grid
+  (`build_site.draft_grid`): a row per slot in the same order, a column per
+  round, each cell the holder, red where traded, green rows once fixed.
 - **Where it sits**: at the bottom of the Standings page, and on the Scoreboard
   (after the playoff odds) from week 10 to the final, by the Scoreboard's own
   week (`DRAFT_ORDER_FROM_WEEK`). Once the season is over it goes back to
