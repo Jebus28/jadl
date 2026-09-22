@@ -712,6 +712,34 @@ Wednesday, so `build_site.projected_store` keeps each week's figures in
 they stood once it does not. It is the pre-game projection throughout, not a
 live one that swaps in points as players finish.
 
+### The rookie draft order (Standings, then Scoreboard)
+
+Added in September 2026 at Matt's request, with a **Max PF** column on the
+standings tables (Sleeper's roster `ppts`), since max points orders the picks.
+`stats.draft_order` works out the first round of the draft the season leads to,
+by rulebook paras 33–36: the toilet bowl winner has the 1.01 and the other three
+teams out of the playoffs follow on max points, lowest first. Then come the
+Divisional Round losers (1.05–1.06) and the Conference Championship losers
+(1.07–1.08), each pair on max points, lowest first, then the runner-up and the
+champion. The draft is straight, not snake, so every round goes the same way.
+
+- **Checked against every rookie draft on Sleeper.** It reproduces the 2022–2026
+  drafts slot for slot. The 2021 draft does not match, because the 2020 season
+  ran under an earlier rulebook.
+- **Until the regular season is over it is provisional**: the playoff places as
+  the tables stand (`stats.playoff_field`, the same para 71 and Rule 3 the odds
+  use), each group on max points. Nothing is fixed.
+- **Once the brackets are set**, every way they can still go is played out, and a
+  pick is **fixed** (green) when the same team has it in all of them. The order
+  shown has each undecided game going to the team ahead in it, or the better
+  regular season before kick-off. A pick that isn't fixed shows every pick the
+  team could still end up with.
+- Traded picks show who holds them, from the trade log (`stats.pick_holders`).
+- **Where it sits**: at the bottom of the Standings page, and on the Scoreboard
+  (after the playoff odds) from week 10 to the final, by the Scoreboard's own
+  week (`DRAFT_ORDER_FROM_WEEK`). Once the season is over it goes back to
+  Standings, all fixed. It is not shown in pre-season.
+
 ## Conventions
 
 - **British English** throughout, in copy and in code comments.

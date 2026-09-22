@@ -93,6 +93,9 @@ def manager_lookup(cfg, users, rosters):
             "division": str(st.get("division") or "1"),
             "wins": st.get("wins", 0), "losses": st.get("losses", 0), "ties": st.get("ties", 0),
             "fpts": pts(st, "fpts"), "fpts_against": pts(st, "fpts_against"),
+            # Sleeper's max points: what the best lineup would have scored. It
+            # orders the rookie draft picks within each group (rulebook paras 34-36).
+            "max_points": pts(st, "ppts"),
         }
     return out
 
@@ -780,21 +783,86 @@ def standings_table(cfg, teams, division):
         <td><div class="tm"><span class="nm"><a href="team-{e(t['slug'])}.html">{e(t['team'])}</a></span><span class="hd">{e(t['manager'])}</span></div></td>
         <td class="num">{t['wins']}&ndash;{t['losses']}</td>
         <td class="num">{t['fpts']:,.2f}</td>
-        <td class="num">{t['fpts_against']:,.2f}</td></tr>""" for t in members)
+        <td class="num">{t['fpts_against']:,.2f}</td>
+        <td class="num">{t['max_points']:,.2f}</td></tr>""" for t in members)
     return f"""
       <div class="conf {cls}">
         <div class="conf-head"><span class="swatch" aria-hidden="true"></span><h3>{e(conf.get('name','Conference'))}</h3></div>
         <div class="tablewrap"><table>
-          <thead><tr><th>Team</th><th>W&ndash;L</th><th>PF</th><th>PA</th></tr></thead>
+          <thead><tr><th>Team</th><th>W&ndash;L</th><th>PF</th><th>PA</th><th title="Sleeper's max points: what the best possible lineup would have scored">Max PF</th></tr></thead>
           <tbody>{body}</tbody>
         </table></div>
       </div>"""
 
 
 def standings_section(cfg, teams, heading):
-    return ("<section>" + sechead(heading, "Sorted by record, then points for.")
+    return ("<section>" + sechead(heading, "Sorted by record, then points for. Max PF, Sleeper's max "
+                                           "points, orders the draft picks.")
             + '<div class="conf-grid">' + standings_table(cfg, teams, "1")
             + standings_table(cfg, teams, "2") + "</div></section>")
+
+
+# The draft order sits on the Standings page until the divisional weeks, then on
+# the Scoreboard to the end of the season, while the picks are being settled
+# (Matt, September 2026).
+DRAFT_ORDER_FROM_WEEK = 10
+
+
+def pick_list(picks):
+    """Every pick a team could still have: '1.05–1.10', or '1.01 or 1.04' where there are gaps."""
+    names = ["1." + f"{p:02d}" for p in picks]
+    if len(picks) > 2 and picks[-1] - picks[0] == len(picks) - 1:
+        return names[0] + "&ndash;" + names[-1]
+    return ", ".join(names[:-1]) + " or " + names[-1] if len(names) > 1 else names[0]
+
+
+def draft_section(cfg, order, teams, holders, year, rounds):
+    """
+    The next rookie draft's order, rulebook paras 33-36, from stats.draft_order.
+    A pick is green once it is fixed: the same team has it however the brackets
+    go from here. Until then it is the order as things stand, with every pick
+    the team could still end up with. A pick traded away says who holds it.
+    """
+    if not order:
+        return ""
+    by_owner = {t["user_id"]: t for t in teams.values()}
+    names = {t["user_id"]: t["manager"] for t in teams.values()}
+    rows = []
+    for r in order["rows"]:
+        t = by_owner.get(r["owner_id"])
+        if not t:
+            continue
+        away = [(rnd, holders[(str(year), rnd, r["owner_id"])]) for rnd in range(1, rounds + 1)
+                if holders.get((str(year), rnd, r["owner_id"]), r["owner_id"]) != r["owner_id"]]
+        traded = ('<div class="dtraded">' + " &middot; ".join(
+            f"{ordinal(rnd)} held by {e(names.get(who, 'another team'))}" for rnd, who in away) + "</div>"
+            if away else "")
+        state = "fixed" if r["fixed"] else "open"
+        could = "" if r["fixed"] else '<span class="dcould">could be ' + pick_list(r["possible"]) + "</span>"
+        rows.append(f"""<tr class="{state}">
+        <td><span class="dpick num {state}">1.{r['pick']:02d}</span></td>
+        <td><div class="tm"><span class="nm"><a href="team-{e(t['slug'])}.html">{e(t['team'])}</a></span><span class="hd">{e(t['manager'])}</span></div>{traded}<div class="dstate narrow">{'Fixed' if r['fixed'] else could}</div></td>
+        <td class="num">{r['max_points']:,.2f}</td>
+        <td class="dstate wide">{'Fixed' if r['fixed'] else could}</td></tr>""")
+    fixed = sum(r["fixed"] for r in order["rows"])
+    if not order["settled"]:
+        note = "Provisional: the playoff places as the tables stand."
+    elif fixed == len(order["rows"]):
+        note = "Final: every pick is fixed."
+    else:
+        note = f"{fixed} of {len(order['rows'])} picks fixed."
+    rule = ('<p class="oddsnote">The rulebook, <a href="rules.html#rule-33">paras 33&ndash;36</a>: the '
+            "toilet bowl winner has the 1.01 and the other three teams out of the playoffs follow on max "
+            "points, lowest first. The Divisional Round losers have 1.05&ndash;1.06 and the Conference "
+            "Championship losers 1.07&ndash;1.08, each pair on max points, lowest first; then the runner-up "
+            "and the champion. Every round goes in the same order. A green pick is fixed, whatever happens "
+            "from here." + ("" if order["settled"] else
+                            " Nothing is fixed until the regular season is over and the brackets are set.")
+            + "</p>")
+    return ("<section>" + sechead(f"{year} Rookie Draft Order", note)
+            + '<div class="pr"><div class="tablewrap"><table class="draftorder">'
+            + '<thead><tr><th>Pick</th><th>Team</th><th>Max PF</th><th class="wide"></th></tr></thead>'
+            + "<tbody>" + "".join(rows) + "</tbody></table></div></div>" + rule + "</section>")
 
 
 def move_chip(move):
@@ -2851,10 +2919,21 @@ def main():
     # first picks land until the end of the season.
     game = pro_bowl(cfg, current, teams, players, projections, prev_finish, state)
 
+    # The rookie draft this season leads to: on the Standings page, and on the
+    # Scoreboard from the divisional weeks to the final. Not before a ball is
+    # kicked, when there is nothing to order it by.
+    draft = ""
+    if phase != "preseason":
+        draft = draft_section(cfg, S.draft_order(current, indexed[0]), teams, S.pick_holders(trade_log),
+                              cfg["season"]["year"] + 1,
+                              (current.get("settings") or {}).get("draft_rounds") or 5)
+    draft_on_home = phase == "season" and week >= DRAFT_ORDER_FROM_WEEK
+
     if phase == "season":
         home = (scoreboard(cfg, teams, results, week, career, prev_finish, odds, projected)
                 + pro_bowl_section(cfg, game, names)
-                + odds_section(cfg, teams, odds) + power_section(cfg, power)
+                + odds_section(cfg, teams, odds) + (draft if draft_on_home else "")
+                + power_section(cfg, power)
                 + power_section(cfg, ros, "Rest of Season Power Rankings"))
     else:
         home = offseason_home(cfg, phase, current, indexed, names, trade_log, board,
@@ -2864,7 +2943,8 @@ def main():
 
     (DOCS / "standings.html").write_text(
         page(cfg, "Standings", "Standings",
-             standings_section(cfg, teams, str(cfg["season"]["year"]) + " Standings")), encoding="utf-8")
+             standings_section(cfg, teams, str(cfg["season"]["year"]) + " Standings")
+             + ("" if draft_on_home else draft)), encoding="utf-8")
 
     (DOCS / "teams.html").write_text(
         page(cfg, "Teams", "Teams", teams_index(cfg, teams, power, career)), encoding="utf-8")

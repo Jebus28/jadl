@@ -457,6 +457,16 @@ def draft_board(seasons: list[dict]) -> dict:
     return board
 
 
+def pick_holders(log: list[dict]) -> dict:
+    """(season, round, original owner) -> who holds that pick now, for every pick ever traded."""
+    holder = {}
+    for trade in log:
+        for move in trade["moves"]:
+            if move["kind"] == "pick" and move["to"]:
+                holder[(move["season"], move["round"], move["original"])] = move["to"]
+    return holder
+
+
 def trade_table(log: list[dict]) -> dict:
     """owner_id -> trades made, what came in and went out, and who with."""
     out = defaultdict(lambda: {"trades": 0, "players_in": 0, "players_out": 0, "picks_in": 0,
@@ -985,19 +995,10 @@ def playoff_odds(raw: dict, season: dict, history: list[dict], projections: dict
             p[b] += score_b
             w[a if score_a > score_b else b] += 1
         table = {d: sorted(members[d], key=lambda rid: (w[rid], p[rid]), reverse=True) for d in divisions}
-        through = set()
-        for d in divisions:
-            tally[table[d][0]]["bye"] += 1
-            through.update(table[d][:3])
-        # Rule 3: a third-placed team below .500 gives way to the other
-        # conference's fourth-placed team above it.
-        for here, there in (divisions, divisions[::-1]):
-            if len(table[here]) > 2 and len(table[there]) > 3:
-                third, fourth = table[here][2], table[there][3]
-                if ((w[third] + ties[third] / 2) / total[third] < 0.5
-                        and (w[fourth] + ties[fourth] / 2) / total[fourth] > 0.5):
-                    through.discard(third)
-                    through.add(fourth)
+        byes, through = playoff_field(
+            table, {rid: (w[rid] + ties[rid] / 2) / total[rid] for rid in teams})
+        for rid in byes:
+            tally[rid]["bye"] += 1
         for rid in through:
             tally[rid]["playoffs"] += 1
         for rid in teams:
@@ -1181,3 +1182,193 @@ def power_rankings(raw: dict, season: dict, projections: dict | None,
     for i, row in enumerate(rows, 1):
         row["rank"] = i
     return rows
+
+
+# --------------------------------------------------------------------------- #
+# the rookie draft order - Standings, and the Scoreboard from week 10
+# --------------------------------------------------------------------------- #
+def playoff_field(table: dict, share: dict) -> tuple:
+    """
+    The byes and the playoff places, rulebook para 71, from each conference's
+    table (division -> roster ids, best first) and each team's share of its
+    games won: (byes, everyone through). The conference winners get the bye and
+    the top three of each conference are in, unless Rule 3 applies: a
+    third-placed team below .500 gives way to the other conference's
+    fourth-placed team above it.
+    """
+    divisions = sorted(table)
+    byes = {table[d][0] for d in divisions if table[d]}
+    through = {rid for d in divisions for rid in table[d][:3]}
+    if len(divisions) == 2:
+        for here, there in (divisions, divisions[::-1]):
+            if len(table[here]) > 2 and len(table[there]) > 3:
+                third, fourth = table[here][2], table[there][3]
+                if share[third] < 0.5 and share[fourth] > 0.5:
+                    through.discard(third)
+                    through.add(fourth)
+    return byes, through
+
+
+def _bracket_runs(bracket: list | None, lean) -> list[dict]:
+    """
+    Every way a bracket can still finish, each as match number -> (winner,
+    loser), with the games already played as they went. `lean(a, b)` says which
+    of two teams is ahead in a game not yet decided; the first run returned has
+    every such game going that way, which is the bracket as it stands.
+    """
+    matches = sorted(bracket or [], key=lambda m: (m.get("r") or 0, m.get("m") or 0))
+
+    def side(match, key, done):
+        if isinstance(match.get(key), int):
+            return match[key]
+        src = match.get(key + "_from") or {}
+        if "w" in src:
+            return (done.get(src["w"]) or (None, None))[0]
+        if "l" in src:
+            return (done.get(src["l"]) or (None, None))[1]
+        return None
+
+    runs = []
+
+    def walk(i, done):
+        if i == len(matches):
+            runs.append(dict(done))
+            return
+        match = matches[i]
+        a, b = side(match, "t1", done), side(match, "t2", done)
+        if match.get("w") and match.get("l"):
+            options = [(match["w"], match["l"])]
+        elif a and b:
+            ahead = lean(a, b)
+            behind = b if ahead == a else a
+            options = [(ahead, behind), (behind, ahead)]
+        else:
+            options = [(None, None)]
+        for option in options:
+            done[match["m"]] = option
+            walk(i + 1, done)
+        del done[match["m"]]
+
+    walk(0, {})
+    return runs
+
+
+def _toilet_order(run: dict, bracket: list, max_points: dict) -> list | None:
+    """
+    The top picks from one run of the toilet bowl, para 34: its winner has the
+    1.01 and the rest follow on max points, lowest first.
+    """
+    final = next((m for m in bracket if m.get("p") == 1), None)
+    winner = (run.get(final["m"]) or (None, None))[0] if final else None
+    if not winner:
+        return None
+    teams = {t for pair in run.values() for t in pair if t}
+    return [winner] + sorted(teams - {winner}, key=lambda t: max_points.get(t, 0))
+
+
+def _playoff_order(run: dict, bracket: list, max_points: dict) -> list | None:
+    """
+    The later picks from one run of the playoffs, para 36: the teams knocked out
+    first pick first, each round's losers on max points, lowest first; then the
+    runner-up and the champion. Placement games (for 3rd and 5th) do not count.
+    """
+    final = next((m for m in bracket if m.get("p") == 1), None)
+    champion, runner_up = (run.get(final["m"]) or (None, None)) if final else (None, None)
+    if not champion:
+        return None
+    out_in = {}
+    for match in bracket:
+        loser = (run.get(match["m"]) or (None, None))[1]
+        if not match.get("p") and loser:
+            out_in[loser] = match.get("r") or 0
+    teams = {t for pair in run.values() for t in pair if t}
+    rest = sorted(teams - {champion, runner_up},
+                  key=lambda t: (out_in.get(t, 0), max_points.get(t, 0)))
+    return rest + [runner_up, champion]
+
+
+def draft_order(raw: dict, season: dict) -> dict | None:
+    """
+    The first round of the rookie draft this season leads to, rulebook paras
+    33-36. The four teams out of the playoffs have the top four picks: the
+    toilet bowl winner the 1.01, the other three on max points (Sleeper's
+    regular-season potential points), lowest first. Then the playoff teams: the
+    Divisional Round losers 1.05-1.06 and the Conference Championship losers
+    1.07-1.08, each pair on max points, lowest first; the runner-up 1.09 and
+    the champion 1.10. The same order runs through every round.
+
+    Until the regular season is over it is the order as things stand: the
+    playoff places as the tables stand, each group on max points, and no pick
+    is fixed. Once the brackets are set, every way they can still go is played
+    out, and a pick is fixed when the same team has it in all of them. The
+    order shown has each undecided game going to the team ahead in it, or,
+    before a ball is kicked, the one with the better regular season.
+
+    `raw` is the season as fetched and `season` is it indexed. Rows in pick
+    order: roster_id, owner_id, pick, max_points, possible (every pick the team
+    could still end up with) and fixed. None without two conferences to seed.
+    """
+    owner = season["roster_owner"]
+    stand = {r["roster_id"]: r.get("settings") or {}
+             for r in raw.get("rosters") or [] if owner.get(r["roster_id"])}
+    if not stand:
+        return None
+    max_points = {rid: _pts(st, "ppts") for rid, st in stand.items()}
+    record = {rid: (st.get("wins", 0), _pts(st, "fpts")) for rid, st in stand.items()}
+    brackets = raw.get("brackets") or {}
+    wb, lb = brackets.get("winners_bracket") or [], brackets.get("losers_bracket") or []
+
+    possible = defaultdict(set)
+    if season["regular_done"] and wb and lb:
+        start = season["playoff_week_start"]
+        weeks = [(week_fixtures(raw, wk), week_points(raw, wk)) for wk in range(start, start + 3)]
+
+        def lean(a, b):
+            for against, pts in weeks:
+                if against.get(a) == b and pts.get(a, 0) != pts.get(b, 0):
+                    return a if pts.get(a, 0) > pts.get(b, 0) else b
+            return a if record[a] >= record[b] else b
+
+        heads = [o for o in (_toilet_order(r, lb, max_points) for r in _bracket_runs(lb, lean)) if o]
+        tails = [o for o in (_playoff_order(r, wb, max_points) for r in _bracket_runs(wb, lean)) if o]
+        if not heads or not tails:
+            return None
+        for order in heads:
+            for pick, rid in enumerate(order, 1):
+                possible[rid].add(pick)
+        for order in tails:
+            for pick, rid in enumerate(order, len(heads[0]) + 1):
+                possible[rid].add(pick)
+        shown = heads[0] + tails[0]
+    else:
+        table = defaultdict(list)
+        for rid, st in stand.items():
+            table[str(st.get("division") or "1")].append(rid)
+        if len(table) != 2:
+            return None
+        for members in table.values():
+            members.sort(key=record.get, reverse=True)
+        share = {}
+        for rid, st in stand.items():
+            played = st.get("wins", 0) + st.get("losses", 0) + st.get("ties", 0)
+            share[rid] = (st.get("wins", 0) + st.get("ties", 0) / 2) / played if played else 0.0
+        byes, through = playoff_field(table, share)
+        out = sorted(set(stand) - through, key=max_points.get)
+        first_round = sorted(through - byes, key=max_points.get)
+        shown = out + first_round + sorted(byes, key=max_points.get)
+        # Out of the playoffs: the top picks. In them: anything from the first
+        # playoff pick down, but a bye team cannot lose in the first round.
+        for rid in out:
+            possible[rid] = set(range(1, len(out) + 1))
+        for rid in first_round:
+            possible[rid] = set(range(len(out) + 1, len(shown) + 1))
+        for rid in byes:
+            possible[rid] = set(range(len(out) + len(first_round) // 2 + 1, len(shown) + 1))
+
+    return {
+        "settled": bool(season["regular_done"] and wb and lb),
+        "rows": [{"roster_id": rid, "owner_id": owner[rid], "pick": pick,
+                  "max_points": max_points[rid], "possible": sorted(possible[rid]),
+                  "fixed": len(possible[rid]) == 1}
+                 for pick, rid in enumerate(shown, 1)],
+    }
