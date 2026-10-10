@@ -18599,6 +18599,7 @@
     "13302"
    ],
    "reserve": [
+    "12492",
     "8408"
    ],
    "roster_id": 2,
@@ -18905,7 +18906,9 @@
     "7553",
     "12493"
    ],
-   "reserve": null,
+   "reserve": [
+    "6819"
+   ],
    "roster_id": 5,
    "settings": {
     "division": 1,
