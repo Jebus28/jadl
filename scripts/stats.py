@@ -883,6 +883,106 @@ def scoring_level(seasons: list[dict], year: int, weight: float = 4.0) -> tuple[
     return {uid: (sum(v) + weight * league) / (len(v) + weight) for uid, v in scores.items()}, league
 
 
+def _outcomes(base: dict, fixtures: list, limit: int) -> set | None:
+    """
+    Every distinct set of win totals `fixtures` can leave, starting from `base`
+    (roster id -> wins), each as a tuple in the order of `base`. None if there
+    are more than `limit` of them.
+    """
+    order = list(base)
+    at = {rid: i for i, rid in enumerate(order)}
+    states = {tuple(base[rid] for rid in order)}
+    for a, b in fixtures:
+        ia, ib, step = at[a], at[b], set()
+        for s in states:
+            step.add(s[:ia] + (s[ia] + 1,) + s[ia + 1:])
+            step.add(s[:ib] + (s[ib] + 1,) + s[ib + 1:])
+        if len(step) > limit:
+            return None
+        states = step
+    return states
+
+
+def certainties(wins: dict, ties: dict, total: dict, members: dict, remaining: list,
+                limit: int = 200_000) -> dict:
+    """
+    What the games left can no longer change, by every way they can go rather
+    than by simulation: roster id -> {"playoffs": True/False, "bye": True/False}
+    for each certainty, by the same rules as `playoff_field`. True is clinched
+    and False is out of reach; a chance still open is left out.
+
+    Ties on wins go on total points, and with games still to play any team can
+    still outscore any other, so a tie on wins counts either way: a team has
+    clinched only if it makes it however every such tie breaks. A tied game
+    from here is left out of it. Empty where there are not two conferences, or
+    too many ways the season can go to check (early in a season, before anyone
+    can have clinched anything).
+
+    The conferences are worked out apart, since only the games between them tie
+    one to the other, and a team's fate needs no more of the other conference
+    than how its third and fourth places stand on Rule 3.
+    """
+    divisions = sorted(members)
+    if len(divisions) != 2:
+        return {}
+    conf = {rid: d for d in divisions for rid in members[d]}
+    cross = [(a, b) for _wk, a, b in remaining if conf[a] != conf[b]]
+    inside = {d: [(a, b) for _wk, a, b in remaining if conf[a] == d == conf[b]] for d in divisions}
+    zero = {rid: 0 for rid in conf}
+    swings = _outcomes(zero, cross, limit)
+    own = {d: _outcomes({rid: 0 for rid in members[d]}, inside[d], limit) for d in divisions}
+    if swings is None or None in own.values() or len(swings) * sum(map(len, own.values())) > 20 * limit:
+        return {}
+    order = list(zero)
+    share = lambda rid, w: (w + ties[rid] / 2) / total[rid] if total[rid] else 0.0
+
+    def ranks(table):
+        # Each team's best and worst place, with ties on wins breaking any way.
+        return {rid: (1 + sum(v > w for o, v in table.items() if o != rid),
+                      1 + sum(v >= w for o, v in table.items() if o != rid))
+                for rid, w in table.items()}
+
+    def rule3(table):
+        # The shares of the teams that could finish third and fourth, lowest and
+        # highest: all the other conference needs to know for Rule 3.
+        span = ranks(table)
+        third = [share(rid, table[rid]) for rid, (hi, lo) in span.items() if hi <= 3 <= lo]
+        fourth = [share(rid, table[rid]) for rid, (hi, lo) in span.items() if hi <= 4 <= lo]
+        return min(third), max(third), min(fourth), max(fourth)
+
+    can = {rid: {"in": False, "out": False, "bye": False, "no bye": False} for rid in conf}
+    for swing in swings:
+        tables = {}
+        for d in divisions:
+            lifted = [wins[rid] + swing[order.index(rid)] for rid in members[d]]
+            tables[d] = [dict(zip(members[d], (w + n for w, n in zip(lifted, inner))))
+                         for inner in own[d]]
+        for here, there in (divisions, divisions[::-1]):
+            others = {rule3(t) for t in tables[there]}
+            for table in tables[here]:
+                for rid, (hi, lo) in ranks(table).items():
+                    mine, c = share(rid, table[rid]), can[rid]
+                    c["bye"] |= hi == 1
+                    c["no bye"] |= lo >= 2
+                    for t3_min, t3_max, f4_min, f4_max in others:
+                        # In: second or better; third unless Rule 3 removes it;
+                        # fourth only if Rule 3 brings it up.
+                        c["in"] |= (hi <= 2 or (hi == 3 and not (mine < 0.5 and f4_min > 0.5))
+                                    or (hi == 4 and mine > 0.5 and t3_min < 0.5))
+                        c["out"] |= (lo >= 5 or (lo == 4 and not (t3_max < 0.5 and mine > 0.5))
+                                     or (lo == 3 and mine < 0.5 and f4_max > 0.5))
+    sure = {}
+    for rid, c in can.items():
+        known = {}
+        if not c["out"] or not c["in"]:
+            known["playoffs"] = not c["out"]
+        if not c["no bye"] or not c["bye"]:
+            known["bye"] = not c["no bye"]
+        if known:
+            sure[rid] = known
+    return sure
+
+
 def playoff_odds(raw: dict, season: dict, history: list[dict], projections: dict | None,
                  players: dict, regular_weeks: int, sims: int = 10_000,
                  past: dict | None = None) -> dict | None:
@@ -1004,6 +1104,13 @@ def playoff_odds(raw: dict, season: dict, history: list[dict], projections: dict
         for rid in teams:
             tally[rid]["wins"] += w[rid]
 
+    # What no result left can change, worked out exactly. The simulation agrees
+    # with these, but only a proof can say "clinched".
+    sure = certainties(wins, ties, total, members, remaining)
+    for rid, known in sure.items():
+        for key in known:
+            tally[rid][key] = sims if known[key] else 0
+
     return {
         "sims": sims,
         "weeks_left": len({wk for wk, _a, _b in remaining}),
@@ -1014,6 +1121,9 @@ def playoff_odds(raw: dict, season: dict, history: list[dict], projections: dict
             "playoffs": t["playoffs"] / sims, "bye": t["bye"] / sims,
             "toilet": 1 - t["playoffs"] / sims, "wins": t["wins"] / sims,
             "w": wins[rid], "l": losses[rid], "t": ties[rid], "games": total[rid],
+            # "playoffs" and "bye" -> True (clinched) or False (out of reach),
+            # for each that is settled whatever happens in the games left.
+            "sure": sure.get(rid, {}),
             # Each week still to play, the score the simulation centres on.
             "expected": {wk: expected[(rid, wk)] for wk in weeks},
         } for rid, t in tally.items()},

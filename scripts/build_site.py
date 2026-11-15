@@ -596,8 +596,14 @@ def conf_band(cfg, division):
     return '<div class="confband ' + cls + '">' + mark + "</div>"
 
 
-def chance(p):
-    """A simulated chance as a percentage. Never 0% or 100%: a simulation is not a proof."""
+def chance(p, sure=None):
+    """
+    A simulated chance as a percentage. Never 0% or 100% from the simulation
+    alone, since a simulation is not a proof; only where `sure` says no result
+    left can change it (stats.certainties).
+    """
+    if sure is not None:
+        return "100%" if sure else "0%"
     if p < 0.005:
         return "&lt;1%"
     if p > 0.995:
@@ -623,13 +629,26 @@ def shift(o, key, good=True):
     return f'<span class="shift {tone}">{arrow}&#8202;{abs(move)}</span>'
 
 
+def settled(o, key):
+    """
+    A playoff or bye chance as it reads on the page, and its arrow: "Clinched"
+    or "Out", with no arrow, once no result left can change it; otherwise the
+    simulated chance and its move on the week before.
+    """
+    known = (o.get("sure") or {}).get(key)
+    if known is None:
+        return chance(o[key]), shift(o, key)
+    return ('<span class="sure in">Clinched</span>' if known else '<span class="sure out">Out</span>'), ""
+
+
 def odds_line(odds, team):
     """Playoff and bye chances under a team on the Scoreboard, while there is a race."""
     o = (odds or {}).get("teams", {}).get(team["user_id"])
     if not o:
         return ""
-    return (f'<div class="odds">Playoffs <b>{chance(o["playoffs"])}</b>{shift(o, "playoffs")} &middot; '
-            f'Bye <b>{chance(o["bye"])}</b>{shift(o, "bye")}</div>')
+    (po, po_move), (bye, bye_move) = settled(o, "playoffs"), settled(o, "bye")
+    return (f'<div class="odds">Playoffs <b>{po}</b>{po_move} &middot; '
+            f'Bye <b>{bye}</b>{bye_move}</div>')
 
 
 def odds_section(cfg, teams, odds):
@@ -651,13 +670,16 @@ def odds_section(cfg, teams, odds):
         rows = []
         for t in members:
             o = odds["teams"][t["user_id"]]
+            known = (o.get("sure") or {}).get("playoffs")
+            toilet = (chance(o['toilet'], None if known is None else not known)
+                      + ("" if known is not None else shift(o, 'toilet', good=False)))
             rows.append(f"""<tr>
         <td><div class="tm"><span class="nm"><a href="team-{e(t['slug'])}.html">{e(t['team'])}</a></span><span class="hd">{e(t['manager'])}</span></div></td>
         <td class="num">{rec(o)}</td>
         <td class="num">{o['wins']:.1f}</td>
-        <td class="num pct"><span class="pbar" style="--p:{o['playoffs'] * 100:.1f}%"></span>{chance(o['playoffs'])}{shift(o, 'playoffs')}</td>
-        <td class="num">{chance(o['bye'])}{shift(o, 'bye')}</td>
-        <td class="num">{chance(o['toilet'])}{shift(o, 'toilet', good=False)}</td></tr>""")
+        <td class="num pct"><span class="pbar" style="--p:{o['playoffs'] * 100:.1f}%"></span>{''.join(settled(o, 'playoffs'))}</td>
+        <td class="num">{''.join(settled(o, 'bye'))}</td>
+        <td class="num">{toilet}</td></tr>""")
         blocks.append(f"""
       <div class="conf {cls}">
         <div class="conf-head"><span class="swatch" aria-hidden="true"></span><h3>{e(conf.get('name', 'Conference'))}</h3></div>
@@ -673,7 +695,8 @@ def odds_section(cfg, teams, odds):
             f"team's scores move about: roughly {odds['swing']:.0f} points either way in a week, and "
             f"{odds['doubt']:.0f} a week over a whole season. A team's own history is left out, since this year's "
             "roster may be a different team. Places go by the rulebook: the conference winners get the bye, second "
-            "place is in, and third is in unless Rule 3 applies.")
+            "place is in, and third is in unless Rule 3 applies. Clinched and Out are not simulated: they are "
+            "certain, because no result in the games left can change them.")
     if odds["weeks_projected"] < weeks:
         missing = weeks - odds["weeks_projected"]
         note += (f" Sleeper had no projections for {missing} of those week{'s' if missing != 1 else ''}, "

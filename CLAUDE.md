@@ -39,6 +39,14 @@ The schedule, as rebuilt on 13 September 2026:
   Thursdays and Mondays and missed both. The windows run to 05:45 UTC so they
   still cover the late games after the US clocks go back, and there are extra
   windows for Thanksgiving (the Pro Bowl week), Black Friday and December Saturdays.
+- **GitHub stopped honouring the schedule in October 2026.** Until 10 October
+  the scheduled runs came every quarter of an hour in the game windows; from
+  11 October GitHub started only two to six a day, hours late, though nothing
+  in the workflow changed. The Wednesday noon run drifted from 11:07 to about
+  15:30 UTC by November, so the week turned over in the afternoon, and live
+  scores on a Sunday refreshed about five times. Runs triggered by a push or by
+  `workflow_dispatch` start within a minute, so the remedy is to trigger the
+  workflow from outside rather than rely on its cron lines.
 - **One run at a time, and a new one replaces the old** (`cancel-in-progress:
   true`, `timeout-minutes: 15`). On 13 September 2026 a run GitHub never started
   sat "queued" for 16 hours, and because runs used to wait their turn, every
@@ -661,6 +669,17 @@ and as a table per conference, while regular-season games remain.
   fourth is above .500. Then that fourth takes the place.
 - **Display.** Chances show as "<1%" and ">99%", never 0% or 100%, because a
   simulation is not a proof.
+- **Clinched and Out are proved, not simulated** (Matt, November 2026: the site
+  showed Alex at 9–0 and Chris at 8–1 as ">99%" with five weeks left, when
+  nobody could catch either). `stats.certainties` goes through every way the
+  games left can go, by the same para 71 and Rule 3 as the simulation, with a
+  tie on wins counting either way, since points are still to be scored. A
+  playoff place or bye nothing can take away shows as **Clinched**, one out of
+  reach as **Out**, and the toilet bowl as 100% or 0% to match. The conferences
+  are worked out apart, joined only by the games between them, so it takes a
+  fraction of a second with five weeks left; with too many outcomes to check
+  (early in a season) it checks nothing. Matched a brute force over every
+  outcome and every tie-break order through `playoff_field` in 60 random cases.
 - **Checked in week 1 of 2026.** Every run hands out exactly six places and
   two byes, and 10,000 runs take half a second.
 - **The change on the week before** (Matt, September 2026). A small green or
