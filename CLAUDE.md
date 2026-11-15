@@ -758,6 +758,13 @@ champion. The draft is straight, not snake, so every round goes the same way.
   2027 picks. Below the top ten, Matt asked for **all 50 picks** as a plain grid
   (`build_site.draft_grid`): a row per slot in the same order, a column per
   round, each cell the holder, red where traded, green rows once fixed.
+- **Clinched teams are colour-coded** (Matt, November 2026, as his old sheet
+  did): while the order is provisional, a team that has clinched a playoff
+  place (or the bye) has its name in green with a tag, one eliminated in grey,
+  in the order and the 50-pick grid alike. It comes from the playoff odds'
+  `stats.certainties` (`build_site.clinch_marks`), so it is proof, not
+  simulation. Once the brackets are set the picks themselves say it, so the
+  marks go.
 - **Where it sits**: at the bottom of the Standings page, and on the Scoreboard
   (after the playoff odds) from week 10 to the final, by the Scoreboard's own
   week (`DRAFT_ORDER_FROM_WEEK`). Once the season is over it goes back to

@@ -839,22 +839,48 @@ def pick_list(picks):
     return ", ".join(names[:-1]) + " or " + names[-1] if len(names) > 1 else names[0]
 
 
-def draft_section(cfg, order, teams, holders, year, rounds):
+def clinch_marks(order, sure):
+    """
+    owner_id -> (css class, tag) for each team whose half of the draft is
+    settled while the order is still provisional: a playoff place clinched
+    (picking from 1.05 down) or out of reach (picking in the top four), from
+    stats.certainties. Nothing once the brackets are set, when the picks
+    themselves say it.
+    """
+    if not order or order["settled"]:
+        return {}
+    marks = {}
+    for uid, known in (sure or {}).items():
+        if known.get("bye"):
+            marks[uid] = ("clinched", "Bye clinched")
+        elif known.get("playoffs"):
+            marks[uid] = ("clinched", "Playoffs clinched")
+        elif known.get("playoffs") is False:
+            marks[uid] = ("eliminated", "Eliminated")
+    return marks
+
+
+def draft_section(cfg, order, teams, holders, year, rounds, sure=None):
     """
     The next rookie draft's order, rulebook paras 33-36, from stats.draft_order.
     A pick is green once it is fixed: the same team has it however the brackets
     go from here. Until then it is the order as things stand, with every pick
-    the team could still end up with. A pick traded away says who holds it.
+    the team could still end up with, and a team that has clinched a playoff
+    place has its name in green, one eliminated in grey (`sure`, owner_id ->
+    the playoff odds' certainties). A pick traded away says who holds it.
     """
     if not order:
         return ""
     by_owner = {t["user_id"]: t for t in teams.values()}
     names = {t["user_id"]: t["manager"] for t in teams.values()}
+    marks = clinch_marks(order, sure)
     rows = []
     for r in order["rows"]:
         t = by_owner.get(r["owner_id"])
         if not t:
             continue
+        mark, tag = marks.get(r["owner_id"], ("", ""))
+        tag = f'<span class="ctag {mark}">{tag}</span>' if tag else ""
         away = [(rnd, holders[(str(year), rnd, r["owner_id"])]) for rnd in range(1, rounds + 1)
                 if holders.get((str(year), rnd, r["owner_id"]), r["owner_id"]) != r["owner_id"]]
         traded = ('<div class="dtraded">' + " &middot; ".join(
@@ -864,7 +890,7 @@ def draft_section(cfg, order, teams, holders, year, rounds):
         could = "" if r["fixed"] else '<span class="dcould">could be ' + pick_list(r["possible"]) + "</span>"
         rows.append(f"""<tr class="{state}">
         <td><span class="dpick num {state}">1.{r['pick']:02d}</span></td>
-        <td><div class="tm"><span class="nm"><a href="team-{e(t['slug'])}.html">{e(t['team'])}</a></span><span class="hd">{e(t['manager'])}</span></div>{traded}<div class="dstate narrow">{'Fixed' if r['fixed'] else could}</div></td>
+        <td><div class="tm"><span class="nm {mark}"><a href="team-{e(t['slug'])}.html">{e(t['team'])}</a></span><span class="hd">{e(t['manager'])}</span>{tag}</div>{traded}<div class="dstate narrow">{'Fixed' if r['fixed'] else could}</div></td>
         <td class="num">{r['max_points']:,.2f}</td>
         <td class="dstate wide">{'Fixed' if r['fixed'] else could}</td></tr>""")
     fixed = sum(r["fixed"] for r in order["rows"])
@@ -881,20 +907,25 @@ def draft_section(cfg, order, teams, holders, year, rounds):
             "and the champion. Every round goes in the same order. A green pick is fixed, whatever happens "
             "from here." + ("" if order["settled"] else
                             " Nothing is fixed until the regular season is over and the brackets are set.")
+            + (" A team in green has clinched a playoff place, so picks from 1.05 down; one in grey is "
+               "eliminated, so picks in the top four." if marks else "")
             + "</p>")
     return ("<section>" + sechead(f"{year} Rookie Draft Order", note)
             + '<div class="pr"><div class="tablewrap"><table class="draftorder">'
             + '<thead><tr><th>Pick</th><th>Team</th><th>Max PF</th><th class="wide"></th></tr></thead>'
             + "<tbody>" + "".join(rows) + "</tbody></table></div></div>" + rule
-            + draft_grid(order, by_owner, names, holders, year, rounds) + "</section>")
+            + draft_grid(order, by_owner, names, holders, year, rounds, marks) + "</section>")
 
 
-def draft_grid(order, by_owner, names, holders, year, rounds):
+def draft_grid(order, by_owner, names, holders, year, rounds, marks=None):
     """
     Every pick in the draft, on the same order: a row for each team's slot and
     a column for each round, naming whoever holds the pick. The draft is
     straight, so a slot is the same in every round. A traded pick is in red.
+    A slot's team is in green once it has clinched a playoff place and grey
+    once it is eliminated (`marks`, from clinch_marks).
     """
+    marks = marks or {}
     rows = []
     for r in order["rows"]:
         t = by_owner.get(r["owner_id"])
@@ -906,7 +937,8 @@ def draft_grid(order, by_owner, names, holders, year, rounds):
             traded = ' class="traded"' if who != r["owner_id"] else ""
             cells.append(f'<td{traded}><span class="dno num">{rnd}.{r["pick"]:02d}</span>'
                          f'{e(names.get(who, "Another team"))}</td>')
-        rows.append(f'<tr class="{"fixed" if r["fixed"] else "open"}"><td>'
+        mark = marks.get(r["owner_id"], ("", ""))[0]
+        rows.append(f'<tr class="{"fixed" if r["fixed"] else "open"}"><td class="slot {mark}">'
                     f'<a href="team-{e(t["slug"])}.html">{e(t["manager"])}</a></td>' + "".join(cells) + "</tr>")
     heads = "".join(f"<th>{ordinal(rnd)}</th>" for rnd in range(1, rounds + 1))
     return ('<div class="pr draftgrid"><div class="conf-head"><h3>All ' + str(len(rows) * rounds)
@@ -914,7 +946,9 @@ def draft_grid(order, by_owner, names, holders, year, rounds):
             + "<thead><tr><th>Slot</th>" + heads + "</tr></thead><tbody>" + "".join(rows)
             + "</tbody></table></div></div>"
             + '<p class="oddsnote">Each row is one team&rsquo;s slot, the same in every round. A name in '
-              "red holds a pick traded to it. The picks move with the order above until they are fixed.</p>")
+              "red holds a pick traded to it. The picks move with the order above until they are fixed."
+            + (" A slot in green has clinched a playoff place, one in grey is eliminated." if marks else "")
+            + "</p>")
 
 
 def move_chip(move):
@@ -2974,11 +3008,14 @@ def main():
     # The rookie draft this season leads to: on the Standings page, and on the
     # Scoreboard from the divisional weeks to the final. Not before a ball is
     # kicked, when there is nothing to order it by.
+    # Teams that have clinched a playoff place, or are out of reach, are marked.
     draft = ""
     if phase != "preseason":
+        sure = {uid: o.get("sure") or {} for uid, o in (model or {}).get("teams", {}).items()} \
+            if phase == "season" else {}
         draft = draft_section(cfg, S.draft_order(current, indexed[0]), teams, S.pick_holders(trade_log),
                               cfg["season"]["year"] + 1,
-                              (current.get("settings") or {}).get("draft_rounds") or 5)
+                              (current.get("settings") or {}).get("draft_rounds") or 5, sure)
     draft_on_home = phase == "season" and week >= DRAFT_ORDER_FROM_WEEK
 
     if phase == "season":
