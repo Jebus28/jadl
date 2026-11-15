@@ -866,7 +866,7 @@ def draft_section(cfg, order, teams, holders, year, rounds, sure=None):
     A pick is green once it is fixed: the same team has it however the brackets
     go from here. Until then it is the order as things stand, with every pick
     the team could still end up with, and a team that has clinched a playoff
-    place has its name in green, one eliminated in grey (`sure`, owner_id ->
+    place has its name in green, one eliminated in orange (`sure`, owner_id ->
     the playoff odds' certainties). A pick traded away says who holds it.
     """
     if not order:
@@ -907,7 +907,7 @@ def draft_section(cfg, order, teams, holders, year, rounds, sure=None):
             "and the champion. Every round goes in the same order. A green pick is fixed, whatever happens "
             "from here." + ("" if order["settled"] else
                             " Nothing is fixed until the regular season is over and the brackets are set.")
-            + (" A team in green has clinched a playoff place, so picks from 1.05 down; one in grey is "
+            + (" A team in green has clinched a playoff place, so picks from 1.05 down; one in orange is "
                "eliminated, so picks in the top four." if marks else "")
             + "</p>")
     return ("<section>" + sechead(f"{year} Rookie Draft Order", note)
@@ -922,7 +922,7 @@ def draft_grid(order, by_owner, names, holders, year, rounds, marks=None):
     Every pick in the draft, on the same order: a row for each team's slot and
     a column for each round, naming whoever holds the pick. The draft is
     straight, so a slot is the same in every round. A traded pick is in red.
-    A slot's team is in green once it has clinched a playoff place and grey
+    A slot's team is in green once it has clinched a playoff place and orange
     once it is eliminated (`marks`, from clinch_marks).
     """
     marks = marks or {}
@@ -947,7 +947,7 @@ def draft_grid(order, by_owner, names, holders, year, rounds, marks=None):
             + "</tbody></table></div></div>"
             + '<p class="oddsnote">Each row is one team&rsquo;s slot, the same in every round. A name in '
               "red holds a pick traded to it. The picks move with the order above until they are fixed."
-            + (" A slot in green has clinched a playoff place, one in grey is eliminated." if marks else "")
+            + (" A slot in green has clinched a playoff place, one in orange is eliminated." if marks else "")
             + "</p>")
 
 
