@@ -923,6 +923,47 @@ On his Windows machine, under `OneDrive\Documents\Fantasy Football\Dynasty`:
 Google Drive has the season review PDFs (2020–2026), schedules, rules PDFs,
 records sheets and the Trade Log, in `FF/Website`.
 
+### The Idiot's Guide
+
+`Website\JADL Website - Idiot's Guide.docx` is Matt's manual for the site:
+every job it needs from him, step by step, in plain words. **It is not in the
+repo, and Matt reads it rather than the README**, so when a change gives him
+something new to do, or changes how one of his jobs works, update the guide
+too (he asked for this in November 2026, having found it missed). The README
+is the short technical version.
+
+It has ten sections: read this first, the year at a glance (a table of jobs,
+each pointing to its section), how to make a change, after the Championship,
+the AGM and rulebook, Commissioner Updates, before the new season, the Pro
+Bowl, something's gone wrong, and things you never need to do (with "Where
+everything lives"). Added in November 2026:
+
+- **7.7 Renewing the refresh key (July)**: the cron-job.org token (see "How it
+  runs"), with the five jobs' settings in case they have to be rebuilt, and a
+  July row in the year at a glance.
+- **9.6 The site has stopped updating**: reading the Actions tab to tell a
+  lapsed key from a failing build.
+- **9.7 A playoff game is missing from the Scoreboard**: weeks 15–17 come from
+  the rulebook, but a game only shows once Sleeper's pairing fits it.
+- Smaller changes: the refresh times in section 1, the crests in 4.3 (shown
+  big, so use full-size artwork; check them in weeks 10–16), where the trophy
+  name shows in 4.4, and new lines in section 10 and the Where everything
+  lives table.
+
+**How to edit it.** Unzip it and edit `word/document.xml` directly, building new
+parts from the guide's own pieces so they match: Heading2 with a `_Toc`
+bookmark, a step is a paragraph with a red bold number and a tab (hanging
+indent 567), grey Consolas code boxes, gold "Good to know" and red warning
+boxes (one-cell tables with a thick left border), navy-headed tables with
+banded rows (fill `F5F6F8` on alternate rows), `ListBullet` paragraphs. A
+new section needs a `TOC2` entry too. Then open it in Word through COM to
+refresh the contents (`TablesOfContents.Update()`), save it there, export a
+PDF, and render the changed pages to look at them (pypdfium2) before copying
+it over the original. Word renames the `_Toc` bookmarks when it refreshes the
+contents, so look them up afresh each time. Check the file has not changed
+since it was copied, and is not open in Word (a `~$` lock file), before
+saving over it.
+
 ## Backlog
 
 Roughly in the order discussed with Matt, though he has not yet picked:
