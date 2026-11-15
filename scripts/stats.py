@@ -1397,6 +1397,81 @@ def _playoff_order(run: dict, bracket: list, max_points: dict) -> list | None:
     return rest + [runner_up, champion]
 
 
+def rule_brackets(season: dict, table: dict, byes: set, through: set) -> tuple:
+    """
+    The playoff and toilet bowl brackets as the rulebook draws them, in
+    Sleeper's own shape, with each game's result once its week is over.
+    Sleeper's brackets are not read: Matt sets the teams in them by hand after
+    week 14, and until he has, Sleeper's own seeding is wrong (November 2026).
+
+    `table` is each conference's final standings, best first, and `byes` and
+    `through` the places from `playoff_field`. Paras 72-75: 2nd plays 3rd in
+    each conference and the toilet bowl's four play within their conferences,
+    except under Rule 3, when the conference with an extra playoff team plays
+    its 4th against the other's 2nd, and the conference a team short plays 4th
+    v 5th with its 3rd against the other's 5th. In week 16 each conference
+    winner meets the Divisional Round winner from its own side of the draw, the
+    beaten pair play for 5th, the toilet bowl's winners for 7th and its losers
+    for 9th; in week 17 the final and the game for 3rd.
+    """
+    divisions = sorted(table)
+    if len(divisions) != 2:
+        return [], []
+
+    def pairs(a, b, odd_first):
+        # Two lists of two (best first) pair off within themselves. Under Rule 3
+        # it is three and one: the playoffs pair the conference's top two and
+        # send its 3rd (that is, 4th) across (para 73); the toilet bowl pairs its
+        # bottom two and sends its top one across (para 75).
+        if len(a) == 2 and len(b) == 2:
+            return [a, b]
+        long, short = (a, b) if len(a) > len(b) else (b, a)
+        if len(long) != 3 or len(short) != 1:
+            return []
+        return [long[1:], [long[0], short[0]]] if odd_first else [long[:2], [long[2], short[0]]]
+
+    playing = pairs(*[[r for r in table[d] if r in through - byes] for d in divisions], odd_first=False)
+    toilet = pairs(*[[r for r in table[d] if r not in through] for d in divisions], odd_first=True)
+    if len(playing) != 2 or len(toilet) != 2 or len(byes) != 2:
+        return [], []
+    division_of = {r: d for d in divisions for r in table[d]}
+    waiting = {}
+    for bye in sorted(byes, key=lambda r: division_of[r]):
+        game = max((i for i in (0, 1) if i not in waiting),
+                   key=lambda i: (sum(division_of[r] == division_of[bye] for r in playing[i]), -i))
+        waiting[game] = bye
+    wb = [{"r": 1, "m": 1, "t1": playing[0][0], "t2": playing[0][1]},
+          {"r": 1, "m": 2, "t1": playing[1][0], "t2": playing[1][1]},
+          {"r": 2, "m": 3, "t1": waiting[0], "t2_from": {"w": 1}},
+          {"r": 2, "m": 4, "t1": waiting[1], "t2_from": {"w": 2}},
+          {"r": 2, "m": 5, "p": 5, "t1_from": {"l": 1}, "t2_from": {"l": 2}},
+          {"r": 3, "m": 6, "p": 1, "t1_from": {"w": 3}, "t2_from": {"w": 4}},
+          {"r": 3, "m": 7, "p": 3, "t1_from": {"l": 3}, "t2_from": {"l": 4}}]
+    lb = [{"r": 1, "m": 1, "t1": toilet[0][0], "t2": toilet[0][1]},
+          {"r": 1, "m": 2, "t1": toilet[1][0], "t2": toilet[1][1]},
+          {"r": 2, "m": 3, "p": 1, "t1_from": {"w": 1}, "t2_from": {"w": 2}},
+          {"r": 2, "m": 4, "p": 3, "t1_from": {"l": 1}, "t2_from": {"l": 2}}]
+    # Results, from weeks that are over: whoever scored more that week.
+    start = season["playoff_week_start"]
+    for bracket in (wb, lb):
+        done = {}
+        for m in bracket:
+            for key in ("t1", "t2"):
+                src = m.get(key + "_from")
+                if src:
+                    m[key] = (done.get(src.get("w")) or (None, None))[0] if "w" in src \
+                        else (done.get(src.get("l")) or (None, None))[1]
+            scores = {rid: pts for a, b in season["fixtures"].get(start + m["r"] - 1, []) for rid, pts in (a, b)}
+            a, b = m.get("t1"), m.get("t2")
+            if a and b and scores.get(a) and scores.get(b) and scores[a] != scores[b]:
+                m["w"], m["l"] = (a, b) if scores[a] > scores[b] else (b, a)
+                done[m["m"]] = (m["w"], m["l"])
+            for key in ("t1", "t2"):
+                if m.get(key + "_from") and not m.get(key):
+                    m.pop(key, None)
+    return wb, lb
+
+
 def draft_order(raw: dict, season: dict) -> dict | None:
     """
     The first round of the rookie draft this season leads to, rulebook paras
@@ -1409,10 +1484,12 @@ def draft_order(raw: dict, season: dict) -> dict | None:
 
     Until the regular season is over it is the order as things stand: the
     playoff places as the tables stand, each group on max points, and no pick
-    is fixed. Once the brackets are set, every way they can still go is played
-    out, and a pick is fixed when the same team has it in all of them. The
-    order shown has each undecided game going to the team ahead in it, or,
-    before a ball is kicked, the one with the better regular season.
+    is fixed. Once it is over, the brackets are drawn from the rulebook and
+    the final tables (rule_brackets; Sleeper's are set by hand and wrong until
+    they are), every way they can still go is played out, and a pick is fixed
+    when the same team has it in all of them. The order shown has each
+    undecided game going to the team ahead in it, or, before a ball is kicked,
+    the one with the better regular season.
 
     `raw` is the season as fetched and `season` is it indexed. Rows in pick
     order: roster_id, owner_id, pick, max_points, possible (every pick the team
@@ -1425,8 +1502,20 @@ def draft_order(raw: dict, season: dict) -> dict | None:
         return None
     max_points = {rid: _pts(st, "ppts") for rid, st in stand.items()}
     record = {rid: (st.get("wins", 0), _pts(st, "fpts")) for rid, st in stand.items()}
-    brackets = raw.get("brackets") or {}
-    wb, lb = brackets.get("winners_bracket") or [], brackets.get("losers_bracket") or []
+    table = defaultdict(list)
+    for rid, st in stand.items():
+        table[str(st.get("division") or "1")].append(rid)
+    if len(table) != 2:
+        return None
+    for members in table.values():
+        members.sort(key=record.get, reverse=True)
+    share = {}
+    for rid, st in stand.items():
+        played = st.get("wins", 0) + st.get("losses", 0) + st.get("ties", 0)
+        share[rid] = (st.get("wins", 0) + st.get("ties", 0) / 2) / played if played else 0.0
+    byes, through = playoff_field(table, share)
+    # The brackets as the rulebook draws them, never Sleeper's (see rule_brackets).
+    wb, lb = rule_brackets(season, table, byes, through) if season["regular_done"] else ([], [])
 
     possible = defaultdict(set)
     if season["regular_done"] and wb and lb:
@@ -1451,18 +1540,6 @@ def draft_order(raw: dict, season: dict) -> dict | None:
                 possible[rid].add(pick)
         shown = heads[0] + tails[0]
     else:
-        table = defaultdict(list)
-        for rid, st in stand.items():
-            table[str(st.get("division") or "1")].append(rid)
-        if len(table) != 2:
-            return None
-        for members in table.values():
-            members.sort(key=record.get, reverse=True)
-        share = {}
-        for rid, st in stand.items():
-            played = st.get("wins", 0) + st.get("losses", 0) + st.get("ties", 0)
-            share[rid] = (st.get("wins", 0) + st.get("ties", 0) / 2) / played if played else 0.0
-        byes, through = playoff_field(table, share)
         out = sorted(set(stand) - through, key=max_points.get)
         first_round = sorted(through - byes, key=max_points.get)
         shown = out + first_round + sorted(byes, key=max_points.get)

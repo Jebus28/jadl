@@ -786,8 +786,17 @@ champion. The draft is straight, not snake, so every round goes the same way.
 - **Until the regular season is over it is provisional**: the playoff places as
   the tables stand (`stats.playoff_field`, the same para 71 and Rule 3 the odds
   use), each group on max points. Nothing is fixed.
-- **Once the brackets are set**, every way they can still go is played out, and a
-  pick is **fixed** (green) when the same team has it in all of them. The order
+- **Once the regular season is over**, every way the playoffs and toilet bowl
+  can still go is played out, and a pick is **fixed** (green) when the same
+  team has it in all of them. The brackets for that are drawn from the
+  rulebook (`stats.rule_brackets`, paras 72–75, Rule 3 included) with each
+  game's result from the scores, **never read from Sleeper**: Matt sets the
+  bracket teams by hand after week 14 and Sleeper's are wrong until he does
+  (November 2026). He also sets the draft order on Sleeper by hand once the
+  season is over; the site never reads that, only the draft once it is made.
+  Checked on 2022–2025: the final orders are identical to the bracket-read
+  ones, and at every week of the playoffs each team's possible picks include
+  the one it ended up with. The order
   shown has each undecided game going to the team ahead in it, or the better
   regular season before kick-off. A pick that isn't fixed shows every pick the
   team could still end up with.
