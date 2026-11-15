@@ -370,6 +370,44 @@ with them. Matt makes a new one after each final (`JADL 5.JPG` after 2024,
 `JADL 6.jpg` after 2025, in the same folder); copy the newest over
 `assets/league/league-logo.jpg` unchanged.
 
+**The crests are shown large** (Matt, November 2026): centred over their
+conference's games, about the height of a team picture
+(`.conflogo`, `clamp(130px, 24vw, 250px)`), in the divisional weeks and the
+playoff weeks alike. To stay sharp at that size they were re-cut in November
+2026 from the full-size artwork (`LFC 2.png`, already see-through, 283×400;
+`MFC 4.JPG`, its white background flooded in from the edges so the M's own
+white outline is kept, 449×402), trimmed to the letter. The old cuts were
+under 100 pixels tall.
+
+### The playoff weeks (Scoreboard)
+
+Built in November 2026. **Never read the playoff weeks from Sleeper's
+brackets**: Matt sets the playoff and toilet bowl teams on Sleeper by hand
+after week 14, and until he has, Sleeper's own seeding is wrong.
+`build_site.playoff_plan` works each game out from the rulebook instead
+(paras 71–75):
+
+- **Week 15**: the field from the final tables (`stats.playoff_field`, para 71
+  and Rule 3). The conference winners are **on a bye**, each shown as a card
+  in its conference's block ("Straight through to the Conference
+  Championship"). A game between two playoff teams is the **Divisional
+  Round**; one between two of the four left out is the **Toilet Bowl**.
+  Under Rule 3 the rulebook pairs 4th v the other conference's 2nd (para 73)
+  and, in the toilet bowl, 3rd v the other's 5th (para 75); those show in an
+  "Across the conferences" block.
+- **Week 16**, from week 15's results: a Divisional Round winner against a bye
+  team is a **Conference Championship**, the two Divisional Round losers play
+  for **Fifth place**, the toilet bowl's winners for **7th and the 1.01**
+  (under the season's cup name) and its losers the **Loser of All Losers
+  game**.
+- **Week 17**: the two Conference Champions in **The Championship** (the
+  featured style), the two beaten in the **Third place** game.
+- Each conference's games sit under its crest, playoff game first, then the
+  bye, then the toilet bowl; the cross-conference games follow. A pairing
+  that fits none of it (Sleeper filling in a week) is not shown.
+- **Checked against 2022–2025**: worked out from the standings and results
+  alone, every label matches the brackets as Matt finally set them.
+
 Playoffs run **in conference** until the final and the toilet bowl itself:
 week 15 is the **Divisional Round**, week 16 the **Conference Championships**,
 week 17 **The Championship**. These are in `playoff_rounds`, keyed by week.

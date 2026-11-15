@@ -573,6 +573,107 @@ def week_heading(cfg, week):
     return rounds.get(str(week)) or ("Week " + str(week))
 
 
+# The winners bracket's games, which lead a playoff week's Scoreboard.
+PLAYOFF_STAGES = {"Divisional Round", "Conference Championship", "The Championship",
+                  "Third place", "Fifth place"}
+
+
+def playoff_plan(cfg, teams, results, week):
+    """
+    What each game in a playoff week is for: {frozenset of the two roster ids:
+    (billing, is it the final)}, and the teams on a bye that week, each with the
+    round it goes straight through to. None outside the playoff weeks.
+
+    Worked out from the rulebook, never from Sleeper's brackets: Matt sets the
+    playoff and toilet bowl teams on Sleeper by hand, and until he has, Sleeper's
+    own seeding is wrong (November 2026). Para 71 and Rule 3 give the field from
+    the final regular-season tables (`stats.playoff_field`, as the odds use). In
+    the first week the conference winners have the bye, a game between two
+    playoff teams is the Divisional Round and one between two of the four left
+    out is the toilet bowl (paras 72-75). After that each game is named by what
+    its two teams did the week before, so whatever pairs Matt sets, the names
+    follow: a Divisional Round winner against a bye team is a Conference
+    Championship, two of its losers play for fifth, the toilet bowl's two winners
+    for 7th and the 1.01 under the season's cup name, its two losers for Loser of
+    All Losers; then the two Conference Champions meet in The Championship and
+    the two beaten there play for third. A pairing that fits none of it (Sleeper
+    filling in a week for teams with nothing left to play) is left out.
+    """
+    rnd = week - cfg["season"]["playoff_start_week"] + 1
+    if rnd < 1 or rnd > 3:
+        return None
+    rows = {t["roster_id"]: t for t in teams.values()}
+    table = {}
+    for rid, t in rows.items():
+        table.setdefault(t["division"], []).append(rid)
+    if len(table) != 2:
+        return None
+    for members in table.values():
+        members.sort(key=lambda rid: (rows[rid]["wins"], rows[rid]["fpts"]), reverse=True)
+    share = {rid: t["wins"] / max(1, t["wins"] + t["losses"]) for rid, t in rows.items()}
+    byes, through = S.playoff_field(table, share)
+    side = (cfg.get("side_competitions") or {})
+    cup = (side.get("consolation_by_season") or {}).get(str(cfg["season"]["year"])) or "Consolation bracket"
+    toilet = (side.get("labels") or {}).get("consolation", "Toilet Bowl")
+
+    def outcome(wk):
+        """Each finished game's (winner, loser) that week."""
+        out = []
+        for fx in results.get(wk, []):
+            a, b = fx["home"], fx["away"]
+            if a["points"] != b["points"]:
+                out.append((a["roster_id"], b["roster_id"]) if a["points"] > b["points"]
+                           else (b["roster_id"], a["roster_id"]))
+        return out
+
+    # Who is where, round by round: (label, the teams it takes, is it the final).
+    start = cfg["season"]["playoff_start_week"]
+    first = [("Divisional Round", through - byes, False), (toilet, set(rows) - through, False)]
+    stages = [first]
+    if rnd >= 2:
+        played = outcome(start)
+        po = {g for g in played if set(g) <= through - byes}
+        tb = {g for g in played if set(g) <= set(rows) - through}
+        won = {w for w, _l in po}
+        stages.append([
+            ("Conference Championship", won | byes, False),
+            ("Fifth place", {l for _w, l in po}, False),
+            (cup + " · 7th place and the 1.01", {w for w, _l in tb}, False),
+            ("Loser of All Losers game", {l for _w, l in tb}, False)])
+    if rnd == 3:
+        last = {g for g in outcome(start + 1) if set(g) <= won | byes}
+        stages.append([("The Championship", {w for w, _l in last}, True),
+                       ("Third place", {l for _w, l in last}, False)])
+    games = {}
+    for fx in results.get(week, []):
+        pair = {fx["home"]["roster_id"], fx["away"]["roster_id"]}
+        for label, members, final in stages[rnd - 1]:
+            # A Conference Championship is a bye team against a Divisional Round winner.
+            if pair <= members and (label != "Conference Championship" or len(pair & byes) == 1):
+                games[frozenset(pair)] = (label, final)
+                break
+    waiting = [(rid, "Conference Championship") for rid in sorted(byes)] if rnd == 1 else []
+    return {"games": games, "byes": waiting}
+
+
+def bye_card(team, cfg, places, through_to):
+    """A team sitting the week out on a bye, beside its conference's game."""
+    return f"""
+      <article class="fixture bye">
+        <div class="billing">On a bye</div>
+        <div class="side home">
+          {shot(team, cfg)}
+          <div class="line">
+            <div class="who">
+              <div class="team"><a href="team-{e(team['slug'])}.html">{e(team['team'])}</a></div>
+              <div class="mgr">{e(team['manager'])} &middot; {team['wins']}&ndash;{team['losses']} &middot; {e(places.get(team['roster_id'], ''))}</div>
+            </div>
+          </div>
+        </div>
+        <div class="byenote">Straight through to the {e(through_to)}</div>
+      </article>"""
+
+
 def is_divisional_week(cfg, week):
     dw = cfg.get("divisional_weeks") or {}
     return dw.get("from_week", 0) <= week <= dw.get("to_week", -1)
@@ -715,16 +816,23 @@ def score_box(points, proj, lead):
             + under + "</div>")
 
 
-def scoreboard(cfg, teams, results, week, career, prev_finish, odds=None, projected=None):
-    rows = []
+def scoreboard(cfg, teams, results, week, career, prev_finish, odds=None, projected=None, plan=None):
+    rows, ranks = [], []
     projected = projected or {}
     places = conference_places(cfg, teams)
+    by_roster = {t["roster_id"]: t for t in teams.values()}
     for fx in results.get(week, []):
         home, away = teams.get(fx["home"]["roster_id"]), teams.get(fx["away"]["roster_id"])
         if not home or not away:
             continue
         hp, ap = fx["home"]["points"], fx["away"]["points"]
-        billing = featured_name(cfg, week, home, away, prev_finish)
+        billing, final = featured_name(cfg, week, home, away, prev_finish), False
+        if plan:
+            # A playoff week: every game says what it is for, and a pairing
+            # with nothing riding on it is not shown.
+            billing, final = plan["games"].get(frozenset((home["roster_id"], away["roster_id"])), ("", False))
+            if not billing:
+                continue
         # Conference-era regular season only. BCE was a different league shape and
         # Matt does not want it folded into the head-to-head shown on a fixture.
         h2h = ""
@@ -738,11 +846,14 @@ def scoreboard(cfg, teams, results, week, career, prev_finish, odds=None, projec
                            + " &middot; " + str(w) + "&ndash;" + str(l) + "</div>")
         marquee = ('<div class="billing">' + e(billing) + "</div>") if billing else ""
         # "featured" for the inter-conference game, otherwise the division both
-        # sides share. Used to group the week into LFC and MFC blocks.
-        group = "featured" if billing else (
-            home["division"] if home["division"] == away["division"] else "mixed")
+        # sides share. Used to group the week into LFC and MFC blocks. In a
+        # playoff week every game is billed, and only The Championship shouts.
+        shared = home["division"] if home["division"] == away["division"] else "mixed"
+        group = shared if plan else ("featured" if billing else shared)
+        style = (" featured" if final else " billed") if plan else (" featured" if billing else "")
+        ranks.append(0 if plan and billing in PLAYOFF_STAGES else 2)
         rows.append((group, f"""
-      <article class="fixture{' featured' if billing else ''}">
+      <article class="fixture{style}">
         {marquee}
         <div class="side home">
           {shot(home, cfg)}
@@ -769,8 +880,29 @@ def scoreboard(cfg, teams, results, week, career, prev_finish, odds=None, projec
         </div>
       </article>"""))
 
+    if plan:
+        # The bye teams sit in their own conference's block, after its playoff
+        # game and before the toilet bowl's. The playoffs lead throughout.
+        for rid, through_to in plan["byes"]:
+            t = by_roster.get(rid)
+            if t:
+                rows.append((t["division"], bye_card(t, cfg, places, through_to)))
+                ranks.append(1)
+        rows = [row for _rank, _i, row in sorted(zip(ranks, range(len(rows)), rows))]
+
     if not rows:
         inner = '<p class="empty">No fixtures published for this week yet.</p>'
+    elif plan:
+        # Each conference's games under its crest, then the games between them.
+        blocks = []
+        for division in sorted(cfg["conferences"]):
+            games = [html for group, html in rows if group == division]
+            if games:
+                blocks.append(conf_band(cfg, division) + "".join(games))
+        across = [html for group, html in rows if group == "mixed"]
+        if across and blocks:
+            blocks.append('<div class="confband plain"><h3>Across the conferences</h3></div>')
+        inner = "".join(blocks) + "".join(across)
     elif is_divisional_week(cfg, week):
         # The named game leads, then the two conferences under their own headers.
         blocks = ["".join(html for group, html in rows if group == "featured")]
@@ -3019,7 +3151,8 @@ def main():
     draft_on_home = phase == "season" and week >= DRAFT_ORDER_FROM_WEEK
 
     if phase == "season":
-        home = (scoreboard(cfg, teams, results, week, career, prev_finish, odds, projected)
+        home = (scoreboard(cfg, teams, results, week, career, prev_finish, odds, projected,
+                           playoff_plan(cfg, teams, results, week))
                 + pro_bowl_section(cfg, game, names)
                 + odds_section(cfg, teams, odds) + (draft if draft_on_home else "")
                 + power_section(cfg, power)

@@ -238,15 +238,37 @@
   /* In a divisional week the fixtures split into an LFC block and an MFC block,
      each under its own crest. The stars on those crests are championships won by
      the managers currently in that conference. */
-  .confband{display:flex;align-items:center;gap:9px;padding:18px 2px 4px}
-  .confband:first-child{padding-top:0}
-  .conflogo{height:34px;width:auto;display:block}
+  /* The crests are shown about the size of a team picture (Matt, November
+     2026), centred over their conference's games. */
+  .confband{display:flex;align-items:center;justify-content:center;gap:9px;padding:30px 2px 10px}
+  .confband:first-child{padding-top:4px}
+  .conflogo{height:clamp(130px,24vw,250px);width:auto;display:block}
   .confband h3{font-size:12px;font-weight:700;letter-spacing:.10em;text-transform:uppercase}
   .confband.lc h3{color:var(--lombardi)}
   .confband.mc h3{color:var(--madden)}
+  .confband.plain h3{font-family:"Roboto Slab",system-ui,sans-serif;font-size:13px;font-weight:800;letter-spacing:.14em;color:var(--ink-2)}
+
+  /* A playoff week: every game says what it is for, quieter than the featured
+     game, and The Championship takes the featured style. */
+  .fixture.billed{grid-template-areas:"billing billing billing" "home vs away";padding-top:0}
+  .fixture.billed .billing{grid-area:billing;color:var(--ink-2)}
+  .fixture.billed .side.home{grid-area:home}
+  .fixture.billed .vs{grid-area:vs}
+  .fixture.billed .side.away{grid-area:away}
+
+  /* A team on a bye: its own picture, and where it goes next. */
+  .fixture.bye{grid-template-areas:"billing billing billing" "home . note";padding-top:0;border-style:dashed}
+  .fixture.bye .billing{grid-area:billing;color:var(--ink-2)}
+  .fixture.bye .side.home{grid-area:home}
+  .byenote{
+    grid-area:note;align-self:center;text-align:center;padding:0 12px;
+    font-family:"Roboto Slab",system-ui,sans-serif;font-weight:700;font-size:15px;color:var(--muted);
+  }
   @media (max-width:640px){
     .fixture{grid-template-columns:1fr;gap:10px}
-    .fixture.featured{grid-template-areas:"billing" "home" "vs" "away"}
+    .fixture.featured,.fixture.billed{grid-template-areas:"billing" "home" "vs" "away"}
+    .fixture.bye{grid-template-columns:1fr;grid-template-areas:"billing" "home" "note"}
+    .byenote{padding:2px 0 4px}
     .side.away .line{flex-direction:row;text-align:left}
     .side.away .scorebox{text-align:right}
     .vs{text-align:left;padding-inline:2px}
