@@ -1,37 +1,37 @@
 {
- "fetched": 1795629939,
+ "fetched": 1795712473,
  "picks": [
   {
    "players": [
-    "To be named",
-    "To be named"
+    "Dak Prescott",
+    "Caleb Williams"
    ],
    "slot": "QB"
   },
   {
    "players": [
-    "To be named",
-    "To be named"
+    "Patrick Mahomes",
+    "Josh Allen"
    ],
    "slot": "QB"
   },
   {
    "players": [
-    "To be named",
-    "To be named"
+    "Jahmyr Gibbs",
+    "Emmett Johnson"
    ],
    "slot": "RB"
   },
   {
    "players": [
-    "To be named",
-    "To be named"
+    "Javonte Williams",
+    "Jonah Coleman"
    ],
    "slot": "RB"
   },
   {
    "players": [
-    "To be named",
+    "James Cook",
     "To be named"
    ],
    "slot": "RB"
@@ -39,7 +39,14 @@
   {
    "players": [
     "Christian Watson",
-    "To be named"
+    "Amon-Ra St. Brown"
+   ],
+   "slot": "WR"
+  },
+  {
+   "players": [
+    "Ceedee Lamb",
+    "George Pickens"
    ],
    "slot": "WR"
   },
@@ -60,14 +67,7 @@
   {
    "players": [
     "To be named",
-    "To be named"
-   ],
-   "slot": "WR"
-  },
-  {
-   "players": [
-    "To be named",
-    "To be named"
+    "Travis Kelce"
    ],
    "slot": "TE"
   },
@@ -116,14 +116,14 @@
   {
    "players": [
     "To be named",
-    "To be named"
+    "Tyler Bass"
    ],
    "slot": "K"
   },
   {
    "players": [
     "To be named",
-    "To be named"
+    "Denver Broncos"
    ],
    "slot": "DST"
   }
